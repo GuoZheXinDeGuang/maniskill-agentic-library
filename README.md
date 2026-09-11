@@ -14,6 +14,21 @@ Official repository for the ManiSkill-HAB project by
 
 **[Paper](https://arxiv.org/abs/2412.13211)** | **[Website](https://arth-shukla.github.io/mshab/)** | **[Models](https://huggingface.co/arth-shukla/mshab_checkpoints)** | **[Dataset](https://arth-shukla.github.io/mshab/#dataset-section)** | **[Supplementary](https://sites.google.com/view/maniskill-hab)**
 
+## Skill Library (experimental)
+
+This fork includes an object-oriented skill library for managing atomic
+Navigate/Pick/Place/Open/Close contracts, learned checkpoint backends, and
+task-conditioned goal and skill-composition graphs with explicit skill-skill
+relations.
+
+<p align="center">
+  <img src="./docs/static/images/skill_library_architecture.svg"
+       alt="Task-conditioned skill library architecture" width="100%" />
+</p>
+
+See the [skill-library guide](./mshab/skills/README.md) for installation,
+checkpoint download commands, API examples, and the standalone smoke test.
+
 ## Updates
 
 <div align="center">

@@ -172,6 +172,12 @@ bench_results/
 nohup*
 test*
 
+# The OOP skill-library starter ships one stdlib unit test and one standalone
+# checkpoint smoke test. Keep the historical broad test* rule for other files.
+!tests/
+!tests/test_skill_library.py
+!scripts/test_skill_library.py
+
 ManiSkill/
 nautilus/
 
