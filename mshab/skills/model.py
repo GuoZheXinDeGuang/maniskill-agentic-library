@@ -15,11 +15,21 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from types import MappingProxyType
-from typing import Any, Dict, Iterable, Mapping, Optional, Sequence, Tuple
+from typing import (
+    Any,
+    Dict,
+    FrozenSet,
+    Iterable,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
 
 
 class SkillType(str, Enum):
-    """The primitive skill vocabulary currently implemented by MS-HAB."""
+    """Built-in primitive skill vocabulary currently implemented by MS-HAB."""
 
     NAVIGATE = "navigate"
     PICK = "pick"
@@ -81,6 +91,7 @@ class BoundContract:
     invariants: Tuple[str, ...]
     verification: Tuple[str, ...]
     failure_modes: Tuple[str, ...]
+    deletes: Tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         for name in (
@@ -89,8 +100,23 @@ class BoundContract:
             "invariants",
             "verification",
             "failure_modes",
+            "deletes",
         ):
             object.__setattr__(self, name, tuple(getattr(self, name)))
+        overlap = sorted(set(self.deletes) & set(self.effects))
+        if overlap:
+            raise ValueError(
+                "grounded predicates cannot be both asserted and retracted: {}".format(
+                    overlap
+                )
+            )
+        invariant_overlap = sorted(set(self.deletes) & set(self.invariants))
+        if invariant_overlap:
+            raise ValueError(
+                "a grounded skill cannot retract its own invariants: {}".format(
+                    invariant_overlap
+                )
+            )
 
     def can_start(self, facts: Iterable[str]) -> bool:
         return set(self.preconditions).issubset(set(facts))
@@ -102,6 +128,22 @@ class BoundContract:
         """Whether the explicit success predicates hold after execution."""
 
         return set(self.verification).issubset(set(facts))
+
+    def retracted(self, facts: Iterable[str]) -> bool:
+        """Whether every predicate this skill invalidates is actually gone."""
+
+        return not (set(self.deletes) & set(facts))
+
+    def apply_to(self, facts: Iterable[str]) -> FrozenSet[str]:
+        """The symbolic state after a successful execution.
+
+        Contracts reject an overlap between deletes and effects, so the order
+        here is only an implementation detail.  Without delete effects, a
+        state that records ``open(fridge)`` would keep ``closed(fridge)``
+        alongside it, and ``holding(bowl)`` would survive placing the bowl.
+        """
+
+        return frozenset(set(facts) - set(self.deletes) | set(self.effects))
 
 
 @dataclass(frozen=True)
@@ -119,6 +161,7 @@ class SkillContract:
     invariants: Tuple[str, ...] = ()
     verification: Tuple[str, ...] = ()
     failure_modes: Tuple[str, ...] = ()
+    deletes: Tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         for name in (
@@ -128,6 +171,7 @@ class SkillContract:
             "invariants",
             "verification",
             "failure_modes",
+            "deletes",
         ):
             object.__setattr__(self, name, tuple(getattr(self, name)))
         names = [parameter.name for parameter in self.parameters]
@@ -142,9 +186,20 @@ class SkillContract:
             ("effects", self.effects),
             ("invariants", self.invariants),
             ("verification", self.verification),
+            ("deletes", self.deletes),
         ):
             if any(not predicate.strip() for predicate in predicates):
                 raise ValueError("{} cannot contain empty predicates".format(group_name))
+        overlap = sorted(set(self.deletes) & set(self.effects))
+        if overlap:
+            raise ValueError(
+                "predicates cannot be both asserted and retracted: {}".format(overlap)
+            )
+        invariant_overlap = sorted(set(self.deletes) & set(self.invariants))
+        if invariant_overlap:
+            raise ValueError(
+                "a skill cannot retract its own invariants: {}".format(invariant_overlap)
+            )
 
     def bind(self, arguments: Mapping[str, Any]) -> BoundContract:
         values = dict(arguments)
@@ -178,6 +233,7 @@ class SkillContract:
             invariants=ground(self.invariants),
             verification=ground(self.verification),
             failure_modes=self.failure_modes,
+            deletes=ground(self.deletes),
         )
 
 
@@ -332,25 +388,44 @@ class AtomicSkill(Skill):
 
     def __init__(
         self,
-        skill_type: SkillType,
+        skill_type: Union[SkillType, str],
         task: str,
         target: str,
         contract: SkillContract,
         env_id: str,
         max_episode_steps: int,
         description: str = "",
+        target_parameter: Optional[str] = None,
     ) -> None:
         if not target:
             raise ValueError("atomic skill target must be non-empty")
+        skill_type = _normalise_skill_type(skill_type)
+        skill_type_name = (
+            skill_type.value if isinstance(skill_type, SkillType) else skill_type
+        )
+        if target_parameter is None:
+            target_parameter = _TARGET_PARAMETER.get(skill_type)
+        if not target_parameter or not target_parameter.isidentifier():
+            raise ValueError(
+                "atomic skill target_parameter must be a non-empty identifier"
+            )
+        parameter_names = {parameter.name for parameter in contract.parameters}
+        if target_parameter not in parameter_names:
+            raise ValueError(
+                "target parameter {!r} is not declared by the contract".format(
+                    target_parameter
+                )
+            )
         if max_episode_steps <= 0:
             raise ValueError("max_episode_steps must be positive")
         super().__init__(
-            name="{}.{}".format(skill_type.value, target),
+            name="{}.{}".format(skill_type_name, target),
             task=task,
             contract=contract,
             description=description,
         )
         self.skill_type = skill_type
+        self.target_parameter = target_parameter
         self.target = target
         self.env_id = env_id
         self.max_episode_steps = max_episode_steps
@@ -377,11 +452,14 @@ class AtomicSkill(Skill):
                         self.id, key, sorted(self._backends)
                     )
                 ) from exc
-        ready = [
-            backend
-            for backend in self._backends.values()
-            if backend.status == ArtifactStatus.READY
-        ]
+        ready = sorted(
+            (
+                backend
+                for backend in self._backends.values()
+                if backend.status == ArtifactStatus.READY
+            ),
+            key=lambda item: item.key,
+        )
         if not ready:
             raise RuntimeError("skill {} has no ready backend".format(self.id))
         return ready[0]
@@ -397,16 +475,15 @@ class AtomicSkill(Skill):
         self, arguments: Mapping[str, Any], backend_key: Optional[str] = None
     ) -> SkillInvocation:
         values = dict(arguments)
-        target_parameter = _TARGET_PARAMETER[self.skill_type]
         if self.target != "all":
-            supplied = values.get(target_parameter)
+            supplied = values.get(self.target_parameter)
             if supplied is not None and supplied != self.target:
                 raise ValueError(
                     "skill {} is specialized for {!r}, not {!r}".format(
                         self.id, self.target, supplied
                     )
                 )
-            values[target_parameter] = self.target
+            values[self.target_parameter] = self.target
         if backend_key is not None:
             self.backend(backend_key)
         return super().bind(values, backend_key=backend_key)
@@ -417,8 +494,9 @@ class AtomicSkill(Skill):
             "name": self.name,
             "kind": "atomic",
             "task": self.task,
-            "skill_type": self.skill_type.value,
+            "skill_type": self.skill_type_name,
             "target": self.target,
+            "target_parameter": self.target_parameter,
             "description": self.description,
             "contract": _contract_dict(self.contract),
             "execution": {
@@ -432,6 +510,14 @@ class AtomicSkill(Skill):
             "ready": self.ready,
         }
 
+    @property
+    def skill_type_name(self) -> str:
+        return (
+            self.skill_type.value
+            if isinstance(self.skill_type, SkillType)
+            else self.skill_type
+        )
+
 
 _TARGET_PARAMETER = {
     SkillType.NAVIGATE: "goal",
@@ -440,6 +526,22 @@ _TARGET_PARAMETER = {
     SkillType.OPEN: "articulation",
     SkillType.CLOSE: "articulation",
 }
+
+
+def _normalise_skill_type(skill_type: Union[SkillType, str]) -> Union[SkillType, str]:
+    if isinstance(skill_type, SkillType):
+        return skill_type
+    if not isinstance(skill_type, str) or not skill_type.strip():
+        raise ValueError("skill_type must be a SkillType or non-empty string")
+    value = skill_type.strip().lower()
+    try:
+        return SkillType(value)
+    except ValueError:
+        if not value.replace("_", "").isalnum():
+            raise ValueError(
+                "custom skill_type must contain only letters, numbers, or underscores"
+            )
+        return value
 
 
 class NavigateSkill(AtomicSkill):
@@ -474,6 +576,7 @@ class PickSkill(AtomicSkill):
                 invariants=("collision_safe()",),
                 verification=("holding({object})",),
                 failure_modes=("grasp_failed", "object_dropped", "force_limit"),
+                deletes=("gripper_empty()",),
             ),
             env_id="PickSubtaskTrain-v0",
             max_episode_steps=200,
@@ -497,6 +600,7 @@ class PlaceSkill(AtomicSkill):
                 invariants=("collision_safe()",),
                 verification=("at({object},{destination})",),
                 failure_modes=("placement_failed", "object_dropped", "force_limit"),
+                deletes=("holding({object})",),
             ),
             env_id="PlaceSubtaskTrain-v0",
             max_episode_steps=200,
@@ -519,6 +623,7 @@ class OpenSkill(AtomicSkill):
                 invariants=("collision_safe()",),
                 verification=("open({articulation})",),
                 failure_modes=("handle_not_grasped", "joint_blocked", "force_limit"),
+                deletes=("closed({articulation})",),
             ),
             env_id="OpenSubtaskTrain-v0",
             max_episode_steps=200,
@@ -541,6 +646,7 @@ class CloseSkill(AtomicSkill):
                 invariants=("collision_safe()",),
                 verification=("closed({articulation})",),
                 failure_modes=("handle_not_grasped", "joint_blocked", "force_limit"),
+                deletes=("open({articulation})",),
             ),
             env_id="CloseSubtaskTrain-v0",
             max_episode_steps=200,
@@ -564,6 +670,7 @@ def _contract_dict(contract: SkillContract) -> Dict[str, Any]:
         "invariants": list(contract.invariants),
         "verification": list(contract.verification),
         "failure_modes": list(contract.failure_modes),
+        "deletes": list(contract.deletes),
     }
 
 

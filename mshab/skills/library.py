@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional, Union
 
 from mshab.skills.model import (
     ATOMIC_SKILL_CLASSES,
@@ -41,7 +41,7 @@ class SkillLibrary:
     def find(
         self,
         task: Optional[str] = None,
-        skill_type: Optional[SkillType] = None,
+        skill_type: Optional[Union[SkillType, str]] = None,
         target: Optional[str] = None,
         ready: Optional[bool] = None,
     ) -> List[Skill]:
@@ -51,10 +51,17 @@ class SkillLibrary:
                 continue
             if ready is not None and skill.ready != ready:
                 continue
-            if skill_type is not None and (
-                not isinstance(skill, AtomicSkill) or skill.skill_type != skill_type
-            ):
-                continue
+            if skill_type is not None:
+                requested_type = (
+                    skill_type.value
+                    if isinstance(skill_type, SkillType)
+                    else str(skill_type)
+                )
+                if (
+                    not isinstance(skill, AtomicSkill)
+                    or skill.skill_type_name != requested_type
+                ):
+                    continue
             if target is not None and (
                 not isinstance(skill, AtomicSkill) or skill.target != target
             ):

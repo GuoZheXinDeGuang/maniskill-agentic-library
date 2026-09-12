@@ -16,10 +16,15 @@ Official repository for the ManiSkill-HAB project by
 
 ## Skill Library (experimental)
 
-This fork includes an object-oriented skill library for managing atomic
-Navigate/Pick/Place/Open/Close contracts, learned checkpoint backends, and
-task-conditioned goal and skill-composition graphs with explicit skill-skill
-relations.
+This fork includes a four-layer object-oriented skill library. Every Layer-1
+functional goal owns one Layer-2 `GoalSkillSubgraph`; typed relations connect
+nodes inside and across these subgraphs. These first two layers are
+scene-independent. Executable contracts and atomic policy/controller backends
+communicate with MS-HAB through an explicit environment entity/fact/snapshot
+adapter. A complete manual SetTable graph and interfaces for custom skills and
+future skill-insertion patches are included. The initial graph is manual; a
+future insertion VLM will place new skills, while a separately trained
+graph-conditioned VLM will select one next skill per decision.
 
 <p align="center">
   <img src="./docs/static/images/skill_library_architecture.svg"
@@ -27,7 +32,10 @@ relations.
 </p>
 
 See the [skill-library guide](./mshab/skills/README.md) for installation,
-checkpoint download commands, API examples, and the standalone smoke test.
+checkpoint download commands, API examples, and the tests under `tests/`.
+The first complete manual SetTable graph is available as
+[JSON](./mshab/skills/catalogs/set_table.json) and as a
+[four-layer SVG diagram](./docs/static/images/set_table_skill_graph.svg).
 
 ## Updates
 

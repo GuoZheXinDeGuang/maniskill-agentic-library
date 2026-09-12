@@ -39,41 +39,47 @@
 
   <!-- Layer 2 -->
   <rect class="box" x="20" y="230" width="1160" height="245" fill="#eaf9ec" stroke="#52a565"/>
-  <text class="title" x="600" y="263" text-anchor="middle">2. Candidate Skill Composition Graph</text>
+  <text class="title" x="600" y="263" text-anchor="middle">2. Goal-owned Candidate Skill Subgraphs</text>
 
-  <rect class="node" x="90" y="292" width="165" height="46" fill="#dff4df" stroke="#399447"/>
-  <text class="text" x="172" y="321" text-anchor="middle">Retrieve(soup)</text>
-  <path class="edge" d="M172 338 V365 H115 V385"/>
-  <path class="edge" d="M172 365 H235 V385"/>
-  <text class="small" x="181" y="360">OR</text>
-  <rect x="45" y="385" width="145" height="43" rx="7" fill="#ddeaff" stroke="#5684ce" stroke-width="1.5"/>
-  <text class="small" x="117" y="412" text-anchor="middle">PickFromShelf</text>
-  <rect x="205" y="385" width="155" height="43" rx="7" fill="#ddeaff" stroke="#5684ce" stroke-width="1.5"/>
-  <text class="small" x="282" y="412" text-anchor="middle">PickFromCabinet</text>
+  <rect x="45" y="280" width="340" height="165" rx="10" fill="#f8fff9" stroke="#399447" stroke-width="2"/>
+  <text class="label" x="215" y="307" text-anchor="middle">GoalSkillSubgraph: retrieved</text>
+  <rect x="65" y="330" width="140" height="43" rx="7" fill="#ddeaff" stroke="#5684ce" stroke-width="1.5"/>
+  <text class="small" x="135" y="357" text-anchor="middle">PickFromShelf</text>
+  <rect x="225" y="330" width="140" height="43" rx="7" fill="#ddeaff" stroke="#5684ce" stroke-width="1.5"/>
+  <text class="small" x="295" y="357" text-anchor="middle">PickFromCabinet</text>
+  <path d="M135 373 H295" fill="none" stroke="#7c3aed" stroke-width="2" stroke-dasharray="5 4"/>
+  <text class="tiny" x="215" y="397" text-anchor="middle">ALTERNATIVE_TO / FALLBACK_TO</text>
+  <text class="small" x="215" y="425" text-anchor="middle">achievers → retrieved(soup)</text>
 
-  <rect class="node" x="465" y="292" width="160" height="46" fill="#fff1ba" stroke="#d49b12"/>
-  <text class="text" x="545" y="321" text-anchor="middle">Heat(soup)</text>
-  <path class="edge" d="M545 338 V365 H490 V385"/>
-  <path class="edge" d="M545 365 H605 V385"/>
-  <text class="small" x="554" y="360">OR</text>
-  <rect x="420" y="385" width="140" height="43" rx="7" fill="#ddeaff" stroke="#5684ce" stroke-width="1.5"/>
-  <text class="small" x="490" y="412" text-anchor="middle">MicrowaveHeat</text>
-  <rect x="575" y="385" width="125" height="43" rx="7" fill="#ddeaff" stroke="#5684ce" stroke-width="1.5"/>
-  <text class="small" x="637" y="412" text-anchor="middle">StoveHeat</text>
+  <rect x="430" y="280" width="340" height="165" rx="10" fill="#f8fff9" stroke="#399447" stroke-width="2"/>
+  <text class="label" x="600" y="307" text-anchor="middle">GoalSkillSubgraph: heated</text>
+  <rect x="450" y="330" width="140" height="43" rx="7" fill="#ddeaff" stroke="#5684ce" stroke-width="1.5"/>
+  <text class="small" x="520" y="357" text-anchor="middle">MicrowaveHeat</text>
+  <rect x="610" y="330" width="140" height="43" rx="7" fill="#ddeaff" stroke="#5684ce" stroke-width="1.5"/>
+  <text class="small" x="680" y="357" text-anchor="middle">StoveHeat</text>
+  <path d="M520 373 H680" fill="none" stroke="#7c3aed" stroke-width="2" stroke-dasharray="5 4"/>
+  <text class="tiny" x="600" y="397" text-anchor="middle">ALTERNATIVE_TO / FALLBACK_TO</text>
+  <text class="small" x="600" y="425" text-anchor="middle">achievers → heated(soup)</text>
 
-  <rect x="755" y="283" width="380" height="165" rx="10" fill="#ffffff" stroke="#9ca3af" stroke-dasharray="6 5"/>
-  <text class="label" x="775" y="310">Skill–Skill Relations</text>
-  <line x1="780" y1="333" x2="830" y2="333" stroke="#3478c5" stroke-width="3" marker-end="url(#arrow)"/>
-  <text class="small" x="845" y="338">IS_A</text>
-  <line x1="780" y1="360" x2="830" y2="360" stroke="#2ea44f" stroke-width="3" marker-end="url(#arrow)"/>
-  <text class="small" x="845" y="365">ENABLES</text>
-  <line x1="780" y1="387" x2="830" y2="387" stroke="#d92d20" stroke-width="3" marker-end="url(#arrow)"/>
-  <text class="small" x="845" y="392">REQUIRES</text>
-  <line x1="780" y1="414" x2="830" y2="414" stroke="#7c3aed" stroke-width="3" marker-end="url(#arrow)"/>
-  <text class="small" x="845" y="419">ALTERNATIVE_TO / FALLBACK_TO</text>
+  <rect x="815" y="280" width="340" height="165" rx="10" fill="#f8fff9" stroke="#399447" stroke-width="2"/>
+  <text class="label" x="985" y="307" text-anchor="middle">GoalSkillSubgraph: served_at</text>
+  <rect x="835" y="330" width="140" height="43" rx="7" fill="#ddeaff" stroke="#5684ce" stroke-width="1.5"/>
+  <text class="small" x="905" y="357" text-anchor="middle">NavigateToTable</text>
+  <rect x="995" y="330" width="140" height="43" rx="7" fill="#ddeaff" stroke="#5684ce" stroke-width="1.5"/>
+  <text class="small" x="1065" y="357" text-anchor="middle">ServeAtTable</text>
+  <path class="edge" d="M975 351 H989"/>
+  <text class="tiny" x="985" y="397" text-anchor="middle">internal ENABLES relation</text>
+  <text class="small" x="985" y="425" text-anchor="middle">achiever → served_at(soup, table)</text>
+
+  <path class="edge" d="M385 362 H424"/>
+  <path class="edge" d="M770 362 H809"/>
+  <text class="tiny" x="407" y="350" text-anchor="middle">cross</text>
+  <text class="tiny" x="792" y="350" text-anchor="middle">cross</text>
+  <text class="tiny" x="48" y="462">INITIAL GRAPH: MANUAL</text>
+  <text class="tiny" x="1152" y="462" text-anchor="end">NEW SKILL: INSERTION VLM PROPOSES ITS PLACEMENT</text>
 
   <path class="edge" d="M600 475 V510"/>
-  <text class="label" x="620" y="500">REALIZED_AS</text>
+  <text class="small" x="620" y="497">FUTURE DECISION VLM: GRAPH + STATE → ONE NEXT SKILL</text>
 
   <!-- Layer 3 -->
   <rect class="box" x="20" y="515" width="1160" height="285" fill="#fff9df" stroke="#e0a928"/>

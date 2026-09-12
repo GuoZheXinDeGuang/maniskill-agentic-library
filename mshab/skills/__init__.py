@@ -1,14 +1,30 @@
 """Public API for the MS-HAB skill-library object model."""
 
+from mshab.skills import schema
+from mshab.skills.catalog import CATALOG_SCHEMA_VERSION, SkillCatalog
 from mshab.skills.library import SkillLibrary
+from mshab.skills.environment import (
+    EnvironmentAdapter,
+    EnvironmentDescription,
+    EnvironmentEntity,
+    EnvironmentSnapshot,
+    MSHabEnvironmentAdapter,
+)
+from mshab.skills.extension import (
+    GoalSkillSubgraphExtension,
+    SkillGraphBuilder,
+    SkillGraphPatch,
+)
 from mshab.skills.graph import (
     FunctionalGoal,
     FunctionalGoalGraph,
     GoalDependency,
+    GoalSkillSubgraph,
     SkillCompositionGraph,
     SkillEdge,
     SkillNode,
     SkillRelation,
+    SkillSubgraphRelation,
 )
 from mshab.skills.model import (
     ArtifactStatus,
@@ -29,25 +45,63 @@ from mshab.skills.model import (
     SkillParameter,
     SkillType,
 )
+from mshab.skills.plan import (
+    NoViableCandidate,
+    SkillPlan,
+    SkillPlanner,
+)
+from mshab.skills.runtime import (
+    BackendExecution,
+    BackendExecutor,
+    ContractViolation,
+    SkillExecutionResult,
+    SkillGrounder,
+    SkillRuntime,
+)
+from mshab.skills.starter import (
+    SetTableAppleGraphBuilder,
+    SetTableGraphBuilder,
+    StarterSkillStack,
+    build_set_table_apple_graph,
+    build_set_table_graph,
+    build_set_table_library,
+    build_set_table_starter,
+    build_set_table_stack,
+)
+from mshab.skills.schema import SchemaError
+from mshab.skills.your_skill import YourSkill
 
 __all__ = [
     "ArtifactStatus",
     "AtomicSkill",
     "BoundContract",
+    "BackendExecution",
+    "BackendExecutor",
     "CheckpointBackend",
     "CloseSkill",
     "ExecutionBackend",
     "ExecutorType",
+    "EnvironmentAdapter",
+    "EnvironmentDescription",
+    "EnvironmentEntity",
+    "EnvironmentSnapshot",
     "FunctionalGoal",
     "FunctionalGoalGraph",
     "GoalDependency",
+    "GoalSkillSubgraph",
+    "MSHabEnvironmentAdapter",
     "NavigateSkill",
     "OpenSkill",
     "ParameterType",
     "PickSkill",
     "PlaceSkill",
     "Skill",
+    "SkillExecutionResult",
+    "SkillGraphBuilder",
+    "SkillGraphPatch",
+    "SkillGrounder",
     "SkillCompositionGraph",
+    "SkillCatalog",
     "SkillContract",
     "SkillEdge",
     "SkillInvocation",
@@ -55,5 +109,24 @@ __all__ = [
     "SkillNode",
     "SkillParameter",
     "SkillRelation",
+    "SkillSubgraphRelation",
+    "SkillRuntime",
+    "schema",
+    "SchemaError",
+    "SkillPlanner",
+    "SkillPlan",
+    "NoViableCandidate",
+    "GoalSkillSubgraphExtension",
     "SkillType",
+    "ContractViolation",
+    "CATALOG_SCHEMA_VERSION",
+    "SetTableAppleGraphBuilder",
+    "SetTableGraphBuilder",
+    "StarterSkillStack",
+    "YourSkill",
+    "build_set_table_apple_graph",
+    "build_set_table_graph",
+    "build_set_table_library",
+    "build_set_table_starter",
+    "build_set_table_stack",
 ]
