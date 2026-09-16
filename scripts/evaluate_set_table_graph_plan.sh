@@ -24,7 +24,11 @@ if [[ ! "$RUN_NAME" =~ ^[a-zA-Z0-9_-]+$ ]]; then
     exit 2
 fi
 
-export MS_ASSET_DIR="${MS_ASSET_DIR:-$WORKSPACE_ROOT/sims/mshab-assets}"
+# Docker sets MS_ASSET_DIR=/root/.maniskill; the fallback is ManiSkill's own default.
+export MS_ASSET_DIR="${MS_ASSET_DIR:-$HOME/.maniskill}"
+# Evaluation outputs (videos, tensorboard). Docker points this inside the
+# bind-mounted repo so results land in ./mshab_exps on the host.
+MSHAB_EXPS_DIR="${MSHAB_EXPS_DIR:-$WORKSPACE_ROOT/mshab_exps}"
 export MPLCONFIGDIR="${MPLCONFIGDIR:-/tmp/mshab-matplotlib}"
 mkdir -p "$MPLCONFIGDIR"
 
@@ -62,7 +66,7 @@ fi
 
 POLICY_TYPE="${POLICY_TYPE:-$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["selection"]["recommended_policy_type"])' "$CHAIN_PLAN")}"
 MAX_EPISODE_STEPS="${MAX_EPISODE_STEPS:-$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["selection"]["estimated_max_episode_steps"])' "$CHAIN_PLAN")}"
-VIDEO_DIR="$WORKSPACE_ROOT/mshab_exps/set_table-graph-plan/$RUN_NAME/eval_videos"
+VIDEO_DIR="$MSHAB_EXPS_DIR/set_table-graph-plan/$RUN_NAME/eval_videos"
 
 cd "$MSHAB_ROOT"
 SAPIEN_NO_DISPLAY=1 python -m mshab.evaluate configs/evaluate.yml \
@@ -85,7 +89,7 @@ SAPIEN_NO_DISPLAY=1 python -m mshab.evaluate configs/evaluate.yml \
     eval_env.extra_stat_keys='<list>success, fail, subtask, subtask_type, subtasks_steps_left, robot_force, robot_cumulative_force</list>' \
     eval_env.env_kwargs.invisible_goals_in_human_render="$INVISIBLE_GOALS" \
     eval_env.env_kwargs.task_cfgs.navigate.ignore_arm_checkers=True \
-    logger.workspace="$WORKSPACE_ROOT/mshab_exps" \
+    logger.workspace="$MSHAB_EXPS_DIR" \
     logger.exp_name="set_table-graph-plan/$RUN_NAME" \
     logger.clear_out=False \
     logger.tensorboard=True \

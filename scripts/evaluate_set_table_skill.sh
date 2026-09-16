@@ -49,7 +49,11 @@ case "$SUBTASK" in
         ;;
 esac
 
-export MS_ASSET_DIR="${MS_ASSET_DIR:-$WORKSPACE_ROOT/sims/mshab-assets}"
+# Docker sets MS_ASSET_DIR=/root/.maniskill; the fallback is ManiSkill's own default.
+export MS_ASSET_DIR="${MS_ASSET_DIR:-$HOME/.maniskill}"
+# Evaluation outputs (videos, tensorboard). Docker points this inside the
+# bind-mounted repo so results land in ./mshab_exps on the host.
+MSHAB_EXPS_DIR="${MSHAB_EXPS_DIR:-$WORKSPACE_ROOT/mshab_exps}"
 export MPLCONFIGDIR="${MPLCONFIGDIR:-/tmp/mshab-matplotlib}"
 mkdir -p "$MPLCONFIGDIR"
 
@@ -88,7 +92,7 @@ SAPIEN_NO_DISPLAY=1 python -m mshab.evaluate configs/evaluate.yml \
     eval_env.info_on_video="$INFO_ON_VIDEO" \
     eval_env.save_video_freq=1 \
     eval_env.extra_stat_keys="$EXTRA_STAT_KEYS" \
-    logger.workspace="$WORKSPACE_ROOT/mshab_exps" \
+    logger.workspace="$MSHAB_EXPS_DIR" \
     logger.exp_name="set_table_single_skill/$SUBTASK/$OBJ" \
     logger.clear_out=False \
     logger.tensorboard=True \

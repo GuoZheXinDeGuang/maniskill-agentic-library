@@ -116,6 +116,7 @@ is runtime inventory state and is deliberately excluded from the canonical
 catalog.
 
 ```bash
+# Layers 1-2 are stdlib-only: any local Python 3.9+, or inside the container.
 python scripts/generate_set_table_skill_graph.py
 ```
 
@@ -127,7 +128,7 @@ from pathlib import Path
 from mshab.skills import build_set_table_stack
 
 set_table = build_set_table_stack(
-    Path("../mshab-assets/data/mshab_checkpoints")
+    Path("/root/.maniskill/data/mshab_checkpoints")
 )
 ```
 
@@ -138,60 +139,64 @@ script then copies only scene-specific grounding (object instance ids,
 articulations, poses, and build/init configs) from one official MS-HAB
 `PlanData`; it does not use the official sequence as the planner.
 
-First inspect the 16 graph decisions without launching the simulator:
+Every command below runs in the container. `docker compose run` starts in
+`/work/mshab` (the bind-mounted repository) with `MS_ASSET_DIR`,
+`MSHAB_EXPS_DIR` and the checkpoint mount already set, so nothing needs to be
+exported first. See [Installation](#installation).
+
+Inspect the 16 graph decisions without loading CUDA or starting the simulator:
 
 ```bash
-export MS_ASSET_DIR="$(cd .. && pwd)/mshab-assets"
-
-python scripts/build_set_table_graph_plan.py \
-  "$MS_ASSET_DIR/data/scene_datasets/replica_cad_dataset/rearrange/task_plans/set_table/sequential/train/all.json" \
-  /tmp/set_table_graph_nominal.json \
-  --execution-plan nominal \
-  --source-plan-index 0
+docker compose run --rm -e DRY_RUN=True mshab \
+  ./scripts/evaluate_set_table_graph_plan.sh nominal
 ```
 
 Run that graph-selected plan with the downloaded per-object policies and save
 one annotated video:
 
 ```bash
-./scripts/evaluate_set_table_graph_plan.sh nominal
+docker compose run --rm mshab \
+  ./scripts/evaluate_set_table_graph_plan.sh nominal
 ```
 
-Use `DRY_RUN=True` to build and inspect the grounded plan without loading CUDA
-or running the simulator:
-
-```bash
-DRY_RUN=True ./scripts/evaluate_set_table_graph_plan.sh nominal
-```
-
-The video is written under:
+Videos and tensorboard logs go to `MSHAB_EXPS_DIR`, which `docker-compose.yml`
+points inside the bind-mounted repository, so on the host they appear under:
 
 ```text
-../../mshab_exps/set_table-graph-plan/nominal_plan0_seed0/eval_videos/*.mp4
+./mshab_exps/set_table-graph-plan/nominal_plan0_seed0/eval_videos/*.mp4
 ```
+
+`mshab_exps/` is gitignored. The container runs as root, so everything written
+there is root-owned on the host; `sudo chown -R "$(id -u):$(id -g)" mshab_exps`
+if that gets in the way.
 
 Run the graph's all-primary-failed fallback plan with the generic pick/place
 policies:
 
 ```bash
-./scripts/evaluate_set_table_graph_plan.sh recovery_all_primaries_failed
+docker compose run --rm mshab \
+  ./scripts/evaluate_set_table_graph_plan.sh recovery_all_primaries_failed
 ```
 
 This first-stage runner executes a path already selected from the graph. It
 does not yet observe a policy failure mid-episode and call the planner again;
 that online `execute -> observe -> re-decide` loop is the next environment
-integration milestone.
+integration milestone. A 16-step episode can therefore end on the first subtask
+whose policy fails; `subtask_fail_counts.json` in the run directory records
+which index that was.
 
-Useful overrides are ordinary environment variables:
+Useful overrides are ordinary environment variables, passed with `-e`:
 
 ```bash
-PLAN_INDEX=3 SEED=7 INFO_ON_VIDEO=True RUN_NAME=my_settable_run \
-  ./scripts/evaluate_set_table_graph_plan.sh nominal
+docker compose run --rm \
+  -e PLAN_INDEX=3 -e SEED=7 -e INFO_ON_VIDEO=True -e RUN_NAME=my_settable_run \
+  mshab ./scripts/evaluate_set_table_graph_plan.sh nominal
 ```
 
-The runner requires a CUDA-visible MS-HAB installation, ReplicaCAD SetTable
-assets, and the RL checkpoints. It prints the exact output video directory when
-evaluation finishes.
+The runner requires a GPU-enabled container, the ReplicaCAD SetTable assets in
+the `mshab-assets` volume, and the RL checkpoints mounted at
+`$MS_ASSET_DIR/data/mshab_checkpoints`. It prints the exact output video
+directory when evaluation finishes.
 
 ## Smaller apple starter stack
 
@@ -205,7 +210,7 @@ from pathlib import Path
 from mshab.skills import build_set_table_starter
 
 stack = build_set_table_starter(
-    Path("../mshab-assets/data/mshab_checkpoints")
+    Path("/root/.maniskill/data/mshab_checkpoints")
 )
 
 # Layer 1
@@ -779,7 +784,7 @@ from pathlib import Path
 
 from mshab.skills import SkillLibrary, SkillType
 
-asset_root = Path(os.environ.get("MS_ASSET_DIR", "../mshab-assets"))
+asset_root = Path(os.environ.get("MS_ASSET_DIR", "/root/.maniskill"))
 library = SkillLibrary.from_checkpoint_root(
     asset_root / "data" / "mshab_checkpoints"
 )
@@ -799,54 +804,107 @@ Upper layers query by semantic id and do not hard-code checkpoint paths.
 
 ## Installation
 
+Docker is the supported path. The image pins CUDA 12.1, PyTorch 2.5.1,
+ManiSkill 3.0.0b18 (`mshab` branch) and SAPIEN 3.0.0b1 -- the combination
+MS-HAB's GPU backend needs. A host-native install is not maintained here.
+
+The host needs an NVIDIA GPU with a recent driver, Docker, and the
+[NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
+
 ```bash
-git clone https://github.com/GuoZheXinDeGuang/maniskill-agentic-library.git \
-  maniskill-hab
-cd maniskill-hab
+git clone https://github.com/GuoZheXinDeGuang/maniskill-agentic-library.git
+cd maniskill-agentic-library
 
-conda create -n mshab python=3.9 -y
-conda activate mshab
-
-git clone https://github.com/haosulab/ManiSkill.git \
-  -b mshab --single-branch ../ManiSkill-mshab
-pip install -e ../ManiSkill-mshab
-pip install -e .
-pip install -U "huggingface_hub[cli]"
+docker compose build    # ~27GB image; ManiSkill is cloned and installed inside
 ```
 
-Layer-1/2 graph construction and CPU-only tests use the Python standard
-library. Full simulation needs the dependencies and assets in the main
-[README](../../README.md#setup-and-installation).
+Download the simulation assets once. They land in the `mshab-assets` Docker
+volume, so they survive container restarts and image rebuilds:
+
+```bash
+# ycb + ReplicaCAD + ReplicaCADRearrange, ~4.4GB
+docker compose run --rm mshab mshab-download-assets
+```
+
+Policy checkpoints are a separate step -- see
+[Download checkpoints](#download-checkpoints).
+
+Then open a shell:
+
+```bash
+docker compose run --rm mshab
+```
+
+The repository is bind-mounted at `/work/mshab`, so host edits take effect
+immediately and code changes never need a rebuild. These are preset:
+
+| Variable | Value | Meaning |
+| --- | --- | --- |
+| `MS_ASSET_DIR` | `/root/.maniskill` | assets volume; `mshab.evaluate` reads policies from `$MS_ASSET_DIR/data/mshab_checkpoints` |
+| `MSHAB_EXPS_DIR` | `/work/mshab/mshab_exps` | evaluation outputs, visible on the host as `./mshab_exps` |
+| `SAPIEN_NO_DISPLAY` | `1` | offscreen rendering |
+
+`docker compose` warns that the `mshab-assets` volume "was not created by
+Docker Compose". That is expected: the volume name is pinned in
+`docker-compose.yml` so the same volume is reused regardless of what the
+project directory is called.
+
+Layers 1 and 2 are scene-independent and import nothing outside the Python
+standard library, so the graph builders and everything under `tests/` also run
+with any local Python 3.9+ without installing MS-HAB or Docker.
 
 ## Download checkpoints
 
+The policies are neither in the image nor in the assets volume. They go to a
+host directory that `docker-compose.yml` bind-mounts read-only at
+`$MS_ASSET_DIR/data/mshab_checkpoints`. Its default is
+`/data/mshab/mshab_checkpoints`; override it with `MSHAB_CKPT_DIR`.
+
 ```bash
-export MS_ASSET_DIR="$(cd .. && pwd)/mshab-assets"
-mkdir -p "$MS_ASSET_DIR/data/mshab_checkpoints"
+mkdir -p /data/mshab/mshab_checkpoints
 ```
 
-Download all released checkpoints:
+Download everything -- 16GiB total (`rl` 2.9GB, `bc` 2.3GB, `dp` 12GB). The
+HuggingFace repository is public, so no login is needed. `--user` keeps the
+files owned by you rather than root:
 
 ```bash
-hf download arth-shukla/mshab_checkpoints \
-  --local-dir "$MS_ASSET_DIR/data/mshab_checkpoints"
+docker run --rm --user "$(id -u):$(id -g)" \
+  -e HOME=/tmp -e HF_HOME=/tmp/hf \
+  -v /data/mshab/mshab_checkpoints:/out \
+  --entrypoint hf mshab:latest \
+  download arth-shukla/mshab_checkpoints --local-dir /out
 ```
 
-Or only the 11 SetTable RL policies used by the starter graph:
+Add `--include "rl/set_table/**"` to that command for only the 11 SetTable RL
+policies used by the graph runner (~630MB).
 
-```bash
-hf download arth-shukla/mshab_checkpoints \
-  --include "rl/set_table/**" \
-  --local-dir "$MS_ASSET_DIR/data/mshab_checkpoints"
+`mshab.evaluate` loads *every* policy registered for the task and policy family
+before the rollout starts, so a partial download within a family is not enough.
+`task=set_table` with `policy_type=rl_*` needs all 11 of:
+
+```text
+rl/set_table/pick/{013_apple, 024_bowl, all}
+rl/set_table/place/{013_apple, 024_bowl, all}
+rl/set_table/navigate/all
+rl/set_table/open/{fridge, kitchen_counter}
+rl/set_table/close/{fridge, kitchen_counter}
 ```
 
 Expected layout:
 
 ```text
-$MS_ASSET_DIR/data/mshab_checkpoints/
+$MSHAB_CKPT_DIR/
 └── <family>/<task>/<skill-type>/<target>/
     ├── config.yml
     └── policy.pt
+```
+
+If the checkpoints live elsewhere, export the override before any
+`docker compose` command:
+
+```bash
+export MSHAB_CKPT_DIR=/my/path/mshab_checkpoints
 ```
 
 ## Tests
@@ -854,19 +912,27 @@ $MS_ASSET_DIR/data/mshab_checkpoints/
 All tests live under `tests/`. Run the complete CPU-only suite:
 
 ```bash
-python -m unittest discover -s tests -p 'test_*.py' -v
+docker compose run --rm mshab python -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
 Run only the manual-graph -> repeated skill-decision test:
 
 ```bash
-python -m unittest tests.test_set_table_graph_decisions -v
+docker compose run --rm mshab python -m unittest tests.test_set_table_graph_decisions -v
 ```
 
 `test_skill_library_checkpoints.py` validates the 11 downloaded SetTable
 policies when the checkpoint directory exists and skips cleanly otherwise.
 Tests inspect checkpoint files but do not load policy tensors or create a GPU
-simulator. Use the existing MS-HAB evaluation scripts for full policy rollouts.
+simulator. Use the evaluation scripts above for full policy rollouts.
+
+The suite has no third-party dependencies, so dropping the `docker compose
+run --rm mshab` prefix also works with any local Python 3.9+.
+
+Two tests in `test_set_table_graph_decisions.py` reach the official SetTable
+task plan through a hard-coded `<repo>/../../mshab-assets/...` path instead of
+`MS_ASSET_DIR`, so they skip inside the container even though the plan is
+present in the assets volume.
 
 ## Current implementation boundary
 
