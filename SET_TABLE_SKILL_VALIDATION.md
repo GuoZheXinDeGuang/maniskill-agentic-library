@@ -1,4 +1,4 @@
-# SetTable single-skill validation
+# SetTable single-policy validation
 
 Environment fixed for the first milestone:
 
@@ -14,7 +14,7 @@ image, downloading assets, and mounting checkpoints. `docker compose run`
 starts in `/work/mshab` with `MS_ASSET_DIR`, `MSHAB_EXPS_DIR` and the
 checkpoint mount already set, so no activation step or `export` is needed.
 
-Run one skill at a time:
+Run one policy (contract type + target) at a time:
 
 ```bash
 docker compose run --rm mshab ./scripts/evaluate_set_table_skill.sh navigate
@@ -67,7 +67,7 @@ gets in the way.
 
 Record one row per run:
 
-| skill | object | episodes | success rate | mean steps | failure states | observation shape | action shape | checkpoint/config | termination condition |
+| contract type | object | episodes | success rate | mean steps | failure states | observation shape | action shape | checkpoint/config | termination condition |
 |---|---|---:|---:|---:|---|---|---|---|---|
 | navigate | all | | | | | | | `rl/set_table/navigate/all` | `success` |
 | open | fridge | | | | | | | `rl/set_table/open/fridge` | `articulation_open` |
@@ -75,7 +75,7 @@ Record one row per run:
 | place | 013_apple | | | | | | | `rl/set_table/place/013_apple` | `obj_at_goal` |
 | close | fridge | | | | | | | `rl/set_table/close/fridge` | `articulation_closed` |
 
-Do not mark a skill validated from video alone. A validated row needs a completed
+Do not mark a policy validated from video alone. A validated row needs a completed
 evaluation run and the environment's programmatic success signal.
 
 ## First composed chain
@@ -99,12 +99,12 @@ docker compose run --rm \
 For a clean video, use `-e INFO_ON_VIDEO=False -e INVISIBLE_GOALS=True`.
 
 The general runner defaults to permissive composition mode
-(`CONTINUOUS_TASK=True`) so later skill handoffs remain observable after a
+(`CONTINUOUS_TASK=True`) so later policy handoffs remain observable after a
 subtask timeout. For strict evaluation, set `CONTINUOUS_TASK=False`; completion
 in permissive mode is not a valid strict task success if an earlier `fail`
 signal occurred.
 
-## General skill-chain runner
+## General skill-chain runner (legacy scripts)
 
 ```bash
 docker compose run --rm mshab ./scripts/evaluate_skill_chain.sh TASK CHAIN_NAME SELECTION
@@ -127,7 +127,7 @@ docker compose run --rm -e PLAN_INDEX=12 \
   mshab ./scripts/evaluate_skill_chain.sh set_table apple_scene_12 8:14
 ```
 
-The generated plan prints every selected skill and grounded target before
+The generated plan prints every selected skill node and grounded target before
 execution. A syntactically valid slice is not necessarily physically valid:
 the user/planner must preserve prerequisites such as Open before picking an
 object from a closed fridge.

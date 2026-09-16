@@ -1,6 +1,6 @@
 """End-to-end Layer-1/2 test: manual graph -> one skill per decision.
 
-:class:`~mshab.skills.plan.SkillPlanner` is a deterministic reference policy,
+:class:`~mshab.skills.plan.SkillPlanner` is a deterministic reference decision model,
 not a VLM.  It specifies the interface of the future trained decision model:
 consume the candidate graph plus completion/failure history, emit one next
 SkillNode.  Repeated decisions form the 16-step SetTable rollout, and the same
@@ -81,11 +81,11 @@ class SetTableGraphDecisionTests(TestCase):
     ) * 2
 
     def setUp(self):
-        self.goals, self.graph = build_set_table_graph()
-        self.planner = SkillPlanner(self.goals, self.graph)
+        self.subgoals, self.graph = build_set_table_graph()
+        self.planner = SkillPlanner(self.subgoals, self.graph)
 
     def test_manual_graph_then_planner_decides_one_skill_at_a_time(self):
-        self.assertEqual(len(self.goals.goals), 8)
+        self.assertEqual(len(self.subgoals.subgoals), 8)
         self.assertEqual(len(self.graph.subgraphs), 8)
         self.assertEqual(len(self.graph.nodes), 20)
 
@@ -95,19 +95,19 @@ class SetTableGraphDecisionTests(TestCase):
         self.assertEqual(tuple(decisions), self.EXPECTED_NODE_SEQUENCE)
         self.assertEqual(
             tuple(
-                self.graph.nodes[node_id].skill_id.split(".")[2]
+                self.graph.nodes[node_id].contract_id.split(".")[2]
                 for node_id in decisions
             ),
             self.EXPECTED_SKILL_TYPES,
         )
-        for goal_id in self.goals.goals:
+        for subgoal_id in self.subgoals.subgoals:
             chosen = [
                 node_id
                 for node_id in decisions
-                if goal_id in self.graph.nodes[node_id].achieves
+                if subgoal_id in self.graph.nodes[node_id].achieves
             ]
             self.assertEqual(
-                len(chosen), 1, "{} must select exactly one achiever".format(goal_id)
+                len(chosen), 1, "{} must select exactly one achiever".format(subgoal_id)
             )
         self.assertNotIn("pick_bowl_generic", decisions)
         self.assertNotIn("place_apple_generic", decisions)
@@ -136,7 +136,7 @@ class SetTableGraphDecisionTests(TestCase):
         payload = [
             {
                 "node_id": node_id,
-                "skill_id": self.graph.nodes[node_id].skill_id,
+                "contract_id": self.graph.nodes[node_id].contract_id,
                 "arguments": dict(self.graph.nodes[node_id].arguments),
             }
             for node_id in _rollout(self.planner)
@@ -151,7 +151,7 @@ class SetTableGraphDecisionTests(TestCase):
         official = json.loads(OFFICIAL_TASK_PLAN.read_text())["plans"][0]["subtasks"]
 
         self.assertEqual(
-            [self.graph.nodes[node_id].skill_id.split(".")[2] for node_id in decisions],
+            [self.graph.nodes[node_id].contract_id.split(".")[2] for node_id in decisions],
             [subtask["type"] for subtask in official],
         )
         self.assertEqual(official[1]["articulation_type"], "kitchen_counter")
@@ -170,19 +170,19 @@ class SetTableGraphDecisionTests(TestCase):
 
         # Recovering through a generic candidate must not change the task shape.
         self.assertEqual(
-            [self.graph.nodes[node_id].skill_id.split(".")[2] for node_id in decisions],
+            [self.graph.nodes[node_id].contract_id.split(".")[2] for node_id in decisions],
             [subtask["type"] for subtask in official],
         )
 
     def test_catalog_plan_is_grounded_into_executable_mshab_plan_data(self):
         catalog = SkillCatalog.from_dict(json.loads(CATALOG.read_text()))
         subtasks = []
-        for index, skill_type in enumerate(self.EXPECTED_SKILL_TYPES):
-            item = {"type": skill_type}
+        for index, contract_type in enumerate(self.EXPECTED_SKILL_TYPES):
+            item = {"type": contract_type}
             bowl = index < 8
-            if skill_type in ("pick", "place"):
+            if contract_type in ("pick", "place"):
                 item["obj_id"] = "024_bowl-3" if bowl else "013_apple-0"
-            if skill_type in ("open", "close"):
+            if contract_type in ("open", "close"):
                 item["articulation_type"] = (
                     "kitchen_counter" if bowl else "fridge"
                 )

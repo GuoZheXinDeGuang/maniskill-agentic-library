@@ -10,8 +10,8 @@ from unittest import SkipTest, TestCase
 from mshab.skills import (
     ArtifactStatus,
     SkillGrounder,
-    SkillLibrary,
-    SkillType,
+    ContractLibrary,
+    ContractType,
     build_set_table_stack,
 )
 
@@ -32,44 +32,44 @@ class DownloadedCheckpointTests(TestCase):
                     CHECKPOINT_ROOT
                 )
             )
-        cls.library = SkillLibrary.from_checkpoint_root(CHECKPOINT_ROOT)
+        cls.library = ContractLibrary.from_checkpoint_root(CHECKPOINT_ROOT)
 
     def test_all_eleven_set_table_skills_are_discovered_and_ready(self):
-        skills = self.library.find(task="set_table")
+        contracts = self.library.find(task="set_table")
 
-        self.assertEqual(len(skills), 11)
-        for skill in skills:
-            self.assertTrue(skill.ready, skill.id)
-            for backend in skill.backends.values():
-                self.assertEqual(backend.status, ArtifactStatus.READY)
+        self.assertEqual(len(contracts), 11)
+        for contract in contracts:
+            self.assertTrue(contract.ready, contract.id)
+            for policy in contract.policies.values():
+                self.assertEqual(policy.status, ArtifactStatus.READY)
         self.assertTrue(json.dumps(self.library.to_dict()))
 
     def test_downloaded_apple_pick_grounds_to_expected_contract(self):
         specialized = self.library.find(
             task="set_table",
-            skill_type=SkillType.PICK,
+            contract_type=ContractType.PICK,
             target="013_apple",
         )[0]
-        invocation = specialized.bind({}, backend_key=specialized.backend().key)
+        invocation = specialized.bind({}, policy_key=specialized.policy().key)
 
         self.assertEqual(invocation.arguments, {"object": "013_apple"})
         self.assertEqual(
-            invocation.contract.preconditions,
+            invocation.terms.preconditions,
             ("reachable(013_apple)", "gripper_empty()"),
         )
         self.assertEqual(
-            invocation.contract.effects,
+            invocation.terms.effects,
             ("holding(013_apple)",),
         )
 
     def test_complete_manual_graph_grounds_all_twenty_nodes(self):
         stack = build_set_table_stack(CHECKPOINT_ROOT)
-        contracts = SkillGrounder(self.library).contracts(stack.skill_graph)
+        bound_terms = SkillGrounder(self.library).bound_terms(stack.skill_graph)
 
-        self.assertEqual(len(stack.goal_graph.goals), 8)
+        self.assertEqual(len(stack.subgoal_graph.subgoals), 8)
         self.assertEqual(len(stack.skill_graph.subgraphs), 8)
         self.assertEqual(len(stack.skill_graph.nodes), 20)
-        self.assertEqual(len(contracts), 20)
+        self.assertEqual(len(bound_terms), 20)
         self.assertEqual(
             contracts["place_apple_specialized"].effects,
             ("at(013_apple,dining_table)", "gripper_empty()"),

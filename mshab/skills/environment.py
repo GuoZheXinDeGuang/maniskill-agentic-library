@@ -1,4 +1,4 @@
-"""Environment boundary for executable skill contracts and atomic skills.
+"""Environment boundary for grounded contracts and the policies that execute them.
 
 Layers 1 and 2 must be usable without importing a simulator.  This module is
 the explicit Layer-3/4 bridge: an adapter converts environment observations
@@ -38,7 +38,7 @@ class EnvironmentDescription:
     environment_id: str
     scene_id: Optional[str] = None
     entities: Mapping[str, EnvironmentEntity] = field(default_factory=dict)
-    compatible_skill_env_ids: Tuple[str, ...] = ()
+    compatible_contract_env_ids: Tuple[str, ...] = ()
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -48,14 +48,14 @@ class EnvironmentDescription:
         if any(key != entity.name for key, entity in entities.items()):
             raise ValueError("environment entity keys must match entity.name")
         object.__setattr__(self, "entities", MappingProxyType(entities))
-        compatible = tuple(dict.fromkeys(self.compatible_skill_env_ids))
+        compatible = tuple(dict.fromkeys(self.compatible_contract_env_ids))
         if self.environment_id not in compatible:
             compatible = (self.environment_id,) + compatible
-        object.__setattr__(self, "compatible_skill_env_ids", compatible)
+        object.__setattr__(self, "compatible_contract_env_ids", compatible)
         object.__setattr__(self, "metadata", MappingProxyType(dict(self.metadata)))
 
-    def supports_skill_env(self, env_id: str) -> bool:
-        return env_id in self.compatible_skill_env_ids
+    def supports_contract_env(self, env_id: str) -> bool:
+        return env_id in self.compatible_contract_env_ids
 
 
 @dataclass(frozen=True)
@@ -85,7 +85,7 @@ class EnvironmentAdapter(ABC):
     1. symbolic entity name -> simulator object/name;
     2. observation/info -> canonical predicate facts;
     3. reset/step -> normalized :class:`EnvironmentSnapshot`;
-    4. skill environment id -> compatibility decision.
+    4. contract environment id -> compatibility decision.
     """
 
     @property
@@ -109,8 +109,8 @@ class EnvironmentAdapter(ABC):
     def step(self, action: Any) -> EnvironmentSnapshot:
         pass
 
-    def supports_skill_env(self, env_id: str) -> bool:
-        return self.description.supports_skill_env(env_id)
+    def supports_contract_env(self, env_id: str) -> bool:
+        return self.description.supports_contract_env(env_id)
 
     def resolve_entity(self, symbolic_name: str) -> EnvironmentEntity:
         try:
@@ -154,7 +154,7 @@ class MSHabEnvironmentAdapter(EnvironmentAdapter):
         scene_id: Optional[str] = None,
         entities: Iterable[EnvironmentEntity] = (),
         entity_extractor: Optional[EntityExtractor] = None,
-        compatible_skill_env_ids: Iterable[str] = (),
+        compatible_contract_env_ids: Iterable[str] = (),
         metadata: Optional[Mapping[str, Any]] = None,
     ) -> None:
         self.env = env
@@ -165,7 +165,7 @@ class MSHabEnvironmentAdapter(EnvironmentAdapter):
             environment_id=environment_id,
             scene_id=scene_id,
             entities=entity_map,
-            compatible_skill_env_ids=tuple(compatible_skill_env_ids),
+            compatible_contract_env_ids=tuple(compatible_contract_env_ids),
             metadata=metadata or {},
         )
         self._snapshot: Optional[EnvironmentSnapshot] = None
@@ -233,7 +233,7 @@ class MSHabEnvironmentAdapter(EnvironmentAdapter):
             environment_id=self._description.environment_id,
             scene_id=self._description.scene_id,
             entities=entities,
-            compatible_skill_env_ids=self._description.compatible_skill_env_ids,
+            compatible_contract_env_ids=self._description.compatible_contract_env_ids,
             metadata=self._description.metadata,
         )
 

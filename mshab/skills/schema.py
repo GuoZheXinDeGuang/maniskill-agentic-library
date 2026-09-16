@@ -9,7 +9,7 @@ hoping.  The rules are deliberately narrow:
 - a payload must be a mapping with no unknown keys;
 - identifiers use a closed character set, so they cannot smuggle path
   separators or predicate punctuation into a graph;
-- skill arguments are scalars only, which keeps ``SkillNode.arguments``
+- skill-node arguments are scalars only, which keeps ``SkillNode.arguments``
   genuinely immutable and keeps grounded predicates well formed.
 """
 
@@ -106,11 +106,11 @@ def optional_identifier(
     return require_identifier(payload, key, where=where)
 
 
-def require_skill_id(payload: Mapping[str, Any], key: str, *, where: str) -> str:
+def require_contract_id(payload: Mapping[str, Any], key: str, *, where: str) -> str:
     value = require_str(payload, key, where=where)
     if not _SKILL_ID.match(value):
         raise SchemaError(
-            "{}.{} {!r} is not a valid skill id".format(where, key, value)
+            "{}.{} {!r} is not a valid contract id".format(where, key, value)
         )
     return value
 
@@ -143,7 +143,7 @@ def require_str_tuple(
 def require_arguments(
     payload: Mapping[str, Any], key: str, *, where: str
 ) -> Dict[str, Any]:
-    """Skill arguments: a flat mapping of identifier -> scalar.
+    """Skill-node arguments: a flat mapping of identifier -> scalar.
 
     Nested containers are rejected.  ``MappingProxyType`` is shallow, so a
     nested list inside a frozen ``SkillNode`` would still be mutable; refusing

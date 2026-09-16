@@ -32,7 +32,7 @@ DEFAULT_CATALOG = REPO_ROOT / "mshab" / "skills" / "catalogs" / "set_table.json"
 
 
 def _semantic_target(
-    node: Any, atomic_record: Mapping[str, Any], skill_type: str
+    node: Any, contract_record: Mapping[str, Any], contract_type: str
 ) -> str:
     argument_name = {
         "pick": "object",
@@ -40,25 +40,25 @@ def _semantic_target(
         "open": "articulation",
         "close": "articulation",
         "navigate": "goal",
-    }[skill_type]
-    return str(node.arguments.get(argument_name, atomic_record["target"]))
+    }[contract_type]
+    return str(node.arguments.get(argument_name, contract_record["target"]))
 
 
 def _validate_grounding(
     index: int,
     node: Any,
-    atomic_record: Mapping[str, Any],
+    contract_record: Mapping[str, Any],
     subtask: Mapping[str, Any],
 ) -> Dict[str, str]:
-    skill_type = str(atomic_record["skill_type"])
-    if subtask.get("type") != skill_type:
+    contract_type = str(contract_record["contract_type"])
+    if subtask.get("type") != contract_type:
         raise ValueError(
             "graph node {} is {!r}, but source subtask {} is {!r}".format(
-                node.id, skill_type, index, subtask.get("type")
+                node.id, contract_type, index, subtask.get("type")
             )
         )
-    target = _semantic_target(node, atomic_record, skill_type)
-    if skill_type in ("pick", "place"):
+    target = _semantic_target(node, contract_record, contract_type)
+    if contract_type in ("pick", "place"):
         grounded = str(subtask.get("obj_id", ""))
         if not grounded.startswith(target + "-"):
             raise ValueError(
@@ -66,7 +66,7 @@ def _validate_grounding(
                     node.id, target, index, grounded
                 )
             )
-    elif skill_type in ("open", "close"):
+    elif contract_type in ("open", "close"):
         grounded = str(subtask.get("articulation_type", ""))
         if grounded != target:
             raise ValueError(
@@ -74,7 +74,7 @@ def _validate_grounding(
                     node.id, target, index, grounded
                 )
             )
-    return {"node_id": node.id, "skill_id": node.skill_id, "target": target}
+    return {"node_id": node.id, "contract_id": node.contract_id, "target": target}
 
 
 def build_plan_data(
@@ -106,21 +106,21 @@ def build_plan_data(
             )
         )
 
-    atomic_by_id = {
-        record["id"]: record for record in catalog.atomic_skills
+    contracts_by_id = {
+        record["id"]: record for record in catalog.contracts
     }
     decisions = []
     uses_all_object_policy = False
     for index, (node_id, subtask) in enumerate(zip(plan.order, subtasks)):
         node = catalog.skill_graph.nodes[node_id]
         try:
-            atomic_record = atomic_by_id[node.skill_id]
+            contract_record = contracts_by_id[node.contract_id]
         except KeyError as exc:
-            raise KeyError("catalog has no atomic record for {}".format(node.skill_id)) from exc
-        decisions.append(_validate_grounding(index, node, atomic_record, subtask))
+            raise KeyError("catalog has no atomic record for {}".format(node.contract_id)) from exc
+        decisions.append(_validate_grounding(index, node, contract_record, subtask))
         uses_all_object_policy |= (
-            atomic_record["skill_type"] in ("pick", "place")
-            and atomic_record["target"] == "all"
+            contract_record["contract_type"] in ("pick", "place")
+            and contract_record["target"] == "all"
         )
 
     recommended_policy = "rl_all_obj" if uses_all_object_policy else "rl_per_obj"
@@ -166,13 +166,13 @@ def main() -> None:
     args.output.write_text(json.dumps(output, indent=2) + "\n")
 
     print("wrote {}".format(args.output))
-    print("graph decision / semantic skill / grounded target")
+    print("graph decision / contract / grounded target")
     for index, decision in enumerate(output["selection"]["skill_decisions"]):
         print(
             "{:>2}  {:<38}  {:<38}  {}".format(
                 index,
                 decision["node_id"],
-                decision["skill_id"],
+                decision["contract_id"],
                 decision["target"],
             )
         )

@@ -1,6 +1,6 @@
 """Selecting one execution path out of the candidate graph.
 
-The Layer-2 graph is a *candidate* structure: a goal subgraph may hold several
+The Layer-2 graph is a *candidate* structure: a sub-goal subgraph may hold several
 achievers, and ``SkillCompositionGraph.execution_order()`` is therefore only a
 partial order over candidates -- never a plan.  Something has to choose.  That
 chooser is a deterministic policy here and a trained decision model later; both
@@ -21,8 +21,8 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional, Set, Tuple
 
 from mshab.skills import schema
 from mshab.skills.graph import (
-    FunctionalGoalGraph,
-    GoalSkillSubgraph,
+    SubGoalGraph,
+    SubGoalSkillSubgraph,
     SkillCompositionGraph,
     SkillNode,
     SkillRelation,
@@ -30,12 +30,12 @@ from mshab.skills.graph import (
 
 
 class NoViableCandidate(RuntimeError):
-    """Every achiever for a functional goal has been exhausted."""
+    """Every achiever for a sub-goal has been exhausted."""
 
 
 @dataclass(frozen=True)
 class SkillPlan:
-    """One resolved execution path: exactly one achiever per functional goal."""
+    """One resolved execution path: exactly one achiever per sub-goal."""
 
     selections: Mapping[str, str]
     order: Tuple[str, ...]
@@ -64,9 +64,9 @@ class SkillPlan:
             payload["selections"], where="{}.selections".format(where)
         )
         selections = {}
-        for goal_id, node_id in raw_selections.items():
-            schema.require_identifier({"goal": goal_id}, "goal", where=where)
-            selections[goal_id] = schema.require_identifier(
+        for subgoal_id, node_id in raw_selections.items():
+            schema.require_identifier({"goal": subgoal_id}, "goal", where=where)
+            selections[subgoal_id] = schema.require_identifier(
                 {"node": node_id}, "node", where=where
             )
         order = schema.require_str_tuple(payload, "order", where=where)
@@ -82,23 +82,23 @@ class SkillPlan:
 
 
 class SkillPlanner:
-    """Deterministic reference policy over a candidate skill-composition graph.
+    """Deterministic reference decision model over a candidate skill-composition graph.
 
     Candidate choice is read from the graph rather than hard-coded: within a
-    goal subgraph the achiever that is the *source* of a ``FALLBACK_TO`` chain
+    sub-goal subgraph the achiever that is the *source* of a ``FALLBACK_TO`` chain
     is the primary, and each ``FALLBACK_TO`` target is the next candidate to try
     once its predecessor is reported failed.
     """
 
     def __init__(
         self,
-        goals: FunctionalGoalGraph,
+        subgoals: SubGoalGraph,
         graph: SkillCompositionGraph,
     ) -> None:
-        if graph.goal_graph is not None and graph.goal_graph is not goals:
-            raise ValueError("graph is bound to a different functional goal graph")
+        if graph.subgoal_graph is not None and graph.subgoal_graph is not subgoals:
+            raise ValueError("graph is bound to a different sub-goal graph")
         graph.validate()
-        self.goals = goals
+        self.subgoals = subgoals
         self.graph = graph
 
     def decide(
@@ -110,20 +110,20 @@ class SkillPlanner:
 
         completed_ids = self._known(completed, "completed")
         failed_ids = self._known(failed, "failed")
-        # ``execution_order()`` on the goal graph is only a deterministic
+        # ``execution_order()`` on the sub-goal graph is only a deterministic
         # iteration order.  Layer 2 may impose additional cross-subgraph
         # requirements, so a node is selectable only when the composition
         # graph says that all of its (possibly disjunctive) prerequisite
         # groups are satisfied.  Without this gate a valid relation such as
-        # ``goal_b ENABLES goal_a`` was ignored whenever Layer 1 left the two
-        # goals unordered.
+        # ``subgoal_b ENABLES subgoal_a`` was ignored whenever Layer 1 left the two
+        # subgoals unordered.
         ready_ids = {
             node.id for node in self.graph.ready_nodes(completed=completed_ids)
         }
-        for goal_id in self.goals.execution_order():
-            if goal_id not in self.graph.subgraphs:
+        for subgoal_id in self.subgoals.execution_order():
+            if subgoal_id not in self.graph.subgraphs:
                 continue
-            subgraph = self.graph.subgraph_for_goal(goal_id)
+            subgraph = self.graph.subgraph_for_subgoal(subgoal_id)
             selected = self.select_achiever(subgraph, failed_ids)
             wanted = self._causal_closure(subgraph, selected.id)
             for node_id in subgraph.execution_order():
@@ -153,25 +153,25 @@ class SkillPlanner:
                 break
             completed.append(node.id)
         selections = {}
-        for goal_id in self.graph.subgraphs:
+        for subgoal_id in self.graph.subgraphs:
             chosen = [
                 node_id
                 for node_id in completed
-                if goal_id in self.graph.nodes[node_id].achieves
+                if subgoal_id in self.graph.nodes[node_id].achieves
             ]
             if len(chosen) != 1:
                 raise NoViableCandidate(
-                    "goal {!r} selected {} achievers".format(goal_id, len(chosen))
+                    "sub-goal {!r} selected {} achievers".format(subgoal_id, len(chosen))
                 )
-            selections[goal_id] = chosen[0]
+            selections[subgoal_id] = chosen[0]
         return SkillPlan(selections=selections, order=tuple(completed))
 
     def select_achiever(
         self,
-        subgraph: GoalSkillSubgraph,
+        subgraph: SubGoalSkillSubgraph,
         failed: Iterable[str] = (),
     ) -> SkillNode:
-        """The first achiever in this goal's fallback chain that has not failed."""
+        """The first achiever in this sub-goal's fallback chain that has not failed."""
 
         failed_ids = set(failed)
         chain = self.fallback_chain(subgraph)
@@ -179,19 +179,19 @@ class SkillPlanner:
             if node.id not in failed_ids:
                 return node
         raise NoViableCandidate(
-            "every achiever for goal {!r} failed: {}".format(
-                subgraph.goal_id, [node.id for node in chain]
+            "every achiever for sub-goal {!r} failed: {}".format(
+                subgraph.subgoal_id, [node.id for node in chain]
             )
         )
 
     @staticmethod
-    def fallback_chain(subgraph: GoalSkillSubgraph) -> Tuple[SkillNode, ...]:
+    def fallback_chain(subgraph: SubGoalSkillSubgraph) -> Tuple[SkillNode, ...]:
         """Achievers ordered primary-first along ``FALLBACK_TO`` edges."""
 
         achievers = {node.id: node for node in subgraph.achievers}
         if not achievers:
             raise ValueError(
-                "goal skill subgraph {!r} has no achiever".format(subgraph.goal_id)
+                "sub-goal skill subgraph {!r} has no achiever".format(subgraph.subgoal_id)
             )
         successor: Dict[str, str] = {}
         for edge in subgraph.edges:
@@ -207,8 +207,8 @@ class SkillPlanner:
         if not successor:
             if len(achievers) > 1:
                 raise ValueError(
-                    "goal {!r} has {} achievers but no FALLBACK_TO order".format(
-                        subgraph.goal_id, len(achievers)
+                    "sub-goal {!r} has {} achievers but no FALLBACK_TO order".format(
+                        subgraph.subgoal_id, len(achievers)
                     )
                 )
             return tuple(achievers.values())
@@ -216,8 +216,8 @@ class SkillPlanner:
         heads = sorted(set(successor) - set(successor.values()))
         if len(heads) != 1:
             raise ValueError(
-                "goal {!r} does not have one unambiguous primary achiever".format(
-                    subgraph.goal_id
+                "sub-goal {!r} does not have one unambiguous primary achiever".format(
+                    subgraph.subgoal_id
                 )
             )
         chain = []
@@ -226,7 +226,7 @@ class SkillPlanner:
         while current is not None:
             if current in seen:
                 raise ValueError(
-                    "FALLBACK_TO cycle in goal {!r}".format(subgraph.goal_id)
+                    "FALLBACK_TO cycle in sub-goal {!r}".format(subgraph.subgoal_id)
                 )
             seen.add(current)
             chain.append(achievers[current])
@@ -234,14 +234,14 @@ class SkillPlanner:
         unreachable = sorted(set(achievers) - seen)
         if unreachable:
             raise ValueError(
-                "achievers {} in goal {!r} are not on the fallback chain".format(
-                    unreachable, subgraph.goal_id
+                "achievers {} in sub-goal {!r} are not on the fallback chain".format(
+                    unreachable, subgraph.subgoal_id
                 )
             )
         return tuple(chain)
 
     @staticmethod
-    def _causal_closure(subgraph: GoalSkillSubgraph, node_id: str) -> Set[str]:
+    def _causal_closure(subgraph: SubGoalSkillSubgraph, node_id: str) -> Set[str]:
         """``node_id`` plus the instrumental nodes it transitively depends on."""
 
         prerequisites: Dict[str, Set[str]] = {item: set() for item in subgraph.nodes}

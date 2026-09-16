@@ -12,17 +12,17 @@ import json
 from unittest import TestCase
 
 from mshab.skills import (
-    FunctionalGoal,
-    FunctionalGoalGraph,
-    GoalDependency,
-    GoalSkillSubgraph,
-    GoalSkillSubgraphExtension,
+    SubGoal,
+    SubGoalGraph,
+    SubGoalDependency,
+    SubGoalSkillSubgraph,
+    SubGoalSkillSubgraphExtension,
     NoViableCandidate,
     SchemaError,
     SkillCompositionGraph,
     SkillEdge,
     SkillGraphPatch,
-    SkillLibrary,
+    ContractLibrary,
     SkillNode,
     SkillPlanner,
     SkillRelation,
@@ -40,17 +40,17 @@ def _pick(node_id, target, goal, **arguments):
 def _tiny_graph():
     """One goal, one achiever, plus a second goal downstream of it."""
 
-    goals = FunctionalGoalGraph("tiny")
-    goals.add_goal(FunctionalGoal("retrieved", "holding(024_bowl)"))
-    goals.add_goal(FunctionalGoal("placed", "at(024_bowl,table)"))
-    goals.add_dependency("retrieved", "placed")
-    graph = SkillCompositionGraph("set_table", goal_graph=goals)
+    subgoals = SubGoalGraph("tiny")
+    subgoals.add_subgoal(SubGoal("retrieved", "holding(024_bowl)"))
+    subgoals.add_subgoal(SubGoal("placed", "at(024_bowl,table)"))
+    subgoals.add_dependency("retrieved", "placed")
+    graph = SkillCompositionGraph("set_table", subgoal_graph=subgoals)
 
-    retrieved = GoalSkillSubgraph("retrieved", "set_table")
+    retrieved = SubGoalSkillSubgraph("retrieved", "set_table")
     retrieved.add_node(_pick("pick_primary", "024_bowl", "retrieved"))
     graph.add_subgraph(retrieved)
 
-    placed = GoalSkillSubgraph("placed", "set_table")
+    placed = SubGoalSkillSubgraph("placed", "set_table")
     placed.add_node(
         SkillNode(
             "place_it",
@@ -61,7 +61,7 @@ def _tiny_graph():
     )
     graph.add_subgraph(placed)
     graph.relate_subgraphs("retrieved", "placed", None, "place_it")
-    return goals, graph
+    return subgoals, graph
 
 
 class FallbackReachabilityTests(TestCase):
@@ -93,8 +93,8 @@ class FallbackReachabilityTests(TestCase):
         )
 
     def test_every_cross_goal_relation_survives_a_full_generic_rollout(self):
-        goals, graph = build_set_table_graph()
-        planner = SkillPlanner(goals, graph)
+        subgoals, graph = build_set_table_graph()
+        planner = SkillPlanner(subgoals, graph)
         primaries = [
             planner.select_achiever(subgraph).id
             for subgraph in graph.subgraphs.values()
@@ -124,9 +124,9 @@ class ExecutionPlanTests(TestCase):
     )
 
     def test_plan_selects_exactly_one_achiever_per_goal(self):
-        goals, graph = build_set_table_graph()
+        subgoals, graph = build_set_table_graph()
 
-        plan = SkillPlanner(goals, graph).plan()
+        plan = SkillPlanner(subgoals, graph).plan()
 
         self.assertEqual(len(plan.order), 16)
         self.assertEqual(plan.order[:8], self.EXPECTED)
@@ -134,10 +134,10 @@ class ExecutionPlanTests(TestCase):
         self.assertFalse([item for item in plan.order if item.endswith("_generic")])
 
     def test_candidate_partial_order_is_not_the_plan(self):
-        goals, graph = build_set_table_graph()
+        subgoals, graph = build_set_table_graph()
 
         order = graph.execution_order()
-        plan = SkillPlanner(goals, graph).plan()
+        plan = SkillPlanner(subgoals, graph).plan()
 
         self.assertEqual(len(order), 20)
         self.assertNotEqual(tuple(order), plan.order)
@@ -148,17 +148,17 @@ class ExecutionPlanTests(TestCase):
         )
 
     def test_exhausting_a_fallback_chain_raises_rather_than_looping(self):
-        goals, graph = build_set_table_graph()
-        planner = SkillPlanner(goals, graph)
+        subgoals, graph = build_set_table_graph()
+        planner = SkillPlanner(subgoals, graph)
 
         with self.assertRaisesRegex(NoViableCandidate, "every achiever"):
             planner.plan(failed=("pick_bowl_specialized", "pick_bowl_generic"))
 
     def test_goal_dependency_without_a_layer_two_relation_is_rejected(self):
-        goals, graph = _tiny_graph()
-        goals.add_goal(FunctionalGoal("closed", "closed(fridge)"))
-        goals.add_dependency("placed", "closed")
-        orphan = GoalSkillSubgraph("closed", "set_table")
+        subgoals, graph = _tiny_graph()
+        subgoals.add_subgoal(SubGoal("closed", "closed(fridge)"))
+        subgoals.add_dependency("placed", "closed")
+        orphan = SubGoalSkillSubgraph("closed", "set_table")
         orphan.add_node(
             SkillNode(
                 "close_it", "mshab.set_table.close.fridge", {}, achieves=("closed",)
@@ -172,19 +172,19 @@ class ExecutionPlanTests(TestCase):
     def test_planner_obeys_an_additional_layer_two_dependency(self):
         """Layer 2, not alphabetical Layer-1 order, controls readiness."""
 
-        goals = FunctionalGoalGraph("two otherwise independent outcomes")
-        goals.add_goal(FunctionalGoal("a", "a_done()"))
-        goals.add_goal(FunctionalGoal("b", "b_done()"))
-        graph = SkillCompositionGraph("set_table", goal_graph=goals)
+        subgoals = SubGoalGraph("two otherwise independent outcomes")
+        subgoals.add_subgoal(SubGoal("a", "a_done()"))
+        subgoals.add_subgoal(SubGoal("b", "b_done()"))
+        graph = SkillCompositionGraph("set_table", subgoal_graph=subgoals)
 
-        for goal_id in ("a", "b"):
-            subgraph = GoalSkillSubgraph(goal_id, "set_table")
+        for subgoal_id in ("a", "b"):
+            subgraph = SubGoalSkillSubgraph(subgoal_id, "set_table")
             subgraph.add_node(
                 SkillNode(
-                    goal_id,
+                    subgoal_id,
                     "mshab.set_table.pick.all",
-                    {"object": goal_id},
-                    achieves=(goal_id,),
+                    {"object": subgoal_id},
+                    achieves=(subgoal_id,),
                 )
             )
             graph.add_subgraph(subgraph)
@@ -192,7 +192,7 @@ class ExecutionPlanTests(TestCase):
         # Layer 1 deliberately leaves A/B unordered.  This Layer-2 relation is
         # therefore the only source of the required B -> A execution order.
         graph.relate("b", "a", SkillRelation.ENABLES)
-        planner = SkillPlanner(goals, graph)
+        planner = SkillPlanner(subgoals, graph)
 
         self.assertEqual(planner.decide().id, "b")
         self.assertEqual(planner.decide(completed=("b",)).id, "a")
@@ -206,11 +206,11 @@ class SealingTests(TestCase):
         _, graph = build_set_table_graph()
         subgraph = graph.subgraphs["bowl_retrieved"]
 
-        for name, value in (("goal_id", "apple_placed"), ("_sealed", False)):
+        for name, value in (("subgoal_id", "apple_placed"), ("_sealed", False)):
             with self.assertRaisesRegex(RuntimeError, "registered and sealed"):
                 setattr(subgraph, name, value)
 
-        self.assertEqual(subgraph.goal_id, "bowl_retrieved")
+        self.assertEqual(subgraph.subgoal_id, "bowl_retrieved")
         self.assertTrue(subgraph.sealed)
 
     def test_sealed_subgraph_rejects_structural_mutation(self):
@@ -235,7 +235,7 @@ class SubgraphExtensionTests(TestCase):
     """Adding a candidate to a goal that is already registered."""
 
     def test_extension_adds_a_candidate_and_keeps_cross_goal_relations(self):
-        goals, graph = _tiny_graph()
+        subgoals, graph = _tiny_graph()
         patch = SkillGraphPatch().with_extension(
             "retrieved",
             nodes=(_pick("pick_backup", "all", "retrieved", object="024_bowl"),),
@@ -244,7 +244,7 @@ class SubgraphExtensionTests(TestCase):
             ),
         )
 
-        patch.apply(goals, graph)
+        patch.apply(subgoals, graph)
 
         self.assertEqual(len(graph.subgraphs["retrieved"].achievers), 2)
         self.assertEqual(graph.owner_of("pick_backup"), "retrieved")
@@ -253,44 +253,44 @@ class SubgraphExtensionTests(TestCase):
             [sorted(group) for group in graph.prerequisite_groups("place_it")],
             [["pick_backup", "pick_primary"]],
         )
-        planner = SkillPlanner(goals, graph)
+        planner = SkillPlanner(subgoals, graph)
         self.assertEqual(
             planner.plan(failed=("pick_primary",)).selections["retrieved"],
             "pick_backup",
         )
 
     def test_extension_rejects_a_node_id_owned_by_another_goal(self):
-        goals, graph = _tiny_graph()
+        subgoals, graph = _tiny_graph()
         patch = SkillGraphPatch().with_extension(
             "retrieved",
             nodes=(_pick("place_it", "all", "retrieved", object="024_bowl"),),
         )
 
         with self.assertRaisesRegex(ValueError, "duplicate skill nodes"):
-            patch.apply(goals, graph)
+            patch.apply(subgoals, graph)
         self.assertEqual(graph.owner_of("place_it"), "placed")
 
     def test_extension_rejects_a_node_claiming_another_goal(self):
-        goals, graph = _tiny_graph()
+        subgoals, graph = _tiny_graph()
         patch = SkillGraphPatch().with_extension(
             "retrieved",
             nodes=(_pick("pick_backup", "all", "placed", object="024_bowl"),),
         )
 
         with self.assertRaisesRegex(ValueError, "achieves"):
-            patch.apply(goals, graph)
+            patch.apply(subgoals, graph)
 
 
 class PatchAtomicityTests(TestCase):
     """A rejected patch must leave Layer 1 and Layer 2 byte-identical."""
 
-    def _snapshot(self, goals, graph):
-        return json.dumps([goals.as_dict(), graph.as_dict()], sort_keys=True)
+    def _snapshot(self, subgoals, graph):
+        return json.dumps([subgoals.as_dict(), graph.as_dict()], sort_keys=True)
 
     def test_rejected_relation_leaves_both_graphs_untouched(self):
-        goals, graph = _tiny_graph()
-        before = self._snapshot(goals, graph)
-        stranger = GoalSkillSubgraph("inspected", "set_table")
+        subgoals, graph = _tiny_graph()
+        before = self._snapshot(subgoals, graph)
+        stranger = SubGoalSkillSubgraph("inspected", "set_table")
         stranger.add_node(
             SkillNode(
                 "inspect", "mshab.set_table.pick.all", {"object": "x"},
@@ -298,8 +298,8 @@ class PatchAtomicityTests(TestCase):
             )
         )
         patch = SkillGraphPatch(
-            goals=(FunctionalGoal("inspected", "inspected(x)"),),
-            goal_dependencies=(GoalDependency("placed", "inspected"),),
+            subgoals=(SubGoal("inspected", "inspected(x)"),),
+            subgoal_dependencies=(SubGoalDependency("placed", "inspected"),),
             skill_subgraphs=(stranger,),
             subgraph_relations=(
                 SkillSubgraphRelation("placed", "inspected", None, "does_not_exist"),
@@ -307,38 +307,38 @@ class PatchAtomicityTests(TestCase):
         )
 
         with self.assertRaises(ValueError):
-            patch.apply(goals, graph)
+            patch.apply(subgoals, graph)
 
-        self.assertEqual(self._snapshot(goals, graph), before)
-        self.assertNotIn("inspected", goals.goals)
+        self.assertEqual(self._snapshot(subgoals, graph), before)
+        self.assertNotIn("inspected", subgoals.subgoals)
 
     def test_rejected_extension_leaves_the_original_subgraph_installed(self):
-        goals, graph = _tiny_graph()
-        before = self._snapshot(goals, graph)
+        subgoals, graph = _tiny_graph()
+        before = self._snapshot(subgoals, graph)
         patch = SkillGraphPatch().with_extension(
             "retrieved",
             nodes=(_pick("place_it", "all", "retrieved", object="x"),),
         )
 
         with self.assertRaises(ValueError):
-            patch.apply(goals, graph)
+            patch.apply(subgoals, graph)
 
-        self.assertEqual(self._snapshot(goals, graph), before)
+        self.assertEqual(self._snapshot(subgoals, graph), before)
 
     def test_patch_rejects_foreign_objects_before_touching_the_graph(self):
         class NotASubgraph:
-            goal_id = "spoofed"
+            subgoal_id = "spoofed"
             task = "set_table"
             nodes = {}
             edges = ()
 
-        with self.assertRaisesRegex(TypeError, "GoalSkillSubgraph"):
+        with self.assertRaisesRegex(TypeError, "SubGoalSkillSubgraph"):
             SkillGraphPatch(skill_subgraphs=(NotASubgraph(),))
 
     def test_apply_rejects_a_skill_the_library_does_not_have(self):
-        goals, graph = _tiny_graph()
-        before = self._snapshot(goals, graph)
-        invented = GoalSkillSubgraph("inspected", "set_table")
+        subgoals, graph = _tiny_graph()
+        before = self._snapshot(subgoals, graph)
+        invented = SubGoalSkillSubgraph("inspected", "set_table")
         invented.add_node(
             SkillNode(
                 "inspect", "mshab.set_table.teleport.moon", {},
@@ -346,28 +346,28 @@ class PatchAtomicityTests(TestCase):
             )
         )
         patch = SkillGraphPatch(
-            goals=(FunctionalGoal("inspected", "inspected(x)"),),
+            subgoals=(SubGoal("inspected", "inspected(x)"),),
             skill_subgraphs=(invented,),
         )
 
-        with self.assertRaisesRegex(KeyError, "unregistered skills"):
-            patch.apply(goals, graph, library=SkillLibrary())
+        with self.assertRaisesRegex(KeyError, "unregistered contracts"):
+            patch.apply(subgoals, graph, library=ContractLibrary())
 
-        self.assertEqual(self._snapshot(goals, graph), before)
+        self.assertEqual(self._snapshot(subgoals, graph), before)
 
 
 class PatchSchemaTests(TestCase):
     """Untrusted patch documents are parsed strictly or not at all."""
 
     VALID = {
-        "goals": [{"id": "inspected", "predicate": "inspected(013_apple)"}],
+        "subgoals": [{"id": "inspected", "predicate": "inspected(013_apple)"}],
         "skill_subgraphs": [
             {
-                "goal_id": "inspected",
+                "subgoal_id": "inspected",
                 "nodes": [
                     {
                         "id": "inspect_apple",
-                        "skill_id": "mshab.set_table.pick.all",
+                        "contract_id": "mshab.set_table.pick.all",
                         "arguments": {"object": "013_apple"},
                         "achieves": ["inspected"],
                     }
@@ -385,7 +385,7 @@ class PatchSchemaTests(TestCase):
         )
 
         self.assertEqual(restored.as_dict(), patch.as_dict())
-        self.assertEqual(restored.goals[0].id, "inspected")
+        self.assertEqual(restored.subgoals[0].id, "inspected")
         self.assertEqual(
             dict(restored.skill_subgraphs[0].nodes["inspect_apple"].arguments),
             {"object": "013_apple"},
@@ -402,29 +402,29 @@ class PatchSchemaTests(TestCase):
 
     def test_malformed_patches_are_rejected(self):
         cases = {
-            "unknown key": {"goals": [], "wat": 1},
-            "unknown goal key": {"goals": [{"id": "g", "predicate": "p()", "x": 1}]},
-            "bad identifier": {"goals": [{"id": "../etc", "predicate": "p()"}]},
+            "unknown key": {"subgoals": [], "wat": 1},
+            "unknown goal key": {"subgoals": [{"id": "g", "predicate": "p()", "x": 1}]},
+            "bad identifier": {"subgoals": [{"id": "../etc", "predicate": "p()"}]},
             "unknown relation": {
                 "subgraph_relations": [
-                    {"source_goal": "a", "target_goal": "b", "relation": "teleports"}
+                    {"source_subgoal": "a", "target_subgoal": "b", "relation": "teleports"}
                 ]
             },
             "nested argument": {
                 "skill_subgraphs": [
                     {
-                        "goal_id": "g",
+                        "subgoal_id": "g",
                         "nodes": [
                             {
                                 "id": "n",
-                                "skill_id": "mshab.set_table.pick.all",
+                                "contract_id": "mshab.set_table.pick.all",
                                 "arguments": {"waypoints": [1, 2, 3]},
                             }
                         ],
                     }
                 ]
             },
-            "goals not a list": {"goals": {"id": "g"}},
+            "subgoals not a list": {"subgoals": {"id": "g"}},
             "bad schema version": {"schema_version": "something.else"},
         }
         for label, payload in cases.items():

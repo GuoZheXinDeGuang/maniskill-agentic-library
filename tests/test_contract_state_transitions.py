@@ -1,9 +1,9 @@
-"""Contracts as state transitions: what a skill asserts *and* what it retracts.
+"""Contract terms as state transitions: what a contract asserts *and* what it retracts.
 
 Without delete effects the symbolic state is monotone, so a SetTable rollout
 ends with ``open(kitchen_counter)`` and ``closed(kitchen_counter)`` both true
 and the bowl still ``holding`` after it was placed.  These tests pin the
-transition semantics that ``BoundContract.deletes``/``apply_to`` restore.
+transition semantics that ``BoundTerms.deletes``/``apply_to`` restore.
 """
 
 from __future__ import annotations
@@ -11,38 +11,38 @@ from __future__ import annotations
 from unittest import TestCase
 
 from mshab.skills import (
-    CloseSkill,
-    OpenSkill,
-    PickSkill,
-    PlaceSkill,
-    SkillContract,
-    SkillParameter,
+    CloseContract,
+    OpenContract,
+    PickContract,
+    PlaceContract,
+    ContractTerms,
+    ContractParameter,
     ParameterType,
     SkillPlanner,
     build_set_table_graph,
 )
-from mshab.skills.library import SkillLibrary
-from mshab.skills.model import NavigateSkill
+from mshab.skills.library import ContractLibrary
+from mshab.skills.model import NavigateContract
 
 
 def _set_table_library():
-    library = SkillLibrary()
-    library.register(NavigateSkill("set_table"))
+    library = ContractLibrary()
+    library.register(NavigateContract("set_table"))
     for target in ("024_bowl", "013_apple"):
-        library.register(PickSkill("set_table", target))
-        library.register(PlaceSkill("set_table", target))
-    library.register(PickSkill("set_table", "all"))
-    library.register(PlaceSkill("set_table", "all"))
+        library.register(PickContract("set_table", target))
+        library.register(PlaceContract("set_table", target))
+    library.register(PickContract("set_table", "all"))
+    library.register(PlaceContract("set_table", "all"))
     for target in ("kitchen_counter", "fridge"):
-        library.register(OpenSkill("set_table", target))
-        library.register(CloseSkill("set_table", target))
+        library.register(OpenContract("set_table", target))
+        library.register(CloseContract("set_table", target))
     return library
 
 
 class DeleteEffectTests(TestCase):
     def test_open_and_close_retract_each_other(self):
-        opened = OpenSkill("set_table", "fridge").bind({}).contract
-        closed = CloseSkill("set_table", "fridge").bind({}).contract
+        opened = OpenContract("set_table", "fridge").bind({}).terms
+        closed = CloseContract("set_table", "fridge").bind({}).terms
 
         after_open = opened.apply_to({"closed(fridge)", "reachable(fridge)"})
         after_close = closed.apply_to(after_open)
@@ -54,9 +54,9 @@ class DeleteEffectTests(TestCase):
 
     def test_place_releases_the_held_object(self):
         contract = (
-            PlaceSkill("set_table", "024_bowl")
+            PlaceContract("set_table", "024_bowl")
             .bind({"destination": "dining_table"})
-            .contract
+            .terms
         )
 
         after = contract.apply_to({"holding(024_bowl)", "reachable(dining_table)"})
@@ -66,7 +66,7 @@ class DeleteEffectTests(TestCase):
         self.assertNotIn("holding(024_bowl)", after)
 
     def test_pick_consumes_the_empty_gripper(self):
-        contract = PickSkill("set_table", "024_bowl").bind({}).contract
+        contract = PickContract("set_table", "024_bowl").bind({}).terms
 
         after = contract.apply_to({"gripper_empty()", "reachable(024_bowl)"})
 
@@ -75,8 +75,8 @@ class DeleteEffectTests(TestCase):
 
     def test_a_predicate_cannot_be_both_asserted_and_retracted(self):
         with self.assertRaisesRegex(ValueError, "asserted and retracted"):
-            SkillContract(
-                parameters=(SkillParameter("object", ParameterType.ENTITY),),
+            ContractTerms(
+                parameters=(ContractParameter("object", ParameterType.ENTITY),),
                 preconditions=(),
                 effects=("holding({object})",),
                 deletes=("holding({object})",),
@@ -84,8 +84,8 @@ class DeleteEffectTests(TestCase):
 
     def test_a_skill_cannot_retract_its_own_invariant(self):
         with self.assertRaisesRegex(ValueError, "retract its own invariants"):
-            SkillContract(
-                parameters=(SkillParameter("object", ParameterType.ENTITY),),
+            ContractTerms(
+                parameters=(ContractParameter("object", ParameterType.ENTITY),),
                 preconditions=(),
                 effects=("holding({object})",),
                 invariants=("collision_safe()",),
@@ -93,8 +93,8 @@ class DeleteEffectTests(TestCase):
             )
 
     def test_grounding_cannot_create_an_assert_delete_conflict(self):
-        contract = SkillContract(
-            parameters=(SkillParameter("object", ParameterType.ENTITY),),
+        contract = ContractTerms(
+            parameters=(ContractParameter("object", ParameterType.ENTITY),),
             preconditions=(),
             effects=("holding({object})",),
             deletes=("holding(013_apple)",),
@@ -124,37 +124,37 @@ class SetTableStateTransitionTests(TestCase):
     def _rollout(self, failed=()):
         """Replay a plan symbolically, returning the final and per-goal states."""
 
-        goals, graph = build_set_table_graph()
+        subgoals, graph = build_set_table_graph()
         library = _set_table_library()
-        plan = SkillPlanner(goals, graph).plan(failed=failed)
+        plan = SkillPlanner(subgoals, graph).plan(failed=failed)
         facts = set(self.INITIAL)
         at_goal_completion = {}
         for node_id in plan.order:
             node = graph.nodes[node_id]
-            contract = library.get(node.skill_id).bind(node.arguments).contract
-            missing = [item for item in contract.preconditions if item not in facts]
+            terms = library.get(node.contract_id).bind(node.arguments).terms
+            missing = [item for item in terms.preconditions if item not in facts]
             self.assertEqual(
                 missing, [], "{} cannot start: missing {}".format(node_id, missing)
             )
             self.assertTrue(
-                set(contract.invariants).issubset(facts),
+                set(terms.invariants).issubset(facts),
                 "{} invariants do not hold".format(node_id),
             )
-            facts = set(contract.apply_to(facts))
-            for goal_id in node.achieves:
-                at_goal_completion[goal_id] = frozenset(facts)
-        return goals, facts, at_goal_completion
+            facts = set(terms.apply_to(facts))
+            for subgoal_id in node.achieves:
+                at_goal_completion[subgoal_id] = frozenset(facts)
+        return subgoals, facts, at_goal_completion
 
     def test_every_goal_predicate_holds_when_its_achiever_completes(self):
         # open(kitchen_counter) and holding(bowl) are transient: they are true
         # when their subgraph finishes, and correctly retracted later on.
-        goals, _, at_goal_completion = self._rollout()
+        subgoals, _, at_goal_completion = self._rollout()
 
-        self.assertEqual(set(at_goal_completion), set(goals.goals))
-        for goal in goals.goals.values():
+        self.assertEqual(set(at_goal_completion), set(subgoals.subgoals))
+        for goal in subgoals.subgoals.values():
             self.assertIn(goal.predicate, at_goal_completion[goal.id], goal.id)
             self.assertTrue(
-                goals.achieved(goal.id, at_goal_completion[goal.id]), goal.id
+                subgoals.achieved(goal.id, at_goal_completion[goal.id]), goal.id
             )
 
     def test_nominal_plan_leaves_no_contradictory_state(self):

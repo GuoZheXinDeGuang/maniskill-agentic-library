@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="970" viewBox="0 0 1200 970" role="img" aria-labelledby="title desc">
   <title id="title">Task-conditioned skill library architecture</title>
-  <desc id="desc">Four layers from a functional goal graph through candidate skill composition and executable contracts to execution backends.</desc>
+  <desc id="desc">Four layers from a sub-goal graph through candidate skill composition and contracts to the low-level policies that execute them.</desc>
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
       <path d="M0,0 L0,6 L9,3 z" fill="#24364b"/>
@@ -19,9 +19,9 @@
 
   <!-- Layer 1 -->
   <rect class="box" x="20" y="15" width="1160" height="175" fill="#eaf4ff" stroke="#3484c5"/>
-  <text class="title" x="600" y="48" text-anchor="middle">1. Task-conditioned Functional Goal Graph</text>
+  <text class="title" x="600" y="48" text-anchor="middle">1. Goal decomposed into a Sub-goal Graph</text>
   <rect x="55" y="67" width="240" height="88" rx="8" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5"/>
-  <text class="label" x="75" y="92">Task Instruction</text>
+  <text class="label" x="75" y="92">Goal (task text)</text>
   <text class="small" x="75" y="118">“Make soup and serve it</text>
   <text class="small" x="75" y="138">at the table.”</text>
   <path class="edge" d="M295 111 H395"/>
@@ -39,10 +39,10 @@
 
   <!-- Layer 2 -->
   <rect class="box" x="20" y="230" width="1160" height="245" fill="#eaf9ec" stroke="#52a565"/>
-  <text class="title" x="600" y="263" text-anchor="middle">2. Goal-owned Candidate Skill Subgraphs</text>
+  <text class="title" x="600" y="263" text-anchor="middle">2. Sub-goal-owned Candidate Skill Subgraphs</text>
 
   <rect x="45" y="280" width="340" height="165" rx="10" fill="#f8fff9" stroke="#399447" stroke-width="2"/>
-  <text class="label" x="215" y="307" text-anchor="middle">GoalSkillSubgraph: retrieved</text>
+  <text class="label" x="215" y="307" text-anchor="middle">SubGoalSkillSubgraph: retrieved</text>
   <rect x="65" y="330" width="140" height="43" rx="7" fill="#ddeaff" stroke="#5684ce" stroke-width="1.5"/>
   <text class="small" x="135" y="357" text-anchor="middle">PickFromShelf</text>
   <rect x="225" y="330" width="140" height="43" rx="7" fill="#ddeaff" stroke="#5684ce" stroke-width="1.5"/>
@@ -52,7 +52,7 @@
   <text class="small" x="215" y="425" text-anchor="middle">achievers → retrieved(soup)</text>
 
   <rect x="430" y="280" width="340" height="165" rx="10" fill="#f8fff9" stroke="#399447" stroke-width="2"/>
-  <text class="label" x="600" y="307" text-anchor="middle">GoalSkillSubgraph: heated</text>
+  <text class="label" x="600" y="307" text-anchor="middle">SubGoalSkillSubgraph: heated</text>
   <rect x="450" y="330" width="140" height="43" rx="7" fill="#ddeaff" stroke="#5684ce" stroke-width="1.5"/>
   <text class="small" x="520" y="357" text-anchor="middle">MicrowaveHeat</text>
   <rect x="610" y="330" width="140" height="43" rx="7" fill="#ddeaff" stroke="#5684ce" stroke-width="1.5"/>
@@ -62,7 +62,7 @@
   <text class="small" x="600" y="425" text-anchor="middle">achievers → heated(soup)</text>
 
   <rect x="815" y="280" width="340" height="165" rx="10" fill="#f8fff9" stroke="#399447" stroke-width="2"/>
-  <text class="label" x="985" y="307" text-anchor="middle">GoalSkillSubgraph: served_at</text>
+  <text class="label" x="985" y="307" text-anchor="middle">SubGoalSkillSubgraph: served_at</text>
   <rect x="835" y="330" width="140" height="43" rx="7" fill="#ddeaff" stroke="#5684ce" stroke-width="1.5"/>
   <text class="small" x="905" y="357" text-anchor="middle">NavigateToTable</text>
   <rect x="995" y="330" width="140" height="43" rx="7" fill="#ddeaff" stroke="#5684ce" stroke-width="1.5"/>
@@ -83,7 +83,7 @@
 
   <!-- Layer 3 -->
   <rect class="box" x="20" y="515" width="1160" height="285" fill="#fff9df" stroke="#e0a928"/>
-  <text class="title" x="600" y="550" text-anchor="middle">3. Executable Skill Contracts</text>
+  <text class="title" x="600" y="550" text-anchor="middle">3. Contracts (physical feasibility only)</text>
 
   <g transform="translate(48,575)">
     <rect width="255" height="190" rx="9" fill="#ffffff" stroke="#4e88c7" stroke-width="2"/>
@@ -91,7 +91,7 @@
     <text class="label" x="127" y="25" text-anchor="middle">PickFromShelf</text>
     <text class="small" x="15" y="59">Preconditions:</text><text class="tiny" x="25" y="78">• at(shelf)</text><text class="tiny" x="25" y="94">• visible(soup)</text>
     <text class="small" x="15" y="117">Effects:</text><text class="tiny" x="25" y="136">• holding(soup)</text>
-    <text class="small" x="15" y="159">Executor:</text><text class="tiny" x="85" y="159">VLA (manipulation)</text>
+    <text class="small" x="15" y="159">Policy:</text><text class="tiny" x="85" y="159">VLA (manipulation)</text>
     <text class="small" x="15" y="179">Verify:</text><text class="tiny" x="70" y="179">is_grasped(soup)</text>
   </g>
   <g transform="translate(330,575)">
@@ -100,7 +100,7 @@
     <text class="label" x="127" y="25" text-anchor="middle">PickFromCabinet</text>
     <text class="small" x="15" y="59">Preconditions:</text><text class="tiny" x="25" y="78">• at(cabinet)</text><text class="tiny" x="25" y="94">• cabinet_open</text>
     <text class="small" x="15" y="117">Effects:</text><text class="tiny" x="25" y="136">• holding(soup)</text>
-    <text class="small" x="15" y="159">Executor:</text><text class="tiny" x="85" y="159">VLA (manipulation)</text>
+    <text class="small" x="15" y="159">Policy:</text><text class="tiny" x="85" y="159">VLA (manipulation)</text>
     <text class="small" x="15" y="179">Verify:</text><text class="tiny" x="70" y="179">is_grasped(soup)</text>
   </g>
   <g transform="translate(612,575)">
@@ -109,7 +109,7 @@
     <text class="label" x="127" y="25" text-anchor="middle">MicrowaveHeat</text>
     <text class="small" x="15" y="59">Preconditions:</text><text class="tiny" x="25" y="78">• holding(soup)</text><text class="tiny" x="25" y="94">• microwave_accessible</text>
     <text class="small" x="15" y="117">Effects:</text><text class="tiny" x="25" y="136">• heated(soup)</text>
-    <text class="small" x="15" y="159">Executor:</text><text class="tiny" x="85" y="159">State Machine</text>
+    <text class="small" x="15" y="159">Policy:</text><text class="tiny" x="85" y="159">State Machine</text>
     <text class="small" x="15" y="179">Verify:</text><text class="tiny" x="70" y="179">temperature(soup) &gt; T</text>
   </g>
   <g transform="translate(894,575)">
@@ -118,7 +118,7 @@
     <text class="label" x="127" y="25" text-anchor="middle">StoveHeat</text>
     <text class="small" x="15" y="59">Preconditions:</text><text class="tiny" x="25" y="78">• holding(soup)</text><text class="tiny" x="25" y="94">• stove_available</text>
     <text class="small" x="15" y="117">Effects:</text><text class="tiny" x="25" y="136">• heated(soup)</text>
-    <text class="small" x="15" y="159">Executor:</text><text class="tiny" x="85" y="159">Script / Controller</text>
+    <text class="small" x="15" y="159">Policy:</text><text class="tiny" x="85" y="159">Script / Controller</text>
     <text class="small" x="15" y="179">Verify:</text><text class="tiny" x="70" y="179">temperature(soup) &gt; T</text>
   </g>
 
@@ -127,7 +127,7 @@
 
   <!-- Layer 4 -->
   <rect class="box" x="20" y="840" width="1160" height="115" fill="#f2eaff" stroke="#8660b4"/>
-  <text class="title" x="600" y="875" text-anchor="middle">4. Atomic Skills / Backend Execution Engines</text>
+  <text class="title" x="600" y="875" text-anchor="middle">4. Low-level Policies (VLA / DP / RL / controller / script)</text>
   <g>
     <rect x="45" y="893" width="200" height="44" rx="8" fill="#ecdfff" stroke="#8660b4"/>
     <text class="label" x="145" y="921" text-anchor="middle">VLA</text>

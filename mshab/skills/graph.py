@@ -1,8 +1,17 @@
-"""Task-conditioned goal and skill-composition graphs.
+"""Task-conditioned sub-goal and skill-composition graphs.
+
+Vocabulary: the *goal* is the task text.  Layer 1 decomposes it into
+*sub-goals*.  Layer 2 gives every sub-goal a subgraph of *skill nodes*; a
+skill node references one contract by id.  "Skill" in this package always
+means a Layer-2 node, never a contract or a policy.
 
 The graph is the only owner of skill-to-skill composition semantics.  There is
 no ``AlternativeSkill`` or ``SequentialSkill`` class: alternatives, fallback,
-requirements, and enabling order are relations between semantic skill nodes.
+requirements, and enabling order are relations between skill nodes.
+
+Relations carry the *semantic/logical* ordering of a task (heating food comes
+before serving it).  Whether a node can physically start in the current
+world state is decided later by its contract terms, not by the graph.
 """
 
 from __future__ import annotations
@@ -27,7 +36,11 @@ from mshab.skills import schema
 
 
 class SkillRelation(str, Enum):
-    """Closed vocabulary for edges in a candidate skill-composition graph."""
+    """Closed vocabulary for edges in a candidate skill-composition graph.
+
+    Edges express semantic or logical ordering between skill nodes.  They do
+    not restate physical preconditions; those live in contract terms.
+    """
 
     IS_A = "is_a"
     ENABLES = "enables"
@@ -37,8 +50,8 @@ class SkillRelation(str, Enum):
 
 
 @dataclass(frozen=True)
-class FunctionalGoal:
-    """One desired world-state predicate from a task instruction."""
+class SubGoal:
+    """One sub-goal: a desired world-state predicate decomposed from the goal."""
 
     id: str
     predicate: str
@@ -46,11 +59,11 @@ class FunctionalGoal:
 
     def __post_init__(self) -> None:
         if not self.id or not self.predicate:
-            raise ValueError("functional goal id and predicate must be non-empty")
+            raise ValueError("sub-goal id and predicate must be non-empty")
 
     @classmethod
-    def from_dict(cls, payload: Mapping[str, Any]) -> "FunctionalGoal":
-        where = "functional_goal"
+    def from_dict(cls, payload: Mapping[str, Any]) -> "SubGoal":
+        where = "subgoal"
         payload = schema.require_mapping(payload, where=where)
         schema.require_keys(
             payload,
@@ -73,19 +86,19 @@ class FunctionalGoal:
 
 
 @dataclass(frozen=True)
-class GoalDependency:
-    """The source goal must be achieved before the target goal."""
+class SubGoalDependency:
+    """The source sub-goal must be achieved before the target sub-goal."""
 
     source: str
     target: str
 
     def __post_init__(self) -> None:
         if not self.source or not self.target or self.source == self.target:
-            raise ValueError("goal dependency needs two distinct non-empty ids")
+            raise ValueError("sub-goal dependency needs two distinct non-empty ids")
 
     @classmethod
-    def from_dict(cls, payload: Mapping[str, Any]) -> "GoalDependency":
-        where = "goal_dependency"
+    def from_dict(cls, payload: Mapping[str, Any]) -> "SubGoalDependency":
+        where = "subgoal_dependency"
         payload = schema.require_mapping(payload, where=where)
         schema.require_keys(payload, where=where, required=("source", "target"))
         return cls(
@@ -97,35 +110,35 @@ class GoalDependency:
         return {"source": self.source, "target": self.target}
 
 
-class FunctionalGoalGraph:
-    """Layer 1: task instruction decomposed into ordered functional goals."""
+class SubGoalGraph:
+    """Layer 1: the task goal decomposed into ordered sub-goals."""
 
-    def __init__(self, instruction: str) -> None:
-        if not instruction:
-            raise ValueError("task instruction must be non-empty")
-        self.instruction = instruction
-        self._goals: Dict[str, FunctionalGoal] = {}
-        self._dependencies: List[GoalDependency] = []
-
-    @property
-    def goals(self) -> Mapping[str, FunctionalGoal]:
-        return dict(self._goals)
+    def __init__(self, goal: str) -> None:
+        if not goal:
+            raise ValueError("task goal must be non-empty")
+        self.goal = goal
+        self._subgoals: Dict[str, SubGoal] = {}
+        self._dependencies: List[SubGoalDependency] = []
 
     @property
-    def dependencies(self) -> Tuple[GoalDependency, ...]:
+    def subgoals(self) -> Mapping[str, SubGoal]:
+        return dict(self._subgoals)
+
+    @property
+    def dependencies(self) -> Tuple[SubGoalDependency, ...]:
         return tuple(self._dependencies)
 
-    def add_goal(self, goal: FunctionalGoal) -> None:
-        if goal.id in self._goals:
-            raise ValueError("duplicate functional goal {!r}".format(goal.id))
-        self._goals[goal.id] = goal
+    def add_subgoal(self, subgoal: SubGoal) -> None:
+        if subgoal.id in self._subgoals:
+            raise ValueError("duplicate sub-goal {!r}".format(subgoal.id))
+        self._subgoals[subgoal.id] = subgoal
 
     def add_dependency(self, source: str, target: str) -> None:
-        self._require_goal(source)
-        self._require_goal(target)
-        dependency = GoalDependency(source, target)
+        self._require_subgoal(source)
+        self._require_subgoal(target)
+        dependency = SubGoalDependency(source, target)
         if dependency in self._dependencies:
-            raise ValueError("duplicate goal dependency {} -> {}".format(source, target))
+            raise ValueError("duplicate sub-goal dependency {} -> {}".format(source, target))
         self._dependencies.append(dependency)
         try:
             self.execution_order()  # reject a cycle at insertion time
@@ -133,103 +146,103 @@ class FunctionalGoalGraph:
             self._dependencies.pop()
             raise
 
-    def achieved(self, goal_id: str, facts: Iterable[str]) -> bool:
-        return self._require_goal(goal_id).predicate in set(facts)
+    def achieved(self, subgoal_id: str, facts: Iterable[str]) -> bool:
+        return self._require_subgoal(subgoal_id).predicate in set(facts)
 
-    def ready_goals(
+    def ready_subgoals(
         self,
         facts: Iterable[str],
         completed: Iterable[str] = (),
-    ) -> Tuple[FunctionalGoal, ...]:
+    ) -> Tuple[SubGoal, ...]:
         fact_set = set(facts)
         completed_set = set(completed)
-        unknown_completed = sorted(completed_set - set(self._goals))
+        unknown_completed = sorted(completed_set - set(self._subgoals))
         if unknown_completed:
-            raise KeyError("unknown completed goals {}".format(unknown_completed))
+            raise KeyError("unknown completed subgoals {}".format(unknown_completed))
         ready = []
-        for goal in self._goals.values():
-            if goal.id in completed_set or goal.predicate in fact_set:
+        for subgoal in self._subgoals.values():
+            if subgoal.id in completed_set or subgoal.predicate in fact_set:
                 continue
             prerequisites = {
                 dependency.source
                 for dependency in self._dependencies
-                if dependency.target == goal.id
+                if dependency.target == subgoal.id
             }
             if all(
-                item in completed_set or self._goals[item].predicate in fact_set
+                item in completed_set or self._subgoals[item].predicate in fact_set
                 for item in prerequisites
             ):
-                ready.append(goal)
+                ready.append(subgoal)
         return tuple(sorted(ready, key=lambda item: item.id))
 
     def execution_order(self) -> Tuple[str, ...]:
         edges = [(item.source, item.target) for item in self._dependencies]
-        return _topological_order(self._goals, edges, "functional goal")
+        return _topological_order(self._subgoals, edges, "sub-goal")
 
     def as_dict(self) -> Dict[str, Any]:
         return {
-            "instruction": self.instruction,
-            "goals": [
-                goal.as_dict()
-                for goal in sorted(self._goals.values(), key=lambda item: item.id)
+            "goal": self.goal,
+            "subgoals": [
+                subgoal.as_dict()
+                for subgoal in sorted(self._subgoals.values(), key=lambda item: item.id)
             ],
             "dependencies": [item.as_dict() for item in self._dependencies],
         }
 
     @classmethod
-    def from_dict(cls, payload: Mapping[str, Any]) -> "FunctionalGoalGraph":
-        where = "functional_goal_graph"
+    def from_dict(cls, payload: Mapping[str, Any]) -> "SubGoalGraph":
+        where = "subgoal_graph"
         payload = schema.require_mapping(payload, where=where)
         schema.require_schema_version(payload, where=where)
         schema.require_keys(
             payload,
             where=where,
-            required=("instruction",),
-            optional=("goals", "dependencies", "schema_version", "execution_order"),
+            required=("goal",),
+            optional=("subgoals", "dependencies", "schema_version", "execution_order"),
         )
-        graph = cls(schema.require_str(payload, "instruction", where=where))
-        for item in schema.require_sequence(payload, "goals", where=where):
-            graph.add_goal(FunctionalGoal.from_dict(item))
+        graph = cls(schema.require_str(payload, "goal", where=where))
+        for item in schema.require_sequence(payload, "subgoals", where=where):
+            graph.add_subgoal(SubGoal.from_dict(item))
         for item in schema.require_sequence(payload, "dependencies", where=where):
-            dependency = GoalDependency.from_dict(item)
+            dependency = SubGoalDependency.from_dict(item)
             graph.add_dependency(dependency.source, dependency.target)
         return graph
 
-    def _adopt(self, other: "FunctionalGoalGraph") -> None:
+    def _adopt(self, other: "SubGoalGraph") -> None:
         """Replace this graph's contents with a validated staging copy.
 
         Used to commit a :class:`~mshab.skills.extension.SkillGraphPatch` in one
         step so a rejected patch can never leave the live graph half-modified.
         """
 
-        self.instruction = other.instruction
-        self._goals = dict(other._goals)
+        self.goal = other.goal
+        self._subgoals = dict(other._subgoals)
         self._dependencies = list(other._dependencies)
 
-    def _require_goal(self, goal_id: str) -> FunctionalGoal:
+    def _require_subgoal(self, subgoal_id: str) -> SubGoal:
         try:
-            return self._goals[goal_id]
+            return self._subgoals[subgoal_id]
         except KeyError as exc:
-            raise KeyError("unknown functional goal {!r}".format(goal_id)) from exc
+            raise KeyError("unknown sub-goal {!r}".format(subgoal_id)) from exc
 
 
 @dataclass(frozen=True)
 class SkillNode:
-    """One scene-independent semantic skill call.
+    """One skill node: a scene-independent request to run one contract.
 
-    Layer 2 stores only a stable library id plus symbolic arguments.  It does
-    not own a bound contract, checkpoint, simulator object, or backend choice;
+    Layer 2 stores only a stable contract id plus symbolic arguments.  It does
+    not own a bound contract, checkpoint, simulator object, or policy choice;
     those are resolved by Layer 3/4 after an environment is selected.
     """
 
     id: str
-    skill_id: str
+    contract_id: str
     arguments: Mapping[str, Any]
     achieves: Tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
-        if not self.id or not self.skill_id:
-            raise ValueError("skill node id and skill_id must be non-empty")
+        if not self.id or not self.contract_id:
+            raise ValueError("skill node id and contract_id must be non-empty")
         arguments = dict(self.arguments)
         for name, value in arguments.items():
             if not isinstance(value, schema.SCALAR_TYPES):
@@ -246,7 +259,7 @@ class SkillNode:
         # contains an unhashable mappingproxy.  Hash the scalar contents instead
         # so nodes may be used in sets and as dict keys.
         return hash(
-            (self.id, self.skill_id, tuple(sorted(self.arguments.items())), self.achieves)
+            (self.id, self.contract_id, tuple(sorted(self.arguments.items())), self.achieves)
         )
 
     @classmethod
@@ -256,7 +269,7 @@ class SkillNode:
         schema.require_keys(
             payload,
             where=where,
-            required=("id", "skill_id"),
+            required=("id", "contract_id"),
             optional=("arguments", "achieves"),
         )
         achieves = schema.require_str_tuple(payload, "achieves", where=where)
@@ -264,7 +277,7 @@ class SkillNode:
             schema.require_identifier({"achieves": item}, "achieves", where=where)
         return cls(
             id=schema.require_identifier(payload, "id", where=where),
-            skill_id=schema.require_skill_id(payload, "skill_id", where=where),
+            contract_id=schema.require_contract_id(payload, "contract_id", where=where),
             arguments=schema.require_arguments(payload, "arguments", where=where),
             achieves=achieves,
         )
@@ -275,7 +288,10 @@ class SkillNode:
 
 @dataclass(frozen=True)
 class SkillEdge:
-    """One typed skill-to-skill relation.
+    """One typed relation between two skill nodes.
+
+    Edges carry semantic/logical ordering only.  Physical readiness of a node
+    in the current world state is the job of its contract terms.
 
     Direction semantics:
 
@@ -314,19 +330,19 @@ class SkillEdge:
         return _edge_dict(self)
 
 
-class GoalSkillSubgraph:
-    """Layer-2 implementation subgraph owned by one functional goal.
+class SubGoalSkillSubgraph:
+    """Layer-2 implementation subgraph owned by one sub-goal.
 
     A subgraph contains both instrumental nodes (for example, navigation) and
-    one or more achiever nodes.  An achiever may only claim the functional goal
+    one or more achiever nodes.  An achiever may only claim the sub-goal
     owned by this subgraph.  This makes the Layer-1-to-Layer-2 boundary explicit
     instead of reconstructing it later from a flat collection of nodes.
     """
 
-    def __init__(self, goal_id: str, task: str) -> None:
-        if not goal_id or not task:
-            raise ValueError("goal_id and task must be non-empty")
-        self._goal_id = goal_id
+    def __init__(self, subgoal_id: str, task: str) -> None:
+        if not subgoal_id or not task:
+            raise ValueError("subgoal_id and task must be non-empty")
+        self._subgoal_id = subgoal_id
         self._task = task
         self._nodes: Dict[str, SkillNode] = {}
         self._edges: List[SkillEdge] = []
@@ -336,23 +352,23 @@ class GoalSkillSubgraph:
         """Freeze the whole object once a composition graph has registered it.
 
         ``_seal`` used to guard only ``add_node``/``relate``, which left the
-        aggregate handing out a live object whose ``goal_id`` could be
-        reassigned -- silently breaking single-goal ownership, the achiever
+        aggregate handing out a live object whose ``subgoal_id`` could be
+        reassigned -- silently breaking single-sub-goal ownership, the achiever
         invariant, and global node-id uniqueness.
         """
 
         if getattr(self, "_sealed", False):
             raise RuntimeError(
-                "goal skill subgraph {!r} is registered and sealed; build a "
-                "replacement with GoalSkillSubgraphExtension instead".format(
-                    self._goal_id
+                "sub-goal skill subgraph {!r} is registered and sealed; build a "
+                "replacement with SubGoalSkillSubgraphExtension instead".format(
+                    self._subgoal_id
                 )
             )
         object.__setattr__(self, name, value)
 
     @property
-    def goal_id(self) -> str:
-        return self._goal_id
+    def subgoal_id(self) -> str:
+        return self._subgoal_id
 
     @property
     def task(self) -> str:
@@ -375,7 +391,7 @@ class GoalSkillSubgraph:
         return tuple(
             node
             for node in sorted(self._nodes.values(), key=lambda item: item.id)
-            if self.goal_id in node.achieves
+            if self.subgoal_id in node.achieves
         )
 
     def add_node(self, node: SkillNode) -> None:
@@ -383,17 +399,17 @@ class GoalSkillSubgraph:
         if node.id in self._nodes:
             raise ValueError("duplicate skill node {!r}".format(node.id))
         expected_prefix = "mshab.{}.".format(self.task)
-        if not node.skill_id.startswith(expected_prefix):
+        if not node.contract_id.startswith(expected_prefix):
             raise ValueError(
-                "node {} skill {!r} is outside task namespace {!r}".format(
-                    node.id, node.skill_id, self.task
+                "node {} contract {!r} is outside task namespace {!r}".format(
+                    node.id, node.contract_id, self.task
                 )
             )
-        foreign_goals = sorted(set(node.achieves) - {self.goal_id})
-        if foreign_goals:
+        foreign_subgoals = sorted(set(node.achieves) - {self.subgoal_id})
+        if foreign_subgoals:
             raise ValueError(
-                "node {} is inside goal subgraph {!r} but achieves {}".format(
-                    node.id, self.goal_id, foreign_goals
+                "node {} is inside sub-goal subgraph {!r} but achieves {}".format(
+                    node.id, self.subgoal_id, foreign_subgoals
                 )
             )
         self._nodes[node.id] = node
@@ -412,19 +428,19 @@ class GoalSkillSubgraph:
 
     def execution_order(self) -> Tuple[str, ...]:
         return _topological_order(
-            self._nodes, _causal_pairs(self._edges), "goal skill subgraph"
+            self._nodes, _causal_pairs(self._edges), "sub-goal skill subgraph"
         )
 
     def validate(self) -> None:
         if not self._nodes:
             raise ValueError(
-                "goal skill subgraph {!r} must contain at least one node".format(
-                    self.goal_id
+                "sub-goal skill subgraph {!r} must contain at least one node".format(
+                    self.subgoal_id
                 )
             )
         if not self.achievers:
             raise ValueError(
-                "goal skill subgraph {!r} has no achiever node".format(self.goal_id)
+                "sub-goal skill subgraph {!r} has no achiever node".format(self.subgoal_id)
             )
         self.execution_order()
 
@@ -434,10 +450,10 @@ class GoalSkillSubgraph:
         self.validate()
         object.__setattr__(self, "_sealed", True)
 
-    def unsealed_copy(self) -> "GoalSkillSubgraph":
+    def unsealed_copy(self) -> "SubGoalSkillSubgraph":
         """A mutable clone: the only supported way to revise a sealed subgraph."""
 
-        clone = GoalSkillSubgraph(self._goal_id, self._task)
+        clone = SubGoalSkillSubgraph(self._subgoal_id, self._task)
         for node in self._nodes.values():
             clone.add_node(node)
         for edge in self._edges:
@@ -447,14 +463,14 @@ class GoalSkillSubgraph:
     def _ensure_mutable(self) -> None:
         if self._sealed:
             raise RuntimeError(
-                "goal skill subgraph {!r} is registered and sealed".format(
-                    self.goal_id
+                "sub-goal skill subgraph {!r} is registered and sealed".format(
+                    self.subgoal_id
                 )
             )
 
     def as_dict(self) -> Dict[str, Any]:
         return {
-            "goal_id": self.goal_id,
+            "subgoal_id": self.subgoal_id,
             "nodes": [
                 _node_dict(node)
                 for node in sorted(
@@ -469,19 +485,19 @@ class GoalSkillSubgraph:
     @classmethod
     def from_dict(
         cls, payload: Mapping[str, Any], *, task: str
-    ) -> "GoalSkillSubgraph":
-        where = "goal_skill_subgraph"
+    ) -> "SubGoalSkillSubgraph":
+        where = "subgoal_skill_subgraph"
         payload = schema.require_mapping(payload, where=where)
         schema.require_keys(
             payload,
             where=where,
-            required=("goal_id",),
+            required=("subgoal_id",),
             # achiever_nodes/execution_order are derived views in as_dict();
             # they are accepted on input but recomputed, never trusted.
             optional=("nodes", "edges", "achiever_nodes", "execution_order"),
         )
         subgraph = cls(
-            schema.require_identifier(payload, "goal_id", where=where), task
+            schema.require_identifier(payload, "subgoal_id", where=where), task
         )
         for item in schema.require_sequence(payload, "nodes", where=where):
             subgraph.add_node(SkillNode.from_dict(item))
@@ -495,35 +511,35 @@ class GoalSkillSubgraph:
             return self._nodes[node_id]
         except KeyError as exc:
             raise KeyError(
-                "unknown skill node {!r} in goal subgraph {!r}".format(
-                    node_id, self.goal_id
+                "unknown skill node {!r} in sub-goal subgraph {!r}".format(
+                    node_id, self.subgoal_id
                 )
             ) from exc
 
 
 @dataclass(frozen=True)
 class SkillSubgraphRelation:
-    """A typed skill relation crossing two functional-goal subgraphs.
+    """A typed skill relation crossing two sub-goal subgraphs.
 
     An endpoint is either a specific node id or ``None``, which means *any
-    achiever of that goal*.  Goal-level endpoints are what make alternative
+    achiever of that sub-goal*.  Sub-goal-level endpoints are what make alternative
     candidates usable: pinning a downstream ``ENABLES`` to one specific
     achiever silently makes that candidate mandatory, so a task that recovers
-    through a fallback can never reach the next functional goal.
+    through a fallback can never reach the next sub-goal.
     """
 
-    source_goal: str
-    target_goal: str
+    source_subgoal: str
+    target_subgoal: str
     source_node: Optional[str] = None
     target_node: Optional[str] = None
     relation: SkillRelation = SkillRelation.ENABLES
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "relation", _require_relation(self.relation))
-        if not self.source_goal or not self.target_goal:
-            raise ValueError("subgraph relation goals must be non-empty")
-        if self.source_goal == self.target_goal:
-            raise ValueError("subgraph relation must connect two distinct goals")
+        if not self.source_subgoal or not self.target_subgoal:
+            raise ValueError("subgraph relation subgoals must be non-empty")
+        if self.source_subgoal == self.target_subgoal:
+            raise ValueError("subgraph relation must connect two distinct subgoals")
         for name in ("source_node", "target_node"):
             value = getattr(self, name)
             if value is not None and not value:
@@ -534,25 +550,25 @@ class SkillSubgraphRelation:
             and self.source_node == self.target_node
         ):
             raise ValueError("subgraph relation needs two distinct node ids")
-        if self.is_goal_level and self.relation not in _CAUSAL_RELATIONS:
+        if self.is_subgoal_level and self.relation not in _CAUSAL_RELATIONS:
             raise ValueError(
-                "a goal-level endpoint is only meaningful for {}; got {}".format(
+                "a sub-goal-level endpoint is only meaningful for {}; got {}".format(
                     sorted(item.value for item in _CAUSAL_RELATIONS),
                     self.relation.value,
                 )
             )
 
     @property
-    def is_goal_level(self) -> bool:
+    def is_subgoal_level(self) -> bool:
         return self.source_node is None or self.target_node is None
 
     def endpoints(
-        self, subgraphs: Mapping[str, "GoalSkillSubgraph"]
+        self, subgraphs: Mapping[str, "SubGoalSkillSubgraph"]
     ) -> Tuple[Tuple[str, str], ...]:
         """Resolve to concrete ``(source_node, target_node)`` pairs."""
 
-        sources = self._resolve(self.source_goal, self.source_node, subgraphs)
-        targets = self._resolve(self.target_goal, self.target_node, subgraphs)
+        sources = self._resolve(self.source_subgoal, self.source_node, subgraphs)
+        targets = self._resolve(self.target_subgoal, self.target_node, subgraphs)
         return tuple(
             (source, target)
             for source in sources
@@ -561,7 +577,7 @@ class SkillSubgraphRelation:
         )
 
     def edges(
-        self, subgraphs: Mapping[str, "GoalSkillSubgraph"]
+        self, subgraphs: Mapping[str, "SubGoalSkillSubgraph"]
     ) -> Tuple[SkillEdge, ...]:
         return tuple(
             SkillEdge(source, target, self.relation)
@@ -570,26 +586,26 @@ class SkillSubgraphRelation:
 
     @staticmethod
     def _resolve(
-        goal_id: str,
+        subgoal_id: str,
         node_id: Optional[str],
-        subgraphs: Mapping[str, "GoalSkillSubgraph"],
+        subgraphs: Mapping[str, "SubGoalSkillSubgraph"],
     ) -> Tuple[str, ...]:
         try:
-            subgraph = subgraphs[goal_id]
+            subgraph = subgraphs[subgoal_id]
         except KeyError as exc:
             raise KeyError(
-                "unknown goal skill subgraph {!r}".format(goal_id)
+                "unknown sub-goal skill subgraph {!r}".format(subgoal_id)
             ) from exc
         if node_id is not None:
             if node_id not in subgraph.nodes:
                 raise ValueError(
-                    "node {!r} is not owned by subgraph {!r}".format(node_id, goal_id)
+                    "node {!r} is not owned by subgraph {!r}".format(node_id, subgoal_id)
                 )
             return (node_id,)
         achievers = tuple(node.id for node in subgraph.achievers)
         if not achievers:
             raise ValueError(
-                "goal-level endpoint needs an achiever in subgraph {!r}".format(goal_id)
+                "sub-goal-level endpoint needs an achiever in subgraph {!r}".format(subgoal_id)
             )
         return achievers
 
@@ -600,12 +616,12 @@ class SkillSubgraphRelation:
         schema.require_keys(
             payload,
             where=where,
-            required=("source_goal", "target_goal"),
+            required=("source_subgoal", "target_subgoal"),
             optional=("source_node", "target_node", "relation"),
         )
         return cls(
-            source_goal=schema.require_identifier(payload, "source_goal", where=where),
-            target_goal=schema.require_identifier(payload, "target_goal", where=where),
+            source_subgoal=schema.require_identifier(payload, "source_subgoal", where=where),
+            target_subgoal=schema.require_identifier(payload, "target_subgoal", where=where),
             source_node=schema.optional_identifier(payload, "source_node", where=where),
             target_node=schema.optional_identifier(payload, "target_node", where=where),
             relation=_require_relation(
@@ -615,8 +631,8 @@ class SkillSubgraphRelation:
 
     def as_dict(self) -> Dict[str, Optional[str]]:
         return {
-            "source_goal": self.source_goal,
-            "target_goal": self.target_goal,
+            "source_subgoal": self.source_subgoal,
+            "target_subgoal": self.target_subgoal,
             "source_node": self.source_node,
             "target_node": self.target_node,
             "relation": self.relation.value,
@@ -624,28 +640,28 @@ class SkillSubgraphRelation:
 
 
 class SkillCompositionGraph:
-    """Layer 2: one goal-owned subgraph per Layer-1 functional goal.
+    """Layer 2: one sub-goal-owned subgraph per Layer-1 sub-goal.
 
     The composition graph is an aggregate root.  Each
-    :class:`GoalSkillSubgraph` owns its nodes and internal relations, while this
-    object owns relations crossing goal boundaries.  ``nodes`` and ``edges``
+    :class:`SubGoalSkillSubgraph` owns its nodes and internal relations, while this
+    object owns relations crossing sub-goal boundaries.  ``nodes`` and ``edges``
     expose read-only flattened views for planners and legacy query code.
     """
 
     def __init__(
         self,
         task: str,
-        goal_graph: Optional[FunctionalGoalGraph] = None,
+        subgoal_graph: Optional[SubGoalGraph] = None,
     ) -> None:
         if not task:
             raise ValueError("composition graph task must be non-empty")
         self.task = task
-        self.goal_graph = goal_graph
-        self._subgraphs: Dict[str, GoalSkillSubgraph] = {}
+        self.subgoal_graph = subgoal_graph
+        self._subgraphs: Dict[str, SubGoalSkillSubgraph] = {}
         self._subgraph_relations: List[SkillSubgraphRelation] = []
 
     @property
-    def subgraphs(self) -> Mapping[str, GoalSkillSubgraph]:
+    def subgraphs(self) -> Mapping[str, SubGoalSkillSubgraph]:
         return dict(self._subgraphs)
 
     @property
@@ -662,9 +678,9 @@ class SkillCompositionGraph:
 
     @property
     def edges(self) -> Tuple[SkillEdge, ...]:
-        """Flattened read-only view; goal-level relations are expanded here.
+        """Flattened read-only view; sub-goal-level relations are expanded here.
 
-        A goal-level relation yields one edge per achiever of its open
+        A sub-goal-level relation yields one edge per achiever of its open
         endpoint.  That is the correct *partial order over candidates*: every
         achiever precedes the downstream node, and exactly one of them will be
         chosen by :class:`~mshab.skills.plan.SkillPlanner`.
@@ -680,40 +696,40 @@ class SkillCompositionGraph:
         )
         return internal + cross
 
-    def add_subgraph(self, subgraph: GoalSkillSubgraph) -> None:
+    def add_subgraph(self, subgraph: SubGoalSkillSubgraph) -> None:
         if subgraph.task != self.task:
             raise ValueError("subgraph task must match composition graph task")
-        if subgraph.goal_id in self._subgraphs:
+        if subgraph.subgoal_id in self._subgraphs:
             raise ValueError(
-                "duplicate goal skill subgraph {!r}".format(subgraph.goal_id)
+                "duplicate sub-goal skill subgraph {!r}".format(subgraph.subgoal_id)
             )
         if (
-            self.goal_graph is not None
-            and subgraph.goal_id not in self.goal_graph.goals
+            self.subgoal_graph is not None
+            and subgraph.subgoal_id not in self.subgoal_graph.subgoals
         ):
             raise ValueError(
-                "subgraph references unknown functional goal {!r}".format(
-                    subgraph.goal_id
+                "subgraph references unknown sub-goal {!r}".format(
+                    subgraph.subgoal_id
                 )
             )
         duplicate_nodes = sorted(set(subgraph.nodes) & set(self.nodes))
         if duplicate_nodes:
             raise ValueError("duplicate skill nodes {}".format(duplicate_nodes))
         subgraph._seal()
-        self._subgraphs[subgraph.goal_id] = subgraph
+        self._subgraphs[subgraph.subgoal_id] = subgraph
 
-    def replace_subgraph(self, subgraph: GoalSkillSubgraph) -> None:
-        """Swap in a revised implementation for an already-registered goal.
+    def replace_subgraph(self, subgraph: SubGoalSkillSubgraph) -> None:
+        """Swap in a revised implementation for an already-registered sub-goal.
 
         This is the commit half of
-        :class:`~mshab.skills.extension.GoalSkillSubgraphExtension`: a sealed
+        :class:`~mshab.skills.extension.SubGoalSkillSubgraphExtension`: a sealed
         subgraph is never edited in place, it is replaced by a validated
-        successor.  The replacement must keep every node that a cross-goal
-        relation still points at, and must not collide with another goal's ids.
+        successor.  The replacement must keep every node that a cross-sub-goal
+        relation still points at, and must not collide with another sub-goal's ids.
         """
 
-        goal_id = subgraph.goal_id
-        current = self._require_subgraph(goal_id)
+        subgoal_id = subgraph.subgoal_id
+        current = self._require_subgraph(subgoal_id)
         if subgraph is current:
             raise ValueError("replacement must be a distinct subgraph object")
         if subgraph.task != self.task:
@@ -721,37 +737,37 @@ class SkillCompositionGraph:
         foreign = {
             node_id
             for other_id, other in self._subgraphs.items()
-            if other_id != goal_id
+            if other_id != subgoal_id
             for node_id in other.nodes
         }
         duplicate_nodes = sorted(set(subgraph.nodes) & foreign)
         if duplicate_nodes:
             raise ValueError("duplicate skill nodes {}".format(duplicate_nodes))
         subgraph._seal()
-        self._subgraphs[goal_id] = subgraph
+        self._subgraphs[subgoal_id] = subgraph
         try:
             self._check_relation_integrity()
             self.execution_order()
         except (KeyError, ValueError):
-            self._subgraphs[goal_id] = current
+            self._subgraphs[subgoal_id] = current
             raise
 
-    def add_node(self, node: SkillNode, goal_id: Optional[str] = None) -> None:
+    def add_node(self, node: SkillNode, subgoal_id: Optional[str] = None) -> None:
         """Compatibility helper; explicit ``add_subgraph`` is preferred.
 
-        A node can only be inserted this way when its owning goal is explicit
+        A node can only be inserted this way when its owning sub-goal is explicit
         (or uniquely declared by ``node.achieves``).  Instrumental nodes should
-        be added directly to a :class:`GoalSkillSubgraph`.
+        be added directly to a :class:`SubGoalSkillSubgraph`.
         """
 
-        owner = goal_id
+        owner = subgoal_id
         if owner is None and len(node.achieves) == 1:
             owner = node.achieves[0]
         if owner is None:
-            raise ValueError("goal_id is required for an instrumental skill node")
+            raise ValueError("subgoal_id is required for an instrumental skill node")
         subgraph = self._subgraphs.get(owner)
         if subgraph is None:
-            subgraph = GoalSkillSubgraph(owner, self.task)
+            subgraph = SubGoalSkillSubgraph(owner, self.task)
             subgraph.add_node(node)
             self.add_subgraph(subgraph)
         else:
@@ -761,29 +777,29 @@ class SkillCompositionGraph:
             )
 
     def relate(self, source: str, target: str, relation: SkillRelation) -> None:
-        source_goal = self.owner_of(source)
-        target_goal = self.owner_of(target)
-        if source_goal == target_goal:
+        source_subgoal = self.owner_of(source)
+        target_subgoal = self.owner_of(target)
+        if source_subgoal == target_subgoal:
             raise RuntimeError(
                 "internal relation belongs to sealed subgraph {!r}; add it "
-                "before calling add_subgraph()".format(source_goal)
+                "before calling add_subgraph()".format(source_subgoal)
             )
-        self.relate_subgraphs(source_goal, target_goal, source, target, relation)
+        self.relate_subgraphs(source_subgoal, target_subgoal, source, target, relation)
 
     def relate_subgraphs(
         self,
-        source_goal: str,
-        target_goal: str,
+        source_subgoal: str,
+        target_subgoal: str,
         source_node: Optional[str] = None,
         target_node: Optional[str] = None,
         relation: SkillRelation = SkillRelation.ENABLES,
     ) -> None:
-        """Relate two goal subgraphs; ``None`` endpoints mean *any achiever*."""
+        """Relate two sub-goal subgraphs; ``None`` endpoints mean *any achiever*."""
 
-        self._require_subgraph(source_goal)
-        self._require_subgraph(target_goal)
+        self._require_subgraph(source_subgoal)
+        self._require_subgraph(target_subgoal)
         item = SkillSubgraphRelation(
-            source_goal, target_goal, source_node, target_node, relation
+            source_subgoal, target_subgoal, source_node, target_node, relation
         )
         # Resolving here verifies both endpoint owners before anything is stored.
         new_edges = item.edges(self._subgraphs)
@@ -804,20 +820,20 @@ class SkillCompositionGraph:
 
     def owner_of(self, node_id: str) -> str:
         owners = [
-            goal_id
-            for goal_id, subgraph in self._subgraphs.items()
+            subgoal_id
+            for subgoal_id, subgraph in self._subgraphs.items()
             if node_id in subgraph.nodes
         ]
         if not owners:
             raise KeyError("unknown skill node {!r}".format(node_id))
         return owners[0]
 
-    def subgraph_for_goal(self, goal_id: str) -> GoalSkillSubgraph:
-        """Return the Layer-2 implementation owned by a Layer-1 goal."""
+    def subgraph_for_subgoal(self, subgoal_id: str) -> SubGoalSkillSubgraph:
+        """Return the Layer-2 implementation owned by a Layer-1 sub-goal."""
 
-        if self.goal_graph is not None and goal_id not in self.goal_graph.goals:
-            raise KeyError("unknown functional goal {!r}".format(goal_id))
-        return self._require_subgraph(goal_id)
+        if self.subgoal_graph is not None and subgoal_id not in self.subgoal_graph.subgoals:
+            raise KeyError("unknown sub-goal {!r}".format(subgoal_id))
+        return self._require_subgraph(subgoal_id)
 
     def alternatives(self, node_id: str) -> Tuple[SkillNode, ...]:
         """The complete ALTERNATIVE_TO connected component, excluding self."""
@@ -848,33 +864,33 @@ class SkillCompositionGraph:
             if edge.source == node_id and edge.relation == SkillRelation.FALLBACK_TO
         )
 
-    def candidates_for_goal(self, goal_id: str) -> Tuple[SkillNode, ...]:
-        """Candidate skill nodes connected to one goal by ACHIEVED_BY."""
+    def candidates_for_subgoal(self, subgoal_id: str) -> Tuple[SkillNode, ...]:
+        """Candidate skill nodes that achieve one sub-goal."""
 
-        if self.goal_graph is None:
-            raise RuntimeError("composition graph has no functional goal graph")
-        if goal_id not in self.goal_graph.goals:
-            raise KeyError("unknown functional goal {!r}".format(goal_id))
-        subgraph = self._subgraphs.get(goal_id)
+        if self.subgoal_graph is None:
+            raise RuntimeError("composition graph has no sub-goal graph")
+        if subgoal_id not in self.subgoal_graph.subgoals:
+            raise KeyError("unknown sub-goal {!r}".format(subgoal_id))
+        subgraph = self._subgraphs.get(subgoal_id)
         return subgraph.achievers if subgraph is not None else ()
 
-    def uncovered_goals(self) -> Tuple[FunctionalGoal, ...]:
-        """Functional goals for which the graph currently has no candidate."""
+    def uncovered_subgoals(self) -> Tuple[SubGoal, ...]:
+        """Functional subgoals for which the graph currently has no candidate."""
 
-        if self.goal_graph is None:
+        if self.subgoal_graph is None:
             return ()
         return tuple(
-            goal
-            for goal in sorted(self.goal_graph.goals.values(), key=lambda item: item.id)
-            if goal.id not in self._subgraphs or not self._subgraphs[goal.id].achievers
+            subgoal
+            for subgoal in sorted(self.subgoal_graph.subgoals.values(), key=lambda item: item.id)
+            if subgoal.id not in self._subgraphs or not self._subgraphs[subgoal.id].achievers
         )
 
     def prerequisite_groups(self, node_id: str) -> Tuple[FrozenSet[str], ...]:
         """Causal prerequisites as disjunctive groups.
 
         Each group must be satisfied by *at least one* completed member.  A
-        node-level relation yields a singleton group; a goal-level relation
-        yields one group holding every achiever of that goal, so recovering
+        node-level relation yields a singleton group; a sub-goal-level relation
+        yields one group holding every achiever of that sub-goal, so recovering
         through a fallback still satisfies the downstream dependency.
         """
 
@@ -911,7 +927,7 @@ class SkillCompositionGraph:
         """Dependency-ready nodes, without consulting an environment.
 
         Contract admission belongs to :class:`SkillRuntime`, because facts and
-        backend readiness are Layer-3/4 environment-specific concerns.
+        policy readiness are Layer-3/4 environment-specific concerns.
         """
 
         completed_set = set(completed)
@@ -951,28 +967,28 @@ class SkillCompositionGraph:
             subgraph.validate()
         self._check_relation_integrity()
         self.execution_order()
-        if self.goal_graph is None:
+        if self.subgoal_graph is None:
             return
-        uncovered = [goal.id for goal in self.uncovered_goals()]
+        uncovered = [subgoal.id for subgoal in self.uncovered_subgoals()]
         if uncovered:
-            raise ValueError("functional goals without an achiever {}".format(uncovered))
+            raise ValueError("sub-goals without an achiever {}".format(uncovered))
         connected = {
-            (item.source_goal, item.target_goal)
+            (item.source_subgoal, item.target_subgoal)
             for item in self._subgraph_relations
             if item.relation == SkillRelation.ENABLES
         }
         missing = sorted(
             "{} -> {}".format(dependency.source, dependency.target)
-            for dependency in self.goal_graph.dependencies
+            for dependency in self.subgoal_graph.dependencies
             if (dependency.source, dependency.target) not in connected
         )
         if missing:
             raise ValueError(
-                "goal dependencies without a Layer-2 ENABLES relation {}".format(missing)
+                "sub-goal dependencies without a Layer-2 ENABLES relation {}".format(missing)
             )
 
     def _check_relation_integrity(self) -> None:
-        """Every cross-goal relation still resolves to owned, existing nodes."""
+        """Every cross-sub-goal relation still resolves to owned, existing nodes."""
 
         seen: List[SkillEdge] = []
         for item in self._subgraph_relations:
@@ -983,10 +999,10 @@ class SkillCompositionGraph:
     def as_dict(self) -> Dict[str, Any]:
         return {
             "task": self.task,
-            "goal_graph": self.goal_graph.as_dict() if self.goal_graph else None,
+            "subgoal_graph": self.subgoal_graph.as_dict() if self.subgoal_graph else None,
             "subgraphs": [
-                self._subgraphs[goal_id].as_dict()
-                for goal_id in self._ordered_goal_ids()
+                self._subgraphs[subgoal_id].as_dict()
+                for subgoal_id in self._ordered_subgoal_ids()
             ],
             "subgraph_relations": [
                 item.as_dict() for item in self._subgraph_relations
@@ -1007,7 +1023,7 @@ class SkillCompositionGraph:
         cls,
         payload: Mapping[str, Any],
         *,
-        goal_graph: Optional[FunctionalGoalGraph] = None,
+        subgoal_graph: Optional[SubGoalGraph] = None,
     ) -> "SkillCompositionGraph":
         where = "skill_composition_graph"
         payload = schema.require_mapping(payload, where=where)
@@ -1017,7 +1033,7 @@ class SkillCompositionGraph:
             where=where,
             required=("task",),
             optional=(
-                "goal_graph",
+                "subgoal_graph",
                 "subgraphs",
                 "subgraph_relations",
                 "nodes",
@@ -1029,16 +1045,16 @@ class SkillCompositionGraph:
             ),
         )
         task = schema.require_identifier(payload, "task", where=where)
-        if goal_graph is None and isinstance(payload.get("goal_graph"), Mapping):
-            goal_graph = FunctionalGoalGraph.from_dict(payload["goal_graph"])
-        graph = cls(task, goal_graph=goal_graph)
+        if subgoal_graph is None and isinstance(payload.get("subgoal_graph"), Mapping):
+            subgoal_graph = SubGoalGraph.from_dict(payload["subgoal_graph"])
+        graph = cls(task, subgoal_graph=subgoal_graph)
         for item in schema.require_sequence(payload, "subgraphs", where=where):
-            graph.add_subgraph(GoalSkillSubgraph.from_dict(item, task=task))
+            graph.add_subgraph(SubGoalSkillSubgraph.from_dict(item, task=task))
         for item in schema.require_sequence(payload, "subgraph_relations", where=where):
             relation = SkillSubgraphRelation.from_dict(item)
             graph.relate_subgraphs(
-                relation.source_goal,
-                relation.target_goal,
+                relation.source_subgoal,
+                relation.target_subgoal,
                 relation.source_node,
                 relation.target_node,
                 relation.relation,
@@ -1057,21 +1073,21 @@ class SkillCompositionGraph:
         except KeyError as exc:
             raise KeyError("unknown skill node {!r}".format(node_id)) from exc
 
-    def _require_subgraph(self, goal_id: str) -> GoalSkillSubgraph:
+    def _require_subgraph(self, subgoal_id: str) -> SubGoalSkillSubgraph:
         try:
-            return self._subgraphs[goal_id]
+            return self._subgraphs[subgoal_id]
         except KeyError as exc:
             raise KeyError(
-                "unknown goal skill subgraph {!r}".format(goal_id)
+                "unknown sub-goal skill subgraph {!r}".format(subgoal_id)
             ) from exc
 
-    def _ordered_goal_ids(self) -> Tuple[str, ...]:
-        if self.goal_graph is None:
+    def _ordered_subgoal_ids(self) -> Tuple[str, ...]:
+        if self.subgoal_graph is None:
             return tuple(sorted(self._subgraphs))
         ordered = [
-            goal_id
-            for goal_id in self.goal_graph.execution_order()
-            if goal_id in self._subgraphs
+            subgoal_id
+            for subgoal_id in self.subgoal_graph.execution_order()
+            if subgoal_id in self._subgraphs
         ]
         ordered.extend(sorted(set(self._subgraphs) - set(ordered)))
         return tuple(ordered)
@@ -1080,7 +1096,7 @@ class SkillCompositionGraph:
 def _node_dict(node: SkillNode) -> Dict[str, Any]:
     return {
         "id": node.id,
-        "skill_id": node.skill_id,
+        "contract_id": node.contract_id,
         "arguments": dict(node.arguments),
         "achieves": list(node.achieves),
     }

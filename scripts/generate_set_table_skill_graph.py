@@ -15,8 +15,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
 from mshab.skills import (
-    AtomicSkill,
-    CheckpointBackend,
+    AtomicContract,
+    CheckpointPolicy,
     SkillCatalog,
     SkillPlanner,
     build_set_table_stack,
@@ -39,14 +39,14 @@ def parse_args():
     return parser.parse_args()
 
 
-def contract_dict(contract):
+def terms_dict(terms):
     return {
-        "preconditions": list(contract.preconditions),
-        "effects": list(contract.effects),
-        "invariants": list(contract.invariants),
-        "verification": list(contract.verification),
-        "failure_modes": list(contract.failure_modes),
-        "deletes": list(contract.deletes),
+        "preconditions": list(terms.preconditions),
+        "effects": list(terms.effects),
+        "invariants": list(terms.invariants),
+        "verification": list(terms.verification),
+        "failure_modes": list(terms.failure_modes),
+        "deletes": list(terms.deletes),
     }
 
 
@@ -58,58 +58,58 @@ def relative_path(path, root):
 
 
 def graph_document(stack, checkpoint_root):
-    contracts = stack.contracts
+    bound_terms = stack.bound_terms
 
-    planner = SkillPlanner(stack.goal_graph, stack.skill_graph)
+    planner = SkillPlanner(stack.subgoal_graph, stack.skill_graph)
     nominal = planner.plan()
-    # Fail only the primaries that actually declare a fallback; a goal whose
+    # Fail only the primaries that actually declare a fallback; a sub-goal whose
     # single achiever fails has no recovery and correctly aborts the plan.
     recoverable = sorted(
-        nominal.selections[goal_id]
-        for goal_id, subgraph in stack.skill_graph.subgraphs.items()
+        nominal.selections[subgoal_id]
+        for subgoal_id, subgraph in stack.skill_graph.subgraphs.items()
         if len(planner.fallback_chain(subgraph)) > 1
     )
     recovery = planner.plan(failed=recoverable)
     layer_3 = {
         node_id: {
-            "skill_id": node.skill_id,
+            "contract_id": node.contract_id,
             "arguments": dict(node.arguments),
-            **contract_dict(contracts[node_id]),
+            **terms_dict(bound_terms[node_id]),
         }
         for node_id, node in sorted(stack.skill_graph.nodes.items())
     }
 
     layer_4 = []
-    for skill in stack.library.find(task="set_table"):
-        if not isinstance(skill, AtomicSkill):
+    for contract in stack.library.find(task="set_table"):
+        if not isinstance(contract, AtomicContract):
             continue
-        backends = {}
-        for key, backend in sorted(skill.backends.items()):
+        policies = {}
+        for key, policy in sorted(contract.policies.items()):
             record = {
-                "executor_type": backend.executor_type.value,
+                "executor_type": policy.executor_type.value,
             }
-            if isinstance(backend, CheckpointBackend):
+            if isinstance(policy, CheckpointPolicy):
                 record.update(
                     {
-                        "family": backend.family,
-                        "policy_type": backend.policy_type,
+                        "family": policy.family,
+                        "policy_type": policy.policy_type,
                         "checkpoint": relative_path(
-                            backend.checkpoint_path, checkpoint_root
+                            policy.checkpoint_path, checkpoint_root
                         ),
                         "config": relative_path(
-                            backend.config_path, checkpoint_root
+                            policy.config_path, checkpoint_root
                         ),
                     }
                 )
-            backends[key] = record
+            policies[key] = record
         layer_4.append(
             {
-                "id": skill.id,
-                "skill_type": skill.skill_type_name,
-                "target": skill.target,
-                "env_id": skill.env_id,
-                "max_episode_steps": skill.max_episode_steps,
-                "backends": backends,
+                "id": contract.id,
+                "contract_type": contract.contract_type_name,
+                "target": contract.target,
+                "env_id": contract.env_id,
+                "max_episode_steps": contract.max_episode_steps,
+                "policies": policies,
             }
         )
 
@@ -133,7 +133,7 @@ def graph_document(stack, checkpoint_root):
             "object_order": ["024_bowl", "013_apple"],
         },
         execution_plan_note=(
-            "One achiever per functional goal, chosen from the candidate "
+            "One achiever per sub-goal, chosen from the candidate "
             "graph. The recovery plan is the same graph re-decided after "
             "every primary achiever is reported failed."
         ),
@@ -141,10 +141,10 @@ def graph_document(stack, checkpoint_root):
             "nominal": nominal,
             "recovery_all_primaries_failed": recovery,
         },
-        goal_graph=stack.goal_graph,
+        subgoal_graph=stack.subgoal_graph,
         skill_graph=stack.skill_graph,
-        bound_contracts=layer_3,
-        atomic_skills=layer_4,
+        bound_terms=layer_3,
+        contracts=layer_4,
     ).as_dict()
 
 
@@ -178,7 +178,7 @@ def set_table_svg(document):
         'viewBox="0 0 {} {}" role="img">'.format(width, height, width, height),
         '<title>Complete MS-HAB SetTable four-layer skill graph</title>',
         '<desc>Bowl and apple SetTable skill composition with contracts and '
-        'downloaded atomic skill backends.</desc>',
+        'the downloaded policies that execute them.</desc>',
         """<defs>
           <marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="3"
                   orient="auto" markerUnits="strokeWidth">
@@ -195,7 +195,7 @@ def set_table_svg(document):
             .subgraph { stroke: #16a34a; stroke-width: 2; rx: 12; }
             .node-title { font: 700 15px Arial, sans-serif; fill: #0f172a; }
             .edge { fill: none; stroke: #334155; stroke-width: 2; }
-            .goal-edge { fill: none; stroke: #2563eb; stroke-width: 2; }
+            .subgoal-edge { fill: none; stroke: #2563eb; stroke-width: 2; }
             .relation { fill: none; stroke: #7c3aed; stroke-width: 2;
                         stroke-dasharray: 6 4; }
           </style>
@@ -203,14 +203,14 @@ def set_table_svg(document):
         '<rect width="1900" height="1510" fill="#f8fafc"/>',
     ]
 
-    # Layer 1: eight ordered functional goals.
+    # Layer 1: eight ordered sub-goals.
     parts.append(
         '<rect class="layer" x="24" y="20" width="1852" height="240" '
         'fill="#eaf4ff" stroke="#3b82f6"/>'
     )
-    parts.append(text(950, 58, "1. Functional Goal Graph", "title"))
+    parts.append(text(950, 58, "1. Sub-goal Graph", "title"))
     parts.append(text(1815, 56, "SCENE-INDEPENDENT", "subtitle", "end"))
-    goal_labels = [
+    subgoal_labels = [
         ("Open counter", "open(kitchen_counter)"),
         ("Retrieve bowl", "holding(024_bowl)"),
         ("Place bowl", "at(024_bowl,dining_table)"),
@@ -220,19 +220,19 @@ def set_table_svg(document):
         ("Place apple", "at(013_apple,dining_table)"),
         ("Close fridge", "closed(fridge)"),
     ]
-    goal_x = [55 + index * 228 for index in range(8)]
-    for index, ((title, subtitle), x) in enumerate(zip(goal_labels, goal_x)):
+    subgoal_x = [55 + index * 228 for index in range(8)]
+    for index, ((title, subtitle), x) in enumerate(zip(subgoal_labels, subgoal_x)):
         parts.extend(node(x, 105, title, subtitle, "#ffffff", width=196, height=78))
         if index:
-            parts.append(arrow(goal_x[index - 1] + 196, 144, x - 6, 144, "goal-edge"))
+            parts.append(arrow(subgoal_x[index - 1] + 196, 144, x - 6, 144, "subgoal-edge"))
 
-    # Layer 2: every functional goal owns one explicit implementation subgraph.
+    # Layer 2: every sub-goal owns one explicit implementation subgraph.
     parts.append(
         '<rect class="layer" x="24" y="285" width="1852" height="670" '
         'fill="#ecfdf3" stroke="#22c55e"/>'
     )
     parts.append(
-        text(950, 325, "2. Goal-owned Candidate Skill Subgraphs", "title")
+        text(950, 325, "2. Sub-goal-owned Candidate Skill Subgraphs", "title")
     )
     parts.append(
         text(1815, 323, "SCENE-INDEPENDENT · MANUAL V1", "subtitle", "end")
@@ -271,13 +271,13 @@ def set_table_svg(document):
                 None,
             ),
         ]
-        for index, (goal_id, first, second, generic) in enumerate(specs):
+        for index, (subgoal_id, first, second, generic) in enumerate(specs):
             x = box_x[index]
             parts.append(
                 '<rect class="subgraph" x="{}" y="{}" width="420" height="235" '
                 'fill="#f7fff9"/>'.format(x, y, 235)
             )
-            parts.append(text(x + 210, y + 27, "Goal: " + goal_id, "subtitle"))
+            parts.append(text(x + 210, y + 27, "Sub-goal: " + subgoal_id, "subtitle"))
             parts.extend(node(x + 18, y + 52, *first, width=175, height=68))
             parts.extend(node(x + 227, y + 52, *second, width=175, height=68))
             parts.append(arrow(x + 193, y + 86, x + 221, y + 86))
@@ -315,8 +315,8 @@ def set_table_svg(document):
             )
 
     legend = (
-        "Green boxes: one GoalSkillSubgraph per functional goal    "
-        "Solid: ENABLES (including cross-subgraph)    Dashed: skill alternatives"
+        "Green boxes: one SubGoalSkillSubgraph per sub-goal    "
+        "Solid: ENABLES (including cross-subgraph)    Dashed: alternative skill nodes"
     )
     parts.append(text(950, 930, legend, "small"))
     parts.append(arrow(950, 955, 950, 978))
@@ -330,12 +330,12 @@ def set_table_svg(document):
         )
     )
 
-    # Layer 3: built-in contract templates used by the 20 graph nodes.
+    # Layer 3: built-in contract terms bound by the 20 graph nodes.
     parts.append(
         '<rect class="layer" x="24" y="980" width="1852" height="255" '
         'fill="#fffbeb" stroke="#eab308"/>'
     )
-    parts.append(text(950, 1020, "3. Bound Skill Contracts", "title"))
+    parts.append(text(950, 1020, "3. Bound Contract Terms", "title"))
     parts.append(text(1815, 1018, "ENVIRONMENT-SPECIFIC", "subtitle", "end"))
     contract_specs = [
         ("Navigate", "pre: present(goal)", "effect: reachable(goal)"),
@@ -358,23 +358,23 @@ def set_table_svg(document):
             )
         )
         parts.append(text(x + 162, 1144, effect, "small"))
-        parts.append(text(x + 162, 1165, "verify effect + collision invariant", "tiny"))
+        parts.append(text(x + 162, 1165, "physical feasibility only: verify effect + collision invariant", "tiny"))
 
-    # Layer 4: all 11 downloaded semantic skills and RL backends.
+    # Layer 4: all 11 contracts and the downloaded RL policies that execute them.
     parts.append(
         '<rect class="layer" x="24" y="1260" width="1852" height="225" '
         'fill="#f5f3ff" stroke="#8b5cf6"/>'
     )
-    parts.append(text(950, 1300, "4. Atomic Skills and Downloaded Backends", "title"))
+    parts.append(text(950, 1300, "4. Contracts and Downloaded Policies", "title"))
     parts.append(text(1815, 1298, "ENVIRONMENT-SPECIFIC", "subtitle", "end"))
-    skills = document["layers"]["4_atomic_skills_and_backends"]
-    for index, skill in enumerate(skills):
+    contracts = document["layers"]["4_contracts_and_policies"]
+    for index, contract in enumerate(contracts):
         row, column = divmod(index, 6)
         x = 55 + column * 300
         y = 1330 + row * 70
-        label = skill["id"].replace("mshab.set_table.", "")
-        backend = skill["backends"].get("rl", {})
-        implementation = "rl · " + backend.get("executor_type", "policy")
+        label = contract["id"].replace("mshab.set_table.", "")
+        policy = contract["policies"].get("rl", {})
+        implementation = "rl · " + policy.get("executor_type", "checkpoint")
         parts.extend(
             node(x, y, label, implementation, "#ffffff", width=265, height=56)
         )

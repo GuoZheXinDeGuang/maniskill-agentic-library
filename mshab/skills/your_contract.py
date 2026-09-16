@@ -1,22 +1,22 @@
-"""Copyable extension point for adding a new environment-specific skill."""
+"""Copyable extension point for adding a new environment-specific contract."""
 
 from __future__ import annotations
 
 from typing import Optional
 
 from mshab.skills.model import (
-    AtomicSkill,
+    AtomicContract,
     ParameterType,
-    SkillContract,
-    SkillParameter,
+    ContractTerms,
+    ContractParameter,
 )
 
 
-class YourSkill(AtomicSkill):
-    """Minimal example of a user-defined atomic skill.
+class YourContract(AtomicContract):
+    """Minimal example of a user-defined atomic contract.
 
-    Replace ``your_skill`` and the default predicates with domain terms, then
-    provide an ``ExecutionBackend`` and ``BackendExecutor`` implementation.
+    Replace ``your_contract`` and the default predicates with domain terms, then
+    provide a ``Policy`` and a ``PolicyExecutor`` implementation.
     No change to the Layer-1/2 graph classes is required.
     """
 
@@ -25,28 +25,28 @@ class YourSkill(AtomicSkill):
         task: str,
         target: str = "all",
         *,
-        env_id: str = "YourSkillEnv-v0",
+        env_id: str = "YourContractEnv-v0",
         max_episode_steps: int = 200,
-        contract: Optional[SkillContract] = None,
+        terms: Optional[ContractTerms] = None,
     ) -> None:
         super().__init__(
-            skill_type="your_skill",
+            contract_type="your_contract",
             task=task,
             target=target,
             target_parameter="target",
-            contract=contract
-            or SkillContract(
+            terms=terms
+            or ContractTerms(
                 parameters=(
-                    SkillParameter(
+                    ContractParameter(
                         "target",
                         ParameterType.ENTITY,
                         "Symbolic target resolved by the environment adapter.",
                     ),
                 ),
-                preconditions=("ready_for_your_skill({target})",),
-                effects=("your_skill_done({target})",),
+                preconditions=("ready_for_your_contract({target})",),
+                effects=("your_contract_done({target})",),
                 invariants=("collision_safe()",),
-                verification=("your_skill_done({target})",),
+                verification=("your_contract_done({target})",),
                 failure_modes=(
                     "target_not_found",
                     "execution_timeout",
@@ -55,5 +55,5 @@ class YourSkill(AtomicSkill):
             ),
             env_id=env_id,
             max_episode_steps=max_episode_steps,
-            description="Template for a user-defined environment-specific skill.",
+            description="Template for a user-defined environment-specific contract.",
         )

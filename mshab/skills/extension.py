@@ -3,11 +3,11 @@
 Three kinds of change reach Layer 1 and Layer 2, and all of them travel as one
 declarative :class:`SkillGraphPatch`:
 
-1. a brand-new functional goal together with its implementation subgraph;
+1. a brand-new sub-goal together with its implementation subgraph;
 2. a relation connecting that subgraph to subgraphs that already exist;
 3. a new candidate node inside a subgraph that is already registered.
 
-The third case is what :class:`GoalSkillSubgraphExtension` exists for.  A
+The third case is what :class:`SubGoalSkillSubgraphExtension` exists for.  A
 registered subgraph is sealed, so it is never edited in place: the extension
 builds a validated successor and the aggregate swaps it in.
 """
@@ -20,36 +20,36 @@ from typing import Any, Dict, Iterable, Mapping, Optional, Sequence, Tuple
 
 from mshab.skills import schema
 from mshab.skills.graph import (
-    FunctionalGoal,
-    FunctionalGoalGraph,
-    GoalSkillSubgraph,
-    GoalDependency,
+    SubGoal,
+    SubGoalGraph,
+    SubGoalSkillSubgraph,
+    SubGoalDependency,
     SkillCompositionGraph,
     SkillEdge,
     SkillNode,
     SkillSubgraphRelation,
 )
-from mshab.skills.library import SkillLibrary
+from mshab.skills.library import ContractLibrary
 
 
 @dataclass(frozen=True)
-class GoalSkillSubgraphExtension:
-    """Add candidates or internal relations to an already-registered goal.
+class SubGoalSkillSubgraphExtension:
+    """Add candidates or internal relations to an already-registered sub-goal.
 
     The extension never mutates the sealed subgraph.  :meth:`rebuild` returns an
     unsealed successor which the composition graph revalidates and installs, so
     a rejected extension leaves the live graph untouched.
     """
 
-    goal_id: str
+    subgoal_id: str
     nodes: Tuple[SkillNode, ...] = ()
     edges: Tuple[SkillEdge, ...] = ()
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "nodes", tuple(self.nodes))
         object.__setattr__(self, "edges", tuple(self.edges))
-        if not self.goal_id:
-            raise ValueError("subgraph extension goal_id must be non-empty")
+        if not self.subgoal_id:
+            raise ValueError("subgraph extension subgoal_id must be non-empty")
         if not self.nodes and not self.edges:
             raise ValueError("subgraph extension must add a node or a relation")
         for node in self.nodes:
@@ -67,11 +67,11 @@ class GoalSkillSubgraphExtension:
                     )
                 )
 
-    def rebuild(self, current: GoalSkillSubgraph) -> GoalSkillSubgraph:
-        if current.goal_id != self.goal_id:
+    def rebuild(self, current: SubGoalSkillSubgraph) -> SubGoalSkillSubgraph:
+        if current.subgoal_id != self.subgoal_id:
             raise ValueError(
-                "extension targets goal {!r}, not {!r}".format(
-                    self.goal_id, current.goal_id
+                "extension targets sub-goal {!r}, not {!r}".format(
+                    self.subgoal_id, current.subgoal_id
                 )
             )
         successor = current.unsealed_copy()
@@ -83,14 +83,14 @@ class GoalSkillSubgraphExtension:
         return successor
 
     @classmethod
-    def from_dict(cls, payload: Mapping[str, Any]) -> "GoalSkillSubgraphExtension":
+    def from_dict(cls, payload: Mapping[str, Any]) -> "SubGoalSkillSubgraphExtension":
         where = "subgraph_extension"
         payload = schema.require_mapping(payload, where=where)
         schema.require_keys(
-            payload, where=where, required=("goal_id",), optional=("nodes", "edges")
+            payload, where=where, required=("subgoal_id",), optional=("nodes", "edges")
         )
         return cls(
-            goal_id=schema.require_identifier(payload, "goal_id", where=where),
+            subgoal_id=schema.require_identifier(payload, "subgoal_id", where=where),
             nodes=tuple(
                 SkillNode.from_dict(item)
                 for item in schema.require_sequence(payload, "nodes", where=where)
@@ -103,7 +103,7 @@ class GoalSkillSubgraphExtension:
 
     def as_dict(self) -> Dict[str, Any]:
         return {
-            "goal_id": self.goal_id,
+            "subgoal_id": self.subgoal_id,
             "nodes": [node.as_dict() for node in self.nodes],
             "edges": [edge.as_dict() for edge in self.edges],
         }
@@ -114,22 +114,22 @@ class SkillGraphPatch:
     """A declarative, reviewable addition to Layer 1 and Layer 2.
 
     Manual code and a future VLM emit this same object.  Applying the patch goes
-    through the existing duplicate, namespace, unknown-goal, achiever, and cycle
+    through the existing duplicate, namespace, unknown-sub-goal, achiever, and cycle
     checks instead of letting a proposer mutate graph internals.
     """
 
-    goals: Tuple[FunctionalGoal, ...] = ()
-    goal_dependencies: Tuple[GoalDependency, ...] = ()
-    skill_subgraphs: Tuple[GoalSkillSubgraph, ...] = ()
+    subgoals: Tuple[SubGoal, ...] = ()
+    subgoal_dependencies: Tuple[SubGoalDependency, ...] = ()
+    skill_subgraphs: Tuple[SubGoalSkillSubgraph, ...] = ()
     subgraph_relations: Tuple[SkillSubgraphRelation, ...] = ()
-    subgraph_extensions: Tuple[GoalSkillSubgraphExtension, ...] = ()
+    subgraph_extensions: Tuple[SubGoalSkillSubgraphExtension, ...] = ()
 
     _FIELD_TYPES = {
-        "goals": FunctionalGoal,
-        "goal_dependencies": GoalDependency,
-        "skill_subgraphs": GoalSkillSubgraph,
+        "subgoals": SubGoal,
+        "subgoal_dependencies": SubGoalDependency,
+        "skill_subgraphs": SubGoalSkillSubgraph,
         "subgraph_relations": SkillSubgraphRelation,
-        "subgraph_extensions": GoalSkillSubgraphExtension,
+        "subgraph_extensions": SubGoalSkillSubgraphExtension,
     }
 
     def __post_init__(self) -> None:
@@ -149,18 +149,18 @@ class SkillGraphPatch:
 
     def with_extension(
         self,
-        goal_id: str,
+        subgoal_id: str,
         nodes: Iterable[SkillNode] = (),
         edges: Iterable[SkillEdge] = (),
     ) -> "SkillGraphPatch":
-        """Return a new patch that also extends an existing goal subgraph."""
+        """Return a new patch that also extends an existing sub-goal subgraph."""
 
-        extension = GoalSkillSubgraphExtension(
-            goal_id=goal_id, nodes=tuple(nodes), edges=tuple(edges)
+        extension = SubGoalSkillSubgraphExtension(
+            subgoal_id=subgoal_id, nodes=tuple(nodes), edges=tuple(edges)
         )
         return SkillGraphPatch(
-            goals=self.goals,
-            goal_dependencies=self.goal_dependencies,
+            subgoals=self.subgoals,
+            subgoal_dependencies=self.subgoal_dependencies,
             skill_subgraphs=self.skill_subgraphs,
             subgraph_relations=self.subgraph_relations,
             subgraph_extensions=self.subgraph_extensions + (extension,),
@@ -168,9 +168,9 @@ class SkillGraphPatch:
 
     def apply(
         self,
-        goal_graph: FunctionalGoalGraph,
+        subgoal_graph: SubGoalGraph,
         skill_graph: SkillCompositionGraph,
-        library: Optional[SkillLibrary] = None,
+        library: Optional[ContractLibrary] = None,
     ) -> None:
         """Atomically apply this patch, or leave both graphs untouched.
 
@@ -181,57 +181,57 @@ class SkillGraphPatch:
         half-applied.
         """
 
-        if skill_graph.goal_graph is not goal_graph:
-            raise ValueError("skill_graph must reference the supplied goal_graph")
-        staging_goals, staging_skills = _staging_copy(goal_graph, skill_graph)
-        self._apply_to(staging_goals, staging_skills, library)
+        if skill_graph.subgoal_graph is not subgoal_graph:
+            raise ValueError("skill_graph must reference the supplied subgoal_graph")
+        staging_subgoals, staging_skills = _staging_copy(subgoal_graph, skill_graph)
+        self._apply_to(staging_subgoals, staging_skills, library)
         staging_skills.validate()
-        goal_graph._adopt(staging_goals)
+        subgoal_graph._adopt(staging_subgoals)
         skill_graph._adopt(staging_skills)
 
     def _apply_to(
         self,
-        goal_graph: FunctionalGoalGraph,
+        subgoal_graph: SubGoalGraph,
         skill_graph: SkillCompositionGraph,
-        library: Optional[SkillLibrary],
+        library: Optional[ContractLibrary],
     ) -> None:
         if library is not None:
-            self.validate_skill_ids(library)
-        for goal in self.goals:
-            goal_graph.add_goal(goal)
-        for dependency in self.goal_dependencies:
-            goal_graph.add_dependency(dependency.source, dependency.target)
+            self.validate_contract_ids(library)
+        for subgoal in self.subgoals:
+            subgoal_graph.add_subgoal(subgoal)
+        for dependency in self.subgoal_dependencies:
+            subgoal_graph.add_dependency(dependency.source, dependency.target)
         for subgraph in self.skill_subgraphs:
             skill_graph.add_subgraph(subgraph.unsealed_copy())
         for extension in self.subgraph_extensions:
-            current = skill_graph.subgraph_for_goal(extension.goal_id)
+            current = skill_graph.subgraph_for_subgoal(extension.subgoal_id)
             skill_graph.replace_subgraph(extension.rebuild(current))
         for relation in self.subgraph_relations:
             skill_graph.relate_subgraphs(
-                relation.source_goal,
-                relation.target_goal,
+                relation.source_subgoal,
+                relation.target_subgoal,
                 relation.source_node,
                 relation.target_node,
                 relation.relation,
             )
 
-    def validate_skill_ids(self, library: SkillLibrary) -> None:
-        """Reject a patch that references a skill the library does not have."""
+    def validate_contract_ids(self, library: ContractLibrary) -> None:
+        """Reject a patch that references a contract the library does not have."""
 
         referenced = {
-            node.skill_id
+            node.contract_id
             for subgraph in self.skill_subgraphs
             for node in subgraph.nodes.values()
         }
         referenced |= {
-            node.skill_id
+            node.contract_id
             for extension in self.subgraph_extensions
             for node in extension.nodes
         }
-        missing = sorted(referenced - {skill.id for skill in library.find()})
+        missing = sorted(referenced - {contract.id for contract in library.find()})
         if missing:
             raise KeyError(
-                "graph patch references unregistered skills {}".format(missing)
+                "graph patch references unregistered contracts {}".format(missing)
             )
 
     @classmethod
@@ -252,8 +252,8 @@ class SkillGraphPatch:
             payload,
             where=where,
             optional=(
-                "goals",
-                "goal_dependencies",
+                "subgoals",
+                "subgoal_dependencies",
                 "skill_subgraphs",
                 "subgraph_relations",
                 "subgraph_extensions",
@@ -261,18 +261,18 @@ class SkillGraphPatch:
             ),
         )
         return cls(
-            goals=tuple(
-                FunctionalGoal.from_dict(item)
-                for item in schema.require_sequence(payload, "goals", where=where)
+            subgoals=tuple(
+                SubGoal.from_dict(item)
+                for item in schema.require_sequence(payload, "subgoals", where=where)
             ),
-            goal_dependencies=tuple(
-                GoalDependency.from_dict(item)
+            subgoal_dependencies=tuple(
+                SubGoalDependency.from_dict(item)
                 for item in schema.require_sequence(
-                    payload, "goal_dependencies", where=where
+                    payload, "subgoal_dependencies", where=where
                 )
             ),
             skill_subgraphs=tuple(
-                GoalSkillSubgraph.from_dict(item, task=task)
+                SubGoalSkillSubgraph.from_dict(item, task=task)
                 for item in schema.require_sequence(
                     payload, "skill_subgraphs", where=where
                 )
@@ -284,7 +284,7 @@ class SkillGraphPatch:
                 )
             ),
             subgraph_extensions=tuple(
-                GoalSkillSubgraphExtension.from_dict(item)
+                SubGoalSkillSubgraphExtension.from_dict(item)
                 for item in schema.require_sequence(
                     payload, "subgraph_extensions", where=where
                 )
@@ -294,9 +294,9 @@ class SkillGraphPatch:
     def as_dict(self) -> Dict[str, Any]:
         return {
             "schema_version": schema.SCHEMA_VERSION,
-            "goals": [goal.as_dict() for goal in self.goals],
-            "goal_dependencies": [
-                item.as_dict() for item in self.goal_dependencies
+            "subgoals": [subgoal.as_dict() for subgoal in self.subgoals],
+            "subgoal_dependencies": [
+                item.as_dict() for item in self.subgoal_dependencies
             ],
             "skill_subgraphs": [
                 subgraph.as_dict() for subgraph in self.skill_subgraphs
@@ -316,7 +316,7 @@ class SkillGraphBuilder(ABC):
     @abstractmethod
     def propose(
         self,
-        instruction: str,
+        goal: str,
         task: str,
         context: Mapping[str, Any],
     ) -> SkillGraphPatch:
@@ -324,36 +324,36 @@ class SkillGraphBuilder(ABC):
 
     def build(
         self,
-        instruction: str,
+        goal: str,
         task: str,
         context: Optional[Mapping[str, Any]] = None,
-        library: Optional[SkillLibrary] = None,
-    ) -> Tuple[FunctionalGoalGraph, SkillCompositionGraph]:
-        goal_graph = FunctionalGoalGraph(instruction)
-        skill_graph = SkillCompositionGraph(task, goal_graph=goal_graph)
-        patch = self.propose(instruction, task, context or {})
-        patch.apply(goal_graph, skill_graph, library=library)
-        return goal_graph, skill_graph
+        library: Optional[ContractLibrary] = None,
+    ) -> Tuple[SubGoalGraph, SkillCompositionGraph]:
+        subgoal_graph = SubGoalGraph(goal)
+        skill_graph = SkillCompositionGraph(task, subgoal_graph=subgoal_graph)
+        patch = self.propose(goal, task, context or {})
+        patch.apply(subgoal_graph, skill_graph, library=library)
+        return subgoal_graph, skill_graph
 
 
 def _staging_copy(
-    goal_graph: FunctionalGoalGraph,
+    subgoal_graph: SubGoalGraph,
     skill_graph: SkillCompositionGraph,
-) -> Tuple[FunctionalGoalGraph, SkillCompositionGraph]:
-    staging_goals = FunctionalGoalGraph(goal_graph.instruction)
-    staging_skills = SkillCompositionGraph(skill_graph.task, goal_graph=staging_goals)
-    for goal in goal_graph.goals.values():
-        staging_goals.add_goal(goal)
-    for dependency in goal_graph.dependencies:
-        staging_goals.add_dependency(dependency.source, dependency.target)
+) -> Tuple[SubGoalGraph, SkillCompositionGraph]:
+    staging_subgoals = SubGoalGraph(subgoal_graph.goal)
+    staging_skills = SkillCompositionGraph(skill_graph.task, subgoal_graph=staging_subgoals)
+    for subgoal in subgoal_graph.subgoals.values():
+        staging_subgoals.add_subgoal(subgoal)
+    for dependency in subgoal_graph.dependencies:
+        staging_subgoals.add_dependency(dependency.source, dependency.target)
     for subgraph in skill_graph.subgraphs.values():
         staging_skills.add_subgraph(subgraph.unsealed_copy())
     for relation in skill_graph.subgraph_relations:
         staging_skills.relate_subgraphs(
-            relation.source_goal,
-            relation.target_goal,
+            relation.source_subgoal,
+            relation.target_subgoal,
             relation.source_node,
             relation.target_node,
             relation.relation,
         )
-    return staging_goals, staging_skills
+    return staging_subgoals, staging_skills

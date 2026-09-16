@@ -6,28 +6,28 @@ from unittest import TestCase
 
 from mshab.skills import (
     ArtifactStatus,
-    BackendExecution,
-    BackendExecutor,
-    CheckpointBackend,
+    PolicyExecution,
+    PolicyExecutor,
+    CheckpointPolicy,
     EnvironmentDescription,
     EnvironmentEntity,
-    FunctionalGoal,
-    FunctionalGoalGraph,
-    GoalDependency,
-    GoalSkillSubgraph,
+    SubGoal,
+    SubGoalGraph,
+    SubGoalDependency,
+    SubGoalSkillSubgraph,
     MSHabEnvironmentAdapter,
-    PickSkill,
+    PickContract,
     SkillGraphPatch,
     SkillCompositionGraph,
     SkillCatalog,
     SkillGrounder,
-    SkillLibrary,
+    ContractLibrary,
     SkillNode,
     SkillRelation,
     SkillRuntime,
     SkillSubgraphRelation,
-    SkillType,
-    YourSkill,
+    ContractType,
+    YourContract,
     build_set_table_apple_graph,
     build_set_table_graph,
     build_set_table_stack,
@@ -38,33 +38,33 @@ from scripts.generate_set_table_skill_graph import graph_document, set_table_svg
 
 class SkillModelTests(TestCase):
     def test_specialized_atomic_skill_binds_target_and_contract(self):
-        skill = PickSkill(task="set_table", target="013_apple")
-        invocation = skill.bind({})
+        contract = PickContract(task="set_table", target="013_apple")
+        invocation = contract.bind({})
 
         self.assertEqual(invocation.arguments, {"object": "013_apple"})
         self.assertEqual(
-            invocation.contract.preconditions,
+            invocation.terms.preconditions,
             ("reachable(013_apple)", "gripper_empty()"),
         )
-        self.assertEqual(invocation.contract.effects, ("holding(013_apple)",))
+        self.assertEqual(invocation.terms.effects, ("holding(013_apple)",))
 
         with self.assertRaisesRegex(ValueError, "specialized"):
-            skill.bind({"object": "024_bowl"})
+            contract.bind({"object": "024_bowl"})
 
     def test_checkpoint_backend_reports_missing_partial_and_ready(self):
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
-            backend = CheckpointBackend(
+            policy = CheckpointPolicy(
                 key="rl",
                 family="rl",
                 checkpoint_path=root / "policy.pt",
                 config_path=root / "config.yml",
             )
-            self.assertEqual(backend.status, ArtifactStatus.MISSING)
+            self.assertEqual(policy.status, ArtifactStatus.MISSING)
             (root / "config.yml").write_text("name: ppo\n")
-            self.assertEqual(backend.status, ArtifactStatus.PARTIAL)
+            self.assertEqual(policy.status, ArtifactStatus.PARTIAL)
             (root / "policy.pt").write_bytes(b"weights")
-            self.assertEqual(backend.status, ArtifactStatus.READY)
+            self.assertEqual(policy.status, ArtifactStatus.READY)
 
     def test_discovery_groups_policy_families_as_alternative_backends(self):
         with TemporaryDirectory() as tmp:
@@ -75,38 +75,38 @@ class SkillModelTests(TestCase):
                 (leaf / "config.yml").write_text("name: {}\n".format(family))
                 (leaf / "policy.pt").write_bytes(b"weights")
 
-            library = SkillLibrary.from_checkpoint_root(root)
-            skills = library.find(task="set_table", skill_type=SkillType.PICK)
+            library = ContractLibrary.from_checkpoint_root(root)
+            contracts = library.find(task="set_table", contract_type=ContractType.PICK)
 
-            self.assertEqual(len(skills), 1)
-            self.assertEqual(set(skills[0].backends), {"rl", "bc"})
-            self.assertTrue(skills[0].ready)
+            self.assertEqual(len(contracts), 1)
+            self.assertEqual(set(contracts[0].policies), {"rl", "bc"})
+            self.assertTrue(contracts[0].ready)
 
     def test_composition_is_expressed_only_with_graph_relations(self):
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
-            for skill_type, target in (
+            for contract_type, target in (
                 ("navigate", "all"),
                 ("pick", "013_apple"),
                 ("pick", "all"),
             ):
-                leaf = root / "rl" / "set_table" / skill_type / target
+                leaf = root / "rl" / "set_table" / contract_type / target
                 leaf.mkdir(parents=True)
                 (leaf / "config.yml").write_text("name: ppo\n")
                 (leaf / "policy.pt").write_bytes(b"weights")
 
-            library = SkillLibrary.from_checkpoint_root(root)
+            library = ContractLibrary.from_checkpoint_root(root)
             navigate = library.get("mshab.set_table.navigate.all")
             pick = library.get("mshab.set_table.pick.013_apple")
             generic_pick = library.get("mshab.set_table.pick.all")
 
-            goals = FunctionalGoalGraph("Retrieve the apple")
-            goals.add_goal(FunctionalGoal("reachable", "reachable(013_apple)"))
-            goals.add_goal(FunctionalGoal("retrieved", "holding(013_apple)"))
-            goals.add_dependency("reachable", "retrieved")
+            subgoals = SubGoalGraph("Retrieve the apple")
+            subgoals.add_subgoal(SubGoal("reachable", "reachable(013_apple)"))
+            subgoals.add_subgoal(SubGoal("retrieved", "holding(013_apple)"))
+            subgoals.add_dependency("reachable", "retrieved")
 
-            graph = SkillCompositionGraph("set_table", goal_graph=goals)
-            reachable_subgraph = GoalSkillSubgraph("reachable", "set_table")
+            graph = SkillCompositionGraph("set_table", subgoal_graph=subgoals)
+            reachable_subgraph = SubGoalSkillSubgraph("reachable", "set_table")
             reachable_subgraph.add_node(
                 SkillNode(
                     "navigate",
@@ -115,7 +115,7 @@ class SkillModelTests(TestCase):
                     achieves=("reachable",),
                 )
             )
-            retrieved_subgraph = GoalSkillSubgraph("retrieved", "set_table")
+            retrieved_subgraph = SubGoalSkillSubgraph("retrieved", "set_table")
             retrieved_subgraph.add_node(
                 SkillNode(
                     "pick",
@@ -171,10 +171,10 @@ class SkillModelTests(TestCase):
                 ("generic_pick",),
             )
             self.assertEqual(
-                tuple(item.id for item in graph.candidates_for_goal("retrieved")),
+                tuple(item.id for item in graph.candidates_for_subgoal("retrieved")),
                 ("generic_pick", "pick"),
             )
-            self.assertEqual(graph.uncovered_goals(), ())
+            self.assertEqual(graph.uncovered_subgoals(), ())
             self.assertEqual(
                 {edge.relation for edge in graph.edges}, set(SkillRelation)
             )
@@ -185,7 +185,7 @@ class SkillModelTests(TestCase):
 
             grounder = SkillGrounder(library)
             self.assertEqual(
-                grounder.ground(graph.nodes["pick"], "rl").contract.effects,
+                grounder.ground(graph.nodes["pick"], "rl").terms.effects,
                 ("holding(013_apple)",),
             )
 
@@ -194,22 +194,22 @@ class SkillModelTests(TestCase):
             self.assertEqual(len(graph.edges), 5)  # failed relation was rolled back
 
     def test_invocation_arguments_are_read_only(self):
-        call = PickSkill(task="set_table", target="013_apple").bind({})
+        call = PickContract(task="set_table", target="013_apple").bind({})
         with self.assertRaises(TypeError):
             call.arguments["object"] = "024_bowl"
 
     def test_starter_graph_builds_layers_one_and_two_without_environment(self):
-        goals, graph = build_set_table_apple_graph()
+        subgoals, graph = build_set_table_apple_graph()
 
-        self.assertEqual(len(goals.goals), 4)
+        self.assertEqual(len(subgoals.subgoals), 4)
         self.assertEqual(len(graph.subgraphs), 4)
         self.assertEqual(len(graph.nodes), 10)
-        self.assertEqual(graph.uncovered_goals(), ())
+        self.assertEqual(graph.uncovered_subgoals(), ())
         self.assertEqual(
             dict(graph.nodes["navigate_to_object"].arguments),
             {"goal": "013_apple"},
         )
-        self.assertNotIn("backend_key", graph.as_dict()["nodes"][0])
+        self.assertNotIn("policy_key", graph.as_dict()["nodes"][0])
         self.assertEqual(
             set(graph.subgraphs),
             {"source_open", "object_retrieved", "object_placed", "source_closed"},
@@ -220,7 +220,7 @@ class SkillModelTests(TestCase):
         self.assertEqual(
             tuple(
                 goal.id
-                for goal in goals.ready_goals(
+                for goal in subgoals.ready_subgoals(
                     {"closed(fridge)"},
                     completed=("source_open", "object_retrieved"),
                 )
@@ -229,9 +229,9 @@ class SkillModelTests(TestCase):
         )
 
     def test_complete_set_table_graph_matches_official_two_object_order(self):
-        goals, graph = build_set_table_graph()
+        subgoals, graph = build_set_table_graph()
 
-        self.assertEqual(len(goals.goals), 8)
+        self.assertEqual(len(subgoals.subgoals), 8)
         self.assertEqual(len(graph.subgraphs), 8)
         self.assertEqual(len(graph.nodes), 20)
         # 24 internal edges + 7 cross-goal relations that expand to 11
@@ -242,11 +242,11 @@ class SkillModelTests(TestCase):
             sum(len(item.edges(graph.subgraphs)) for item in graph.subgraph_relations),
             11,
         )
-        self.assertEqual(graph.uncovered_goals(), ())
-        goal_order = goals.execution_order()
+        self.assertEqual(graph.uncovered_subgoals(), ())
+        subgoal_order = subgoals.execution_order()
         self.assertLess(
-            goal_order.index("bowl_source_closed"),
-            goal_order.index("apple_source_open"),
+            subgoal_order.index("bowl_source_closed"),
+            subgoal_order.index("apple_source_open"),
         )
         node_order = graph.execution_order()
         self.assertLess(
@@ -254,7 +254,7 @@ class SkillModelTests(TestCase):
             node_order.index("navigate_to_apple_source"),
         )
         self.assertEqual(
-            graph.nodes["pick_bowl_specialized"].skill_id,
+            graph.nodes["pick_bowl_specialized"].contract_id,
             "mshab.set_table.pick.024_bowl",
         )
         self.assertEqual(
@@ -280,12 +280,12 @@ class SkillModelTests(TestCase):
                 / "set_table.json"
             ).read_text()
         )
-        goals, graph = build_set_table_graph()
-        layer_1 = document["layers"]["1_functional_goal_graph"]
+        subgoals, graph = build_set_table_graph()
+        layer_1 = document["layers"]["1_subgoal_graph"]
         layer_2 = document["layers"]["2_skill_composition_graph"]
 
         self.assertEqual(
-            layer_1["execution_order"], list(goals.execution_order())
+            layer_1["execution_order"], list(subgoals.execution_order())
         )
         self.assertEqual(layer_2["subgraphs"], graph.as_dict()["subgraphs"])
         self.assertEqual(
@@ -296,7 +296,7 @@ class SkillModelTests(TestCase):
         self.assertEqual(restored.as_dict(), document)
         stale = json.loads(json.dumps(document))
         stale["layers"]["2_skill_composition_graph"]["nodes"][0][
-            "skill_id"
+            "contract_id"
         ] = "mshab.set_table.pick.all"
         with self.assertRaisesRegex(ValueError, "derived nodes view is stale"):
             SkillCatalog.from_dict(stale)
@@ -326,7 +326,7 @@ class SkillModelTests(TestCase):
     def test_starter_stack_binds_layer_three_from_downloaded_layout(self):
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
-            for skill_type, target in (
+            for contract_type, target in (
                 ("navigate", "all"),
                 ("open", "fridge"),
                 ("pick", "013_apple"),
@@ -335,25 +335,25 @@ class SkillModelTests(TestCase):
                 ("place", "013_apple"),
                 ("place", "all"),
             ):
-                leaf = root / "rl" / "set_table" / skill_type / target
+                leaf = root / "rl" / "set_table" / contract_type / target
                 leaf.mkdir(parents=True)
                 (leaf / "config.yml").write_text("name: ppo\n")
                 (leaf / "policy.pt").write_bytes(b"weights")
 
             stack = build_set_table_starter(root)
 
-            self.assertEqual(len(stack.contracts), 10)
+            self.assertEqual(len(stack.bound_terms), 10)
             self.assertEqual(
-                stack.contracts["place_object_specialized"].effects,
+                stack.bound_terms["place_object_specialized"].effects,
                 ("at(013_apple,dining_table)", "gripper_empty()"),
             )
             self.assertEqual(len(stack.library.find(ready=True)), 7)
 
     def test_graph_patch_can_place_a_new_skill_subgraph(self):
-        goals = FunctionalGoalGraph("Retrieve and inspect the apple")
-        goals.add_goal(FunctionalGoal("retrieved", "holding(013_apple)"))
-        graph = SkillCompositionGraph("set_table", goal_graph=goals)
-        retrieved = GoalSkillSubgraph("retrieved", "set_table")
+        subgoals = SubGoalGraph("Retrieve and inspect the apple")
+        subgoals.add_subgoal(SubGoal("retrieved", "holding(013_apple)"))
+        graph = SkillCompositionGraph("set_table", subgoal_graph=subgoals)
+        retrieved = SubGoalSkillSubgraph("retrieved", "set_table")
         retrieved.add_node(
             SkillNode(
                 "retrieve_apple",
@@ -363,18 +363,18 @@ class SkillModelTests(TestCase):
             )
         )
         graph.add_subgraph(retrieved)
-        inspected = GoalSkillSubgraph("inspected", "set_table")
+        inspected = SubGoalSkillSubgraph("inspected", "set_table")
         inspected.add_node(
             SkillNode(
                 "inspect_apple",
-                "mshab.set_table.your_skill.013_apple",
+                "mshab.set_table.your_contract.013_apple",
                 {},
                 achieves=("inspected",),
             )
         )
         patch = SkillGraphPatch(
-            goals=(FunctionalGoal("inspected", "inspected(013_apple)"),),
-            goal_dependencies=(GoalDependency("retrieved", "inspected"),),
+            subgoals=(SubGoal("inspected", "inspected(013_apple)"),),
+            subgoal_dependencies=(SubGoalDependency("retrieved", "inspected"),),
             skill_subgraphs=(inspected,),
             subgraph_relations=(
                 SkillSubgraphRelation(
@@ -387,31 +387,31 @@ class SkillModelTests(TestCase):
             ),
         )
 
-        patch.apply(goals, graph)
+        patch.apply(subgoals, graph)
 
-        self.assertIn("inspected", goals.goals)
+        self.assertIn("inspected", subgoals.subgoals)
         self.assertIn("inspect_apple", graph.nodes)
         self.assertEqual(graph.owner_of("inspect_apple"), "inspected")
 
-        broken = GoalSkillSubgraph("broken", "set_table")
+        broken = SubGoalSkillSubgraph("broken", "set_table")
         with self.assertRaisesRegex(ValueError, "outside task namespace"):
             broken.add_node(
                 SkillNode(
                     "broken_node",
-                    "mshab.wrong_task.your_skill.target",
+                    "mshab.wrong_task.your_contract.target",
                     {},
                     achieves=("broken",),
                 )
             )
 
     def test_custom_atomic_skill_type_is_extendable(self):
-        skill = YourSkill("set_table", "013_apple")
-        call = skill.bind({})
+        contract = YourContract("set_table", "013_apple")
+        call = contract.bind({})
 
-        self.assertEqual(skill.skill_type, "your_skill")
+        self.assertEqual(contract.contract_type, "your_contract")
         self.assertEqual(call.arguments, {"target": "013_apple"})
         self.assertEqual(
-            call.contract.effects, ("your_skill_done(013_apple)",)
+            call.terms.effects, ("your_contract_done(013_apple)",)
         )
 
     def test_runtime_uses_environment_facts_and_verifies_contract(self):
@@ -431,36 +431,36 @@ class SkillModelTests(TestCase):
                 self.facts |= set(action["add_facts"])
                 return {}, 1.0, False, False, {"facts": set(self.facts)}
 
-        class FakeExecutor(BackendExecutor):
-            def execute(self, invocation, backend, environment, monitor):
+        class FakeExecutor(PolicyExecutor):
+            def execute(self, invocation, policy, environment, monitor):
                 snapshot = environment.step(
                     {
-                        "add_facts": set(invocation.contract.effects),
-                        "delete_facts": set(invocation.contract.deletes),
+                        "add_facts": set(invocation.terms.effects),
+                        "delete_facts": set(invocation.terms.deletes),
                     }
                 )
                 monitor(snapshot)
-                return BackendExecution(success=True, steps=1)
+                return PolicyExecution(success=True, steps=1)
 
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "config.yml").write_text("name: ppo\n")
             (root / "policy.pt").write_bytes(b"weights")
-            skill = PickSkill("set_table", "013_apple")
-            skill.add_backend(
-                CheckpointBackend(
+            contract = PickContract("set_table", "013_apple")
+            contract.add_policy(
+                CheckpointPolicy(
                     "rl", "rl", root / "policy.pt", root / "config.yml"
                 )
             )
-            library = SkillLibrary((skill,))
-            goals = FunctionalGoalGraph("Retrieve the apple")
-            goals.add_goal(FunctionalGoal("retrieved", "holding(013_apple)"))
-            graph = SkillCompositionGraph("set_table", goals)
-            subgraph = GoalSkillSubgraph("retrieved", "set_table")
+            library = ContractLibrary((contract,))
+            subgoals = SubGoalGraph("Retrieve the apple")
+            subgoals.add_subgoal(SubGoal("retrieved", "holding(013_apple)"))
+            graph = SkillCompositionGraph("set_table", subgoals)
+            subgraph = SubGoalSkillSubgraph("retrieved", "set_table")
             subgraph.add_node(
                 SkillNode(
                     "pick",
-                    skill.id,
+                    contract.id,
                     {},
                     achieves=("retrieved",),
                 )
@@ -473,7 +473,7 @@ class SkillModelTests(TestCase):
                         "013_apple", "object", "obj_0"
                     )
                 },
-                compatible_skill_env_ids=("PickSubtaskTrain-v0",),
+                compatible_contract_env_ids=("PickSubtaskTrain-v0",),
             )
             env = FakeEnv()
             adapter = MSHabEnvironmentAdapter(
@@ -481,7 +481,7 @@ class SkillModelTests(TestCase):
                 description.environment_id,
                 lambda observation, info, desc: info["facts"],
                 entities=description.entities.values(),
-                compatible_skill_env_ids=description.compatible_skill_env_ids,
+                compatible_contract_env_ids=description.compatible_contract_env_ids,
             )
             adapter.reset()
             runtime = SkillRuntime(library, adapter)
@@ -492,7 +492,7 @@ class SkillModelTests(TestCase):
             result = runtime.execute_node(graph, "pick", FakeExecutor(), "rl")
 
             self.assertTrue(result.success)
-            self.assertEqual(result.backend_key, "rl")
+            self.assertEqual(result.policy_key, "rl")
             self.assertEqual(result.unretracted_deletes, ())
             self.assertEqual(result.violated_invariants, ())
             self.assertNotIn("gripper_empty()", result.after.facts)

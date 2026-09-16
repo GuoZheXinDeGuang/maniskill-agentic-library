@@ -7,74 +7,74 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Union
 
 from mshab.skills.model import (
-    ATOMIC_SKILL_CLASSES,
-    AtomicSkill,
-    CheckpointBackend,
-    Skill,
-    SkillType,
+    ATOMIC_CONTRACT_CLASSES,
+    AtomicContract,
+    CheckpointPolicy,
+    Contract,
+    ContractType,
 )
 
 
-class SkillLibrary:
-    """In-memory owner of semantic skills and their execution alternatives."""
+class ContractLibrary:
+    """In-memory owner of contracts and the policies registered to execute them."""
 
-    def __init__(self, skills: Iterable[Skill] = ()) -> None:
-        self._skills: Dict[str, Skill] = {}
-        for skill in skills:
-            self.register(skill)
+    def __init__(self, contracts: Iterable[Contract] = ()) -> None:
+        self._contracts: Dict[str, Contract] = {}
+        for contract in contracts:
+            self.register(contract)
 
-    def register(self, skill: Skill) -> None:
-        if skill.id in self._skills:
-            raise ValueError("duplicate skill id {!r}".format(skill.id))
-        self._skills[skill.id] = skill
+    def register(self, contract: Contract) -> None:
+        if contract.id in self._contracts:
+            raise ValueError("duplicate contract id {!r}".format(contract.id))
+        self._contracts[contract.id] = contract
 
-    def get(self, skill_id: str) -> Skill:
+    def get(self, contract_id: str) -> Contract:
         try:
-            return self._skills[skill_id]
+            return self._contracts[contract_id]
         except KeyError as exc:
             raise KeyError(
-                "unknown skill {!r}; available={}".format(
-                    skill_id, sorted(self._skills)
+                "unknown contract {!r}; available={}".format(
+                    contract_id, sorted(self._contracts)
                 )
             ) from exc
 
     def find(
         self,
         task: Optional[str] = None,
-        skill_type: Optional[Union[SkillType, str]] = None,
+        contract_type: Optional[Union[ContractType, str]] = None,
         target: Optional[str] = None,
         ready: Optional[bool] = None,
-    ) -> List[Skill]:
+    ) -> List[Contract]:
         result = []
-        for skill in self._skills.values():
-            if task is not None and skill.task != task:
+        for contract in self._contracts.values():
+            if task is not None and contract.task != task:
                 continue
-            if ready is not None and skill.ready != ready:
+            if ready is not None and contract.ready != ready:
                 continue
-            if skill_type is not None:
+            if contract_type is not None:
                 requested_type = (
-                    skill_type.value
-                    if isinstance(skill_type, SkillType)
-                    else str(skill_type)
+                    contract_type.value
+                    if isinstance(contract_type, ContractType)
+                    else str(contract_type)
                 )
                 if (
-                    not isinstance(skill, AtomicSkill)
-                    or skill.skill_type_name != requested_type
+                    not isinstance(contract, AtomicContract)
+                    or contract.contract_type_name != requested_type
                 ):
                     continue
             if target is not None and (
-                not isinstance(skill, AtomicSkill) or skill.target != target
+                not isinstance(contract, AtomicContract) or contract.target != target
             ):
                 continue
-            result.append(skill)
+            result.append(contract)
         return sorted(result, key=lambda item: item.id)
 
     def to_dict(self) -> Dict[str, object]:
-        skills = [skill.as_dict() for skill in self.find()]
+        contracts = [contract.as_dict() for contract in self.find()]
         return {
-            "schema_version": "mshab.skill-library.v1",
-            "count": len(skills),
-            "skills": skills,
+            "schema_version": "mshab.contract-library.v1",
+            "count": len(contracts),
+            "contracts": contracts,
         }
 
     def save_index(self, path: Path) -> None:
@@ -83,13 +83,13 @@ class SkillLibrary:
         output.write_text(json.dumps(self.to_dict(), indent=2) + "\n")
 
     @classmethod
-    def from_checkpoint_root(cls, root: Path) -> "SkillLibrary":
+    def from_checkpoint_root(cls, root: Path) -> "ContractLibrary":
         """Discover ``family/task/type/target/{config.yml,policy.pt}`` leaves.
 
         A leaf is registered even when just one artifact is present, allowing
         callers to report ``partial`` downloads instead of silently hiding them.
-        Multiple policy families are folded into one semantic AtomicSkill as
-        interchangeable backends.
+        Multiple policy families are folded into one AtomicContract as
+        interchangeable policies.
         """
 
         checkpoint_root = Path(root)
@@ -109,23 +109,23 @@ class SkillLibrary:
         for leaf in leaves:
             family, task, raw_type, target = leaf.relative_to(checkpoint_root).parts
             try:
-                skill_type = SkillType(raw_type)
+                contract_type = ContractType(raw_type)
             except ValueError:
                 continue
-            skill_id = "mshab.{}.{}.{}".format(task, skill_type.value, target)
-            existing = library._skills.get(skill_id)
+            contract_id = "mshab.{}.{}.{}".format(task, contract_type.value, target)
+            existing = library._contracts.get(contract_id)
             if existing is None:
-                skill_class = ATOMIC_SKILL_CLASSES[skill_type]
-                skill = skill_class(task=task, target=target)
-                library.register(skill)
-            elif isinstance(existing, AtomicSkill):
-                skill = existing
+                contract_class = ATOMIC_CONTRACT_CLASSES[contract_type]
+                contract = contract_class(task=task, target=target)
+                library.register(contract)
+            elif isinstance(existing, AtomicContract):
+                contract = existing
             else:
-                raise TypeError("{} is not atomic".format(skill_id))
+                raise TypeError("{} is not atomic".format(contract_id))
 
             policy_type = _policy_type(family, target)
-            skill.add_backend(
-                CheckpointBackend(
+            contract.add_policy(
+                CheckpointPolicy(
                     key=family,
                     family=family,
                     checkpoint_path=leaf / "policy.pt",

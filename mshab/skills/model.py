@@ -1,11 +1,11 @@
-"""Object model for executable MS-HAB skills.
+"""Object model for Layer-3 contracts and the Layer-4 policies that execute them.
 
-The classes in this module describe *what* a skill promises separately from
-*how* it is executed.  This matters for a skill library: ``pick(apple)`` is one
-semantic capability even when RL, BC, DP, or a remote VLA can all execute it.
+The classes in this module describe *what* a contract promises separately from
+*how* it is executed.  ``pick(apple)`` is one contract even when an RL, BC,
+DP, or remote VLA policy executes it.
 
 This module deliberately has no torch or ManiSkill imports.  Listing and
-planning with a skill library must not allocate a GPU or load checkpoints.
+planning with the contract library must not allocate a GPU or load checkpoints.
 """
 
 from __future__ import annotations
@@ -28,8 +28,8 @@ from typing import (
 )
 
 
-class SkillType(str, Enum):
-    """Built-in primitive skill vocabulary currently implemented by MS-HAB."""
+class ContractType(str, Enum):
+    """Built-in contract vocabulary currently implemented by MS-HAB."""
 
     NAVIGATE = "navigate"
     PICK = "pick"
@@ -39,7 +39,7 @@ class SkillType(str, Enum):
 
 
 class ParameterType(str, Enum):
-    """Planner-facing parameter types used by skill contracts."""
+    """Planner-facing parameter types used by contract terms."""
 
     ENTITY = "entity"
     LOCATION = "location"
@@ -51,9 +51,9 @@ class ParameterType(str, Enum):
 
 
 class ExecutorType(str, Enum):
-    """Execution engines represented in the architecture diagram."""
+    """Kinds of low-level policy represented in the architecture diagram."""
 
-    POLICY = "policy"
+    CHECKPOINT = "checkpoint"
     VLA = "vla"
     NAVIGATION = "navigation"
     CONTROLLER = "controller"
@@ -62,7 +62,7 @@ class ExecutorType(str, Enum):
 
 
 class ArtifactStatus(str, Enum):
-    """Local availability of an execution backend's artifacts."""
+    """Local availability of a policy's artifacts."""
 
     MISSING = "missing"
     PARTIAL = "partial"
@@ -70,7 +70,7 @@ class ArtifactStatus(str, Enum):
 
 
 @dataclass(frozen=True)
-class SkillParameter:
+class ContractParameter:
     name: str
     type: ParameterType
     description: str = ""
@@ -79,12 +79,12 @@ class SkillParameter:
     def __post_init__(self) -> None:
         object.__setattr__(self, "type", ParameterType(self.type))
         if not self.name or not self.name.isidentifier():
-            raise ValueError("skill parameter name must be a non-empty identifier")
+            raise ValueError("contract parameter name must be a non-empty identifier")
 
 
 @dataclass(frozen=True)
-class BoundContract:
-    """A contract whose predicate templates have concrete arguments."""
+class BoundTerms:
+    """Contract terms whose predicate templates have concrete arguments."""
 
     preconditions: Tuple[str, ...]
     effects: Tuple[str, ...]
@@ -113,7 +113,7 @@ class BoundContract:
         invariant_overlap = sorted(set(self.deletes) & set(self.invariants))
         if invariant_overlap:
             raise ValueError(
-                "a grounded skill cannot retract its own invariants: {}".format(
+                "a grounded contract cannot retract its own invariants: {}".format(
                     invariant_overlap
                 )
             )
@@ -130,7 +130,7 @@ class BoundContract:
         return set(self.verification).issubset(set(facts))
 
     def retracted(self, facts: Iterable[str]) -> bool:
-        """Whether every predicate this skill invalidates is actually gone."""
+        """Whether every predicate this contract retracts is actually gone."""
 
         return not (set(self.deletes) & set(facts))
 
@@ -147,15 +147,20 @@ class BoundContract:
 
 
 @dataclass(frozen=True)
-class SkillContract:
-    """Executable pre/post-condition contract for one semantic skill.
+class ContractTerms:
+    """Pre/post-condition terms of one contract.
+
+    Terms describe only whether the contract can physically start and what it
+    changes in the current world state.  They do not encode task order or
+    semantic plausibility; that belongs to the relations between Layer-2
+    skill nodes.
 
     Predicates use ``str.format`` placeholders matching parameter names, for
     example ``holding({object})``.  They stay lightweight strings here; a
     simulator adapter is responsible for evaluating them against live state.
     """
 
-    parameters: Tuple[SkillParameter, ...]
+    parameters: Tuple[ContractParameter, ...]
     preconditions: Tuple[str, ...]
     effects: Tuple[str, ...]
     invariants: Tuple[str, ...] = ()
@@ -176,9 +181,9 @@ class SkillContract:
             object.__setattr__(self, name, tuple(getattr(self, name)))
         names = [parameter.name for parameter in self.parameters]
         if len(names) != len(set(names)):
-            raise ValueError("skill contract has duplicate parameter names")
+            raise ValueError("contract terms have duplicate parameter names")
         if not self.effects:
-            raise ValueError("skill contract must declare at least one effect")
+            raise ValueError("contract terms must declare at least one effect")
         if not self.verification:
             object.__setattr__(self, "verification", tuple(self.effects))
         for group_name, predicates in (
@@ -198,10 +203,10 @@ class SkillContract:
         invariant_overlap = sorted(set(self.deletes) & set(self.invariants))
         if invariant_overlap:
             raise ValueError(
-                "a skill cannot retract its own invariants: {}".format(invariant_overlap)
+                "a contract cannot retract its own invariants: {}".format(invariant_overlap)
             )
 
-    def bind(self, arguments: Mapping[str, Any]) -> BoundContract:
+    def bind(self, arguments: Mapping[str, Any]) -> BoundTerms:
         values = dict(arguments)
         known = {parameter.name: parameter for parameter in self.parameters}
         missing = sorted(
@@ -212,7 +217,7 @@ class SkillContract:
         unknown = sorted(set(values) - set(known))
         if missing or unknown:
             raise ValueError(
-                "invalid skill arguments: missing={}, unknown={}".format(missing, unknown)
+                "invalid contract arguments: missing={}, unknown={}".format(missing, unknown)
             )
         for name, value in values.items():
             _validate_parameter(known[name], value)
@@ -227,7 +232,7 @@ class SkillContract:
                     )
                 ) from exc
 
-        return BoundContract(
+        return BoundTerms(
             preconditions=ground(self.preconditions),
             effects=ground(self.effects),
             invariants=ground(self.invariants),
@@ -237,7 +242,7 @@ class SkillContract:
         )
 
 
-def _validate_parameter(parameter: SkillParameter, value: Any) -> None:
+def _validate_parameter(parameter: ContractParameter, value: Any) -> None:
     expected = {
         ParameterType.ENTITY: str,
         ParameterType.LOCATION: str,
@@ -262,26 +267,26 @@ def _validate_parameter(parameter: SkillParameter, value: Any) -> None:
         )
 
 
-class ExecutionBackend(ABC):
-    """One interchangeable implementation of an atomic skill."""
+class Policy(ABC):
+    """One low-level policy (checkpoint, VLA, controller, or script) that executes a contract."""
 
     def __init__(self, key: str, executor_type: ExecutorType) -> None:
         if not key:
-            raise ValueError("backend key cannot be empty")
+            raise ValueError("policy key cannot be empty")
         self.key = key
         self.executor_type = executor_type
 
     @property
     @abstractmethod
     def status(self) -> ArtifactStatus:
-        """Whether everything needed to execute this backend is available."""
+        """Whether everything needed to execute this policy is available."""
 
     @abstractmethod
     def as_dict(self) -> Dict[str, Any]:
         """Return a JSON-serialisable library record."""
 
 
-class CheckpointBackend(ExecutionBackend):
+class CheckpointPolicy(Policy):
     """A local learned policy represented by ``config.yml`` + ``policy.pt``."""
 
     def __init__(
@@ -293,7 +298,7 @@ class CheckpointBackend(ExecutionBackend):
         policy_type: Optional[str] = None,
         checkpoint_sha256: Optional[str] = None,
     ) -> None:
-        super().__init__(key=key, executor_type=ExecutorType.POLICY)
+        super().__init__(key=key, executor_type=ExecutorType.CHECKPOINT)
         self.family = family
         self.checkpoint_path = Path(checkpoint_path)
         self.config_path = Path(config_path)
@@ -324,12 +329,12 @@ class CheckpointBackend(ExecutionBackend):
 
 @dataclass(frozen=True)
 class SkillInvocation:
-    """One grounded call to a skill, suitable for a graph node."""
+    """One skill node grounded to a contract with concrete arguments."""
 
-    skill: "Skill" = field(repr=False)
+    contract: "Contract" = field(repr=False)
     arguments: Mapping[str, Any]
-    contract: BoundContract
-    backend_key: Optional[str] = None
+    terms: BoundTerms
+    policy_key: Optional[str] = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "arguments", MappingProxyType(dict(self.arguments)))
@@ -339,24 +344,24 @@ class SkillInvocation:
         args = ",".join(
             "{}={}".format(key, self.arguments[key]) for key in sorted(self.arguments)
         )
-        return "{}({})".format(self.skill.id, args)
+        return "{}({})".format(self.contract.id, args)
 
 
-class Skill(ABC):
-    """Semantic interface shared by every library-managed executable skill."""
+class Contract(ABC):
+    """Interface shared by every library-managed contract."""
 
     def __init__(
         self,
         name: str,
         task: str,
-        contract: SkillContract,
+        terms: ContractTerms,
         description: str = "",
     ) -> None:
         if not name or not task:
-            raise ValueError("skill name and task must be non-empty")
+            raise ValueError("contract name and task must be non-empty")
         self.name = name
         self.task = task
-        self.contract = contract
+        self.terms = terms
         self.description = description
 
     @property
@@ -369,13 +374,13 @@ class Skill(ABC):
         """Whether at least one complete execution path is available."""
 
     def bind(
-        self, arguments: Mapping[str, Any], backend_key: Optional[str] = None
+        self, arguments: Mapping[str, Any], policy_key: Optional[str] = None
     ) -> SkillInvocation:
         return SkillInvocation(
-            skill=self,
+            contract=self,
             arguments=dict(arguments),
-            contract=self.contract.bind(arguments),
-            backend_key=backend_key,
+            terms=self.terms.bind(arguments),
+            policy_key=policy_key,
         )
 
     @abstractmethod
@@ -383,110 +388,110 @@ class Skill(ABC):
         pass
 
 
-class AtomicSkill(Skill):
-    """A smallest dispatchable skill with one or more executor backends."""
+class AtomicContract(Contract):
+    """A dispatchable contract together with the policies that can execute it."""
 
     def __init__(
         self,
-        skill_type: Union[SkillType, str],
+        contract_type: Union[ContractType, str],
         task: str,
         target: str,
-        contract: SkillContract,
+        terms: ContractTerms,
         env_id: str,
         max_episode_steps: int,
         description: str = "",
         target_parameter: Optional[str] = None,
     ) -> None:
         if not target:
-            raise ValueError("atomic skill target must be non-empty")
-        skill_type = _normalise_skill_type(skill_type)
-        skill_type_name = (
-            skill_type.value if isinstance(skill_type, SkillType) else skill_type
+            raise ValueError("atomic contract target must be non-empty")
+        contract_type = _normalise_contract_type(contract_type)
+        contract_type_name = (
+            contract_type.value if isinstance(contract_type, ContractType) else contract_type
         )
         if target_parameter is None:
-            target_parameter = _TARGET_PARAMETER.get(skill_type)
+            target_parameter = _TARGET_PARAMETER.get(contract_type)
         if not target_parameter or not target_parameter.isidentifier():
             raise ValueError(
-                "atomic skill target_parameter must be a non-empty identifier"
+                "atomic contract target_parameter must be a non-empty identifier"
             )
-        parameter_names = {parameter.name for parameter in contract.parameters}
+        parameter_names = {parameter.name for parameter in terms.parameters}
         if target_parameter not in parameter_names:
             raise ValueError(
-                "target parameter {!r} is not declared by the contract".format(
+                "target parameter {!r} is not declared by the contract terms".format(
                     target_parameter
                 )
             )
         if max_episode_steps <= 0:
             raise ValueError("max_episode_steps must be positive")
         super().__init__(
-            name="{}.{}".format(skill_type_name, target),
+            name="{}.{}".format(contract_type_name, target),
             task=task,
-            contract=contract,
+            terms=terms,
             description=description,
         )
-        self.skill_type = skill_type
+        self.contract_type = contract_type
         self.target_parameter = target_parameter
         self.target = target
         self.env_id = env_id
         self.max_episode_steps = max_episode_steps
-        self._backends: Dict[str, ExecutionBackend] = {}
+        self._policies: Dict[str, Policy] = {}
 
     @property
-    def backends(self) -> Mapping[str, ExecutionBackend]:
-        return dict(self._backends)
+    def policies(self) -> Mapping[str, Policy]:
+        return dict(self._policies)
 
-    def add_backend(self, backend: ExecutionBackend) -> None:
-        if backend.key in self._backends:
+    def add_policy(self, policy: Policy) -> None:
+        if policy.key in self._policies:
             raise ValueError(
-                "skill {} already has backend {!r}".format(self.id, backend.key)
+                "contract {} already has policy {!r}".format(self.id, policy.key)
             )
-        self._backends[backend.key] = backend
+        self._policies[policy.key] = policy
 
-    def backend(self, key: Optional[str] = None) -> ExecutionBackend:
+    def policy(self, key: Optional[str] = None) -> Policy:
         if key is not None:
             try:
-                return self._backends[key]
+                return self._policies[key]
             except KeyError as exc:
                 raise KeyError(
-                    "skill {} has no backend {!r}; available={}".format(
-                        self.id, key, sorted(self._backends)
+                    "contract {} has no policy {!r}; available={}".format(
+                        self.id, key, sorted(self._policies)
                     )
                 ) from exc
         ready = sorted(
             (
-                backend
-                for backend in self._backends.values()
-                if backend.status == ArtifactStatus.READY
+                policy
+                for policy in self._policies.values()
+                if policy.status == ArtifactStatus.READY
             ),
             key=lambda item: item.key,
         )
         if not ready:
-            raise RuntimeError("skill {} has no ready backend".format(self.id))
+            raise RuntimeError("contract {} has no ready policy".format(self.id))
         return ready[0]
 
     @property
     def ready(self) -> bool:
         return any(
-            backend.status == ArtifactStatus.READY
-            for backend in self._backends.values()
+            policy.status == ArtifactStatus.READY
+            for policy in self._policies.values()
         )
 
     def bind(
-        self, arguments: Mapping[str, Any], backend_key: Optional[str] = None
+        self, arguments: Mapping[str, Any], policy_key: Optional[str] = None
     ) -> SkillInvocation:
         values = dict(arguments)
         if self.target != "all":
             supplied = values.get(self.target_parameter)
             if supplied is not None and supplied != self.target:
                 raise ValueError(
-                    "skill {} is specialized for {!r}, not {!r}".format(
+                    "contract {} is specialized for {!r}, not {!r}".format(
                         self.id, self.target, supplied
                     )
                 )
             values[self.target_parameter] = self.target
-        if backend_key is not None:
-            self.backend(backend_key)
-        return super().bind(values, backend_key=backend_key)
+        if policy_key is not None:
+            self.policy(policy_key)
+        return super().bind(values, policy_key=policy_key)
 
     def as_dict(self) -> Dict[str, Any]:
         return {
@@ -494,64 +499,64 @@ class AtomicSkill(Skill):
             "name": self.name,
             "kind": "atomic",
             "task": self.task,
-            "skill_type": self.skill_type_name,
+            "contract_type": self.contract_type_name,
             "target": self.target,
             "target_parameter": self.target_parameter,
             "description": self.description,
-            "contract": _contract_dict(self.contract),
+            "terms": _terms_dict(self.terms),
             "execution": {
                 "env_id": self.env_id,
                 "max_episode_steps": self.max_episode_steps,
-                "backends": {
-                    key: backend.as_dict()
-                    for key, backend in sorted(self._backends.items())
+                "policies": {
+                    key: policy.as_dict()
+                    for key, policy in sorted(self._policies.items())
                 },
             },
             "ready": self.ready,
         }
 
     @property
-    def skill_type_name(self) -> str:
+    def contract_type_name(self) -> str:
         return (
-            self.skill_type.value
-            if isinstance(self.skill_type, SkillType)
-            else self.skill_type
+            self.contract_type.value
+            if isinstance(self.contract_type, ContractType)
+            else self.contract_type
         )
 
 
 _TARGET_PARAMETER = {
-    SkillType.NAVIGATE: "goal",
-    SkillType.PICK: "object",
-    SkillType.PLACE: "object",
-    SkillType.OPEN: "articulation",
-    SkillType.CLOSE: "articulation",
+    ContractType.NAVIGATE: "goal",
+    ContractType.PICK: "object",
+    ContractType.PLACE: "object",
+    ContractType.OPEN: "articulation",
+    ContractType.CLOSE: "articulation",
 }
 
 
-def _normalise_skill_type(skill_type: Union[SkillType, str]) -> Union[SkillType, str]:
-    if isinstance(skill_type, SkillType):
-        return skill_type
-    if not isinstance(skill_type, str) or not skill_type.strip():
-        raise ValueError("skill_type must be a SkillType or non-empty string")
-    value = skill_type.strip().lower()
+def _normalise_contract_type(contract_type: Union[ContractType, str]) -> Union[ContractType, str]:
+    if isinstance(contract_type, ContractType):
+        return contract_type
+    if not isinstance(contract_type, str) or not contract_type.strip():
+        raise ValueError("contract_type must be a ContractType or non-empty string")
+    value = contract_type.strip().lower()
     try:
-        return SkillType(value)
+        return ContractType(value)
     except ValueError:
         if not value.replace("_", "").isalnum():
             raise ValueError(
-                "custom skill_type must contain only letters, numbers, or underscores"
+                "custom contract_type must contain only letters, numbers, or underscores"
             )
         return value
 
 
-class NavigateSkill(AtomicSkill):
+class NavigateContract(AtomicContract):
     def __init__(self, task: str, target: str = "all") -> None:
         super().__init__(
-            SkillType.NAVIGATE,
+            ContractType.NAVIGATE,
             task,
             target,
-            SkillContract(
-                parameters=(SkillParameter("goal", ParameterType.ENTITY),),
+            ContractTerms(
+                parameters=(ContractParameter("goal", ParameterType.ENTITY),),
                 preconditions=("present({goal})",),
                 effects=("reachable({goal})",),
                 verification=("reachable({goal})",),
@@ -563,14 +568,14 @@ class NavigateSkill(AtomicSkill):
         )
 
 
-class PickSkill(AtomicSkill):
+class PickContract(AtomicContract):
     def __init__(self, task: str, target: str) -> None:
         super().__init__(
-            SkillType.PICK,
+            ContractType.PICK,
             task,
             target,
-            SkillContract(
-                parameters=(SkillParameter("object", ParameterType.ENTITY),),
+            ContractTerms(
+                parameters=(ContractParameter("object", ParameterType.ENTITY),),
                 preconditions=("reachable({object})", "gripper_empty()"),
                 effects=("holding({object})",),
                 invariants=("collision_safe()",),
@@ -584,16 +589,16 @@ class PickSkill(AtomicSkill):
         )
 
 
-class PlaceSkill(AtomicSkill):
+class PlaceContract(AtomicContract):
     def __init__(self, task: str, target: str) -> None:
         super().__init__(
-            SkillType.PLACE,
+            ContractType.PLACE,
             task,
             target,
-            SkillContract(
+            ContractTerms(
                 parameters=(
-                    SkillParameter("object", ParameterType.ENTITY),
-                    SkillParameter("destination", ParameterType.LOCATION),
+                    ContractParameter("object", ParameterType.ENTITY),
+                    ContractParameter("destination", ParameterType.LOCATION),
                 ),
                 preconditions=("holding({object})", "reachable({destination})"),
                 effects=("at({object},{destination})", "gripper_empty()"),
@@ -608,15 +613,15 @@ class PlaceSkill(AtomicSkill):
         )
 
 
-class OpenSkill(AtomicSkill):
+class OpenContract(AtomicContract):
     def __init__(self, task: str, target: str) -> None:
         super().__init__(
-            SkillType.OPEN,
+            ContractType.OPEN,
             task,
             target,
-            SkillContract(
+            ContractTerms(
                 parameters=(
-                    SkillParameter("articulation", ParameterType.ARTICULATION),
+                    ContractParameter("articulation", ParameterType.ARTICULATION),
                 ),
                 preconditions=("reachable({articulation})", "closed({articulation})"),
                 effects=("open({articulation})",),
@@ -631,15 +636,15 @@ class OpenSkill(AtomicSkill):
         )
 
 
-class CloseSkill(AtomicSkill):
+class CloseContract(AtomicContract):
     def __init__(self, task: str, target: str) -> None:
         super().__init__(
-            SkillType.CLOSE,
+            ContractType.CLOSE,
             task,
             target,
-            SkillContract(
+            ContractTerms(
                 parameters=(
-                    SkillParameter("articulation", ParameterType.ARTICULATION),
+                    ContractParameter("articulation", ParameterType.ARTICULATION),
                 ),
                 preconditions=("reachable({articulation})", "open({articulation})"),
                 effects=("closed({articulation})",),
@@ -654,7 +659,7 @@ class CloseSkill(AtomicSkill):
         )
 
 
-def _contract_dict(contract: SkillContract) -> Dict[str, Any]:
+def _terms_dict(contract: ContractTerms) -> Dict[str, Any]:
     return {
         "parameters": [
             {
@@ -674,10 +679,10 @@ def _contract_dict(contract: SkillContract) -> Dict[str, Any]:
     }
 
 
-ATOMIC_SKILL_CLASSES = {
-    SkillType.NAVIGATE: NavigateSkill,
-    SkillType.PICK: PickSkill,
-    SkillType.PLACE: PlaceSkill,
-    SkillType.OPEN: OpenSkill,
-    SkillType.CLOSE: CloseSkill,
+ATOMIC_CONTRACT_CLASSES = {
+    ContractType.NAVIGATE: NavigateContract,
+    ContractType.PICK: PickContract,
+    ContractType.PLACE: PlaceContract,
+    ContractType.OPEN: OpenContract,
+    ContractType.CLOSE: CloseContract,
 }

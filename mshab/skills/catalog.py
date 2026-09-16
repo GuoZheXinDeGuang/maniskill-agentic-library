@@ -2,7 +2,7 @@
 
 The checked-in catalog is a portable description of the four-layer library,
 not an inventory of one workstation.  Checkpoint readiness is deliberately
-excluded: it belongs to :class:`SkillLibrary` runtime discovery.  Loading a
+excluded: it belongs to :class:`ContractLibrary` runtime discovery.  Loading a
 catalog reconstructs and validates Layer 1/2 rather than trusting duplicated
 derived views such as flattened nodes, edges, or execution order.
 """
@@ -13,16 +13,16 @@ import json
 from typing import Any, Dict, Mapping, Sequence
 
 from mshab.skills import schema
-from mshab.skills.graph import FunctionalGoalGraph, SkillCompositionGraph
+from mshab.skills.graph import SubGoalGraph, SkillCompositionGraph
 from mshab.skills.plan import SkillPlan
 
 
 CATALOG_SCHEMA_VERSION = "mshab.skill-catalog.v1"
 _LAYER_KEYS = (
-    "1_functional_goal_graph",
+    "1_subgoal_graph",
     "2_skill_composition_graph",
-    "3_bound_skill_contracts",
-    "4_atomic_skills_and_backends",
+    "3_bound_contract_terms",
+    "4_contracts_and_policies",
 )
 
 
@@ -36,16 +36,16 @@ class SkillCatalog:
         construction: Mapping[str, Any],
         execution_plan_note: str,
         execution_plans: Mapping[str, SkillPlan],
-        goal_graph: FunctionalGoalGraph,
+        subgoal_graph: SubGoalGraph,
         skill_graph: SkillCompositionGraph,
-        bound_contracts: Mapping[str, Mapping[str, Any]],
-        atomic_skills: Sequence[Mapping[str, Any]],
+        bound_terms: Mapping[str, Mapping[str, Any]],
+        contracts: Sequence[Mapping[str, Any]],
     ) -> None:
         schema.require_identifier({"task": task}, "task", where="skill_catalog")
         if skill_graph.task != task:
             raise ValueError("catalog task must match its skill composition graph")
-        if skill_graph.goal_graph is not goal_graph:
-            raise ValueError("catalog graphs must share the same goal graph object")
+        if skill_graph.subgoal_graph is not subgoal_graph:
+            raise ValueError("catalog graphs must share the same sub-goal graph object")
         skill_graph.validate()
         if not isinstance(construction, Mapping):
             raise TypeError("catalog construction metadata must be a mapping")
@@ -53,20 +53,20 @@ class SkillCatalog:
             raise ValueError("catalog execution-plan note must be a non-empty string")
         if not isinstance(execution_plans, Mapping):
             raise TypeError("catalog execution_plans must be a mapping")
-        if not isinstance(bound_contracts, Mapping):
-            raise TypeError("catalog bound_contracts must be a mapping")
+        if not isinstance(bound_terms, Mapping):
+            raise TypeError("catalog bound_terms must be a mapping")
 
         self.task = task
         self.construction = _json_copy(construction, "construction")
         self.execution_plan_note = execution_plan_note
         self.execution_plans = dict(execution_plans)
-        self.goal_graph = goal_graph
+        self.subgoal_graph = subgoal_graph
         self.skill_graph = skill_graph
-        self.bound_contracts = _json_copy(bound_contracts, "bound_contracts")
-        self.atomic_skills = tuple(_json_copy(atomic_skills, "atomic_skills"))
+        self.bound_terms = _json_copy(bound_terms, "bound_terms")
+        self.contracts = tuple(_json_copy(contracts, "contracts"))
         self._validate_plans()
+        self._validate_bound_terms()
         self._validate_contracts()
-        self._validate_atomic_skills()
 
     @classmethod
     def from_dict(cls, payload: Mapping[str, Any]) -> "SkillCatalog":
@@ -101,13 +101,13 @@ class SkillCatalog:
         schema.require_keys(
             raw_layer_1,
             where="skill_catalog.layer_1",
-            required=("instruction", "goals", "dependencies", "execution_order"),
+            required=("goal", "subgoals", "dependencies", "execution_order"),
         )
-        goal_graph = FunctionalGoalGraph.from_dict(raw_layer_1)
-        declared_goal_order = schema.require_str_tuple(
+        subgoal_graph = SubGoalGraph.from_dict(raw_layer_1)
+        declared_subgoal_order = schema.require_str_tuple(
             raw_layer_1, "execution_order", where="skill_catalog.layer_1"
         )
-        if declared_goal_order != goal_graph.execution_order():
+        if declared_subgoal_order != subgoal_graph.execution_order():
             raise schema.SchemaError("catalog Layer-1 execution_order is stale")
 
         raw_layer_2 = schema.require_mapping(
@@ -127,7 +127,7 @@ class SkillCatalog:
             ),
         )
         skill_graph = SkillCompositionGraph.from_dict(
-            raw_layer_2, goal_graph=goal_graph
+            raw_layer_2, subgoal_graph=subgoal_graph
         )
         declared_candidate_order = schema.require_str_tuple(
             raw_layer_2,
@@ -137,7 +137,7 @@ class SkillCatalog:
         if declared_candidate_order != skill_graph.execution_order():
             raise schema.SchemaError("catalog candidate_partial_order is stale")
         regenerated_layer_2 = skill_graph.as_dict()
-        regenerated_layer_2.pop("goal_graph", None)
+        regenerated_layer_2.pop("subgoal_graph", None)
         for key in ("nodes", "edges"):
             if raw_layer_2[key] != regenerated_layer_2[key]:
                 raise schema.SchemaError(
@@ -170,12 +170,12 @@ class SkillCatalog:
             ),
             execution_plan_note=note,
             execution_plans=plans,
-            goal_graph=goal_graph,
+            subgoal_graph=subgoal_graph,
             skill_graph=skill_graph,
-            bound_contracts=schema.require_mapping(
+            bound_terms=schema.require_mapping(
                 layers[_LAYER_KEYS[2]], where="skill_catalog.layer_3"
             ),
-            atomic_skills=schema.require_sequence(
+            contracts=schema.require_sequence(
                 layers, _LAYER_KEYS[3], where="skill_catalog.layers"
             ),
         )
@@ -189,21 +189,21 @@ class SkillCatalog:
         if nominal is None:
             nominal = next(iter(self.execution_plans.values()))
         return {
-            "functional_goals": len(self.goal_graph.goals),
-            "goal_skill_subgraphs": len(self.skill_graph.subgraphs),
+            "subgoals": len(self.subgoal_graph.subgoals),
+            "subgoal_skill_subgraphs": len(self.skill_graph.subgraphs),
             "subgraph_relations": len(self.skill_graph.subgraph_relations),
             "skill_nodes": len(self.skill_graph.nodes),
             "skill_edges": len(self.skill_graph.edges),
             "planned_steps": len(nominal.order),
-            "bound_contracts": len(self.bound_contracts),
-            "registered_atomic_skills": len(self.atomic_skills),
+            "bound_terms": len(self.bound_terms),
+            "registered_contracts": len(self.contracts),
         }
 
     def as_dict(self) -> Dict[str, Any]:
-        layer_1 = self.goal_graph.as_dict()
-        layer_1["execution_order"] = list(self.goal_graph.execution_order())
+        layer_1 = self.subgoal_graph.as_dict()
+        layer_1["execution_order"] = list(self.subgoal_graph.execution_order())
         layer_2 = self.skill_graph.as_dict()
-        layer_2.pop("goal_graph", None)
+        layer_2.pop("subgoal_graph", None)
         layer_2["candidate_partial_order"] = list(
             self.skill_graph.execution_order()
         )
@@ -221,25 +221,25 @@ class SkillCatalog:
                 _LAYER_KEYS[0]: layer_1,
                 _LAYER_KEYS[1]: layer_2,
                 _LAYER_KEYS[2]: _json_copy(
-                    self.bound_contracts, "bound_contracts"
+                    self.bound_terms, "bound_terms"
                 ),
                 _LAYER_KEYS[3]: list(
-                    _json_copy(self.atomic_skills, "atomic_skills")
+                    _json_copy(self.contracts, "contracts")
                 ),
             },
         }
 
     def _validate_plans(self) -> None:
-        goals = self.goal_graph.goals
+        subgoals = self.subgoal_graph.subgoals
         nodes = self.skill_graph.nodes
         for name, plan in self.execution_plans.items():
             if not isinstance(name, str) or not name:
                 raise TypeError("execution plan names must be non-empty strings")
             if not isinstance(plan, SkillPlan):
                 raise TypeError("execution_plans must contain SkillPlan values")
-            if set(plan.selections) != set(goals):
+            if set(plan.selections) != set(subgoals):
                 raise ValueError(
-                    "execution plan {!r} must select one achiever for every goal".format(
+                    "execution plan {!r} must select one achiever for every sub-goal".format(
                         name
                     )
                 )
@@ -248,22 +248,22 @@ class SkillCatalog:
                 raise ValueError(
                     "execution plan {!r} contains unknown nodes {}".format(name, unknown)
                 )
-            for goal_id, node_id in plan.selections.items():
-                if goal_id not in nodes[node_id].achieves:
+            for subgoal_id, node_id in plan.selections.items():
+                if subgoal_id not in nodes[node_id].achieves:
                     raise ValueError(
-                        "execution plan {!r} selects node {!r} for unrelated goal {!r}".format(
-                            name, node_id, goal_id
+                        "execution plan {!r} selects node {!r} for unrelated sub-goal {!r}".format(
+                            name, node_id, subgoal_id
                         )
                     )
                 executed_achievers = [
                     candidate
                     for candidate in plan.order
-                    if goal_id in nodes[candidate].achieves
+                    if subgoal_id in nodes[candidate].achieves
                 ]
                 if executed_achievers != [node_id]:
                     raise ValueError(
                         "execution plan {!r} must execute exactly its selected "
-                        "achiever for goal {!r}".format(name, goal_id)
+                        "achiever for sub-goal {!r}".format(name, subgoal_id)
                     )
             completed = set()
             for node_id in plan.order:
@@ -279,17 +279,17 @@ class SkillCatalog:
                     )
                 completed.add(node_id)
 
-    def _validate_contracts(self) -> None:
-        if set(self.bound_contracts) != set(self.skill_graph.nodes):
-            raise ValueError("catalog must contain one bound contract per skill node")
-        for node_id, raw in self.bound_contracts.items():
-            where = "bound_contracts.{}".format(node_id)
+    def _validate_bound_terms(self) -> None:
+        if set(self.bound_terms) != set(self.skill_graph.nodes):
+            raise ValueError("catalog must contain bound terms for every skill node")
+        for node_id, raw in self.bound_terms.items():
+            where = "bound_terms.{}".format(node_id)
             record = schema.require_mapping(raw, where=where)
             schema.require_keys(
                 record,
                 where=where,
                 required=(
-                    "skill_id",
+                    "contract_id",
                     "arguments",
                     "preconditions",
                     "effects",
@@ -300,12 +300,12 @@ class SkillCatalog:
                 ),
             )
             node = self.skill_graph.nodes[node_id]
-            if schema.require_skill_id(record, "skill_id", where=where) != node.skill_id:
-                raise ValueError("catalog contract skill_id does not match its node")
+            if schema.require_contract_id(record, "contract_id", where=where) != node.contract_id:
+                raise ValueError("catalog bound terms contract_id does not match its node")
             if schema.require_arguments(record, "arguments", where=where) != dict(
                 node.arguments
             ):
-                raise ValueError("catalog contract arguments do not match its node")
+                raise ValueError("catalog bound terms arguments do not match its node")
             for key in (
                 "preconditions",
                 "effects",
@@ -316,47 +316,47 @@ class SkillCatalog:
             ):
                 schema.require_str_tuple(record, key, where=where)
 
-    def _validate_atomic_skills(self) -> None:
+    def _validate_contracts(self) -> None:
         ids = set()
-        for index, raw in enumerate(self.atomic_skills):
-            where = "atomic_skills[{}]".format(index)
+        for index, raw in enumerate(self.contracts):
+            where = "contracts[{}]".format(index)
             record = schema.require_mapping(raw, where=where)
             schema.require_keys(
                 record,
                 where=where,
                 required=(
                     "id",
-                    "skill_type",
+                    "contract_type",
                     "target",
                     "env_id",
                     "max_episode_steps",
-                    "backends",
+                    "policies",
                 ),
             )
-            skill_id = schema.require_skill_id(record, "id", where=where)
-            if skill_id in ids:
-                raise ValueError("duplicate atomic skill id {!r}".format(skill_id))
-            ids.add(skill_id)
-            schema.require_str(record, "skill_type", where=where)
+            contract_id = schema.require_contract_id(record, "id", where=where)
+            if contract_id in ids:
+                raise ValueError("duplicate contract id {!r}".format(contract_id))
+            ids.add(contract_id)
+            schema.require_str(record, "contract_type", where=where)
             schema.require_str(record, "target", where=where)
             schema.require_str(record, "env_id", where=where)
             steps = record["max_episode_steps"]
             if isinstance(steps, bool) or not isinstance(steps, int) or steps <= 0:
                 raise schema.SchemaError("{}.max_episode_steps must be positive".format(where))
-            backends = schema.require_mapping(
-                record["backends"], where="{}.backends".format(where)
+            policies = schema.require_mapping(
+                record["policies"], where="{}.policies".format(where)
             )
-            if not backends:
-                raise schema.SchemaError("{}.backends cannot be empty".format(where))
-            for backend_key, raw_backend in backends.items():
+            if not policies:
+                raise schema.SchemaError("{}.policies cannot be empty".format(where))
+            for policy_key, raw_policy in policies.items():
                 schema.require_identifier(
-                    {"key": backend_key}, "key", where="{}.backends".format(where)
+                    {"key": policy_key}, "key", where="{}.policies".format(where)
                 )
-                backend_where = "{}.backends.{}".format(where, backend_key)
-                backend = schema.require_mapping(raw_backend, where=backend_where)
+                policy_where = "{}.policies.{}".format(where, policy_key)
+                policy = schema.require_mapping(raw_policy, where=policy_where)
                 schema.require_keys(
-                    backend,
-                    where=backend_where,
+                    policy,
+                    where=policy_where,
                     required=("executor_type",),
                     optional=(
                         "family",
@@ -366,7 +366,7 @@ class SkillCatalog:
                         "checkpoint_sha256",
                     ),
                 )
-                schema.require_str(backend, "executor_type", where=backend_where)
+                schema.require_str(policy, "executor_type", where=policy_where)
                 for key in (
                     "family",
                     "policy_type",
@@ -374,12 +374,12 @@ class SkillCatalog:
                     "config",
                     "checkpoint_sha256",
                 ):
-                    if key in backend and backend[key] is not None:
-                        schema.require_str(backend, key, where=backend_where)
-        referenced = {node.skill_id for node in self.skill_graph.nodes.values()}
+                    if key in policy and policy[key] is not None:
+                        schema.require_str(policy, key, where=policy_where)
+        referenced = {node.contract_id for node in self.skill_graph.nodes.values()}
         missing = sorted(referenced - ids)
         if missing:
-            raise ValueError("catalog has no atomic skill records for {}".format(missing))
+            raise ValueError("catalog has no contract records for {}".format(missing))
 
 
 def _json_copy(value: Any, where: str) -> Any:

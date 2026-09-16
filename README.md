@@ -16,15 +16,19 @@ Official repository for the ManiSkill-HAB project by
 
 ## Skill Library (experimental)
 
-This fork includes a four-layer object-oriented skill library. Every Layer-1
-functional goal owns one Layer-2 `GoalSkillSubgraph`; typed relations connect
-nodes inside and across these subgraphs. These first two layers are
-scene-independent. Executable contracts and atomic policy/controller backends
+This fork includes a four-layer object-oriented skill library. A text task
+description is the *goal*; Layer 1 decomposes it into *sub-goals*. Every
+sub-goal owns one Layer-2 `SubGoalSkillSubgraph` of *skill nodes*; typed
+relations connect nodes inside and across these subgraphs and encode the
+semantic order of the task. These first two layers are scene-independent. Each
+skill node references one *contract* (Layer 3), whose preconditions decide only
+whether it can physically start in the current scene; a contract is executed by
+low-level *policies* (Layer 4: RL/BC/DP/VLA checkpoints or controllers) that
 communicate with MS-HAB through an explicit environment entity/fact/snapshot
-adapter. A complete manual SetTable graph and interfaces for custom skills and
-future skill-insertion patches are included. The initial graph is manual; a
-future insertion VLM will place new skills, while a separately trained
-graph-conditioned VLM will select one next skill per decision.
+adapter. A complete manual SetTable graph and interfaces for custom contracts
+and future skill-node insertion patches are included. The initial graph is
+manual; a future insertion VLM will place new skill nodes, while a separately
+trained graph-conditioned VLM will select one next skill node per decision.
 
 <p align="center">
   <img src="./docs/static/images/skill_library_architecture.svg"
