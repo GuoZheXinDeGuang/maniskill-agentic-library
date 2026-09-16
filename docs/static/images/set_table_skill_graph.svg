@@ -170,7 +170,7 @@
 <path class="edge" d="M 1598 756 L 1626 756" marker-end="url(#arrow)"/>
 <text class="tiny" x="1612" y="748" text-anchor="middle">ENABLES</text>
 <path class="edge" d="M 1375 788 L 1399 788" marker-end="url(#arrow)"/>
-<text class="small" x="950" y="930" text-anchor="middle">Green boxes: one SubGoalSkillSubgraph per sub-goal    Solid: ENABLES (including cross-subgraph)    Dashed: alternative skill nodes</text>
+<text class="small" x="950" y="930" text-anchor="middle">Green boxes: one SkillSubgraph per sub-goal    Solid: ENABLES (including cross-subgraph)    Dashed: alternative skill nodes</text>
 <path class="edge" d="M 950 955 L 950 978" marker-end="url(#arrow)"/>
 <text class="tiny" x="970" y="972" text-anchor="start">future decision VLM: graph + state → one next skill</text>
 <rect class="layer" x="24" y="980" width="1852" height="255" fill="#fffbeb" stroke="#eab308"/>

@@ -15,8 +15,8 @@ from mshab.skills import (
     SubGoal,
     SubGoalGraph,
     SubGoalDependency,
-    SubGoalSkillSubgraph,
-    SubGoalSkillSubgraphExtension,
+    SkillSubgraph,
+    SkillSubgraphExtension,
     NoViableCandidate,
     SchemaError,
     SkillCompositionGraph,
@@ -46,11 +46,11 @@ def _tiny_graph():
     subgoals.add_dependency("retrieved", "placed")
     graph = SkillCompositionGraph("set_table", subgoal_graph=subgoals)
 
-    retrieved = SubGoalSkillSubgraph("retrieved", "set_table")
+    retrieved = SkillSubgraph("retrieved", "set_table")
     retrieved.add_node(_pick("pick_primary", "024_bowl", "retrieved"))
     graph.add_subgraph(retrieved)
 
-    placed = SubGoalSkillSubgraph("placed", "set_table")
+    placed = SkillSubgraph("placed", "set_table")
     placed.add_node(
         SkillNode(
             "place_it",
@@ -158,7 +158,7 @@ class ExecutionPlanTests(TestCase):
         subgoals, graph = _tiny_graph()
         subgoals.add_subgoal(SubGoal("closed", "closed(fridge)"))
         subgoals.add_dependency("placed", "closed")
-        orphan = SubGoalSkillSubgraph("closed", "set_table")
+        orphan = SkillSubgraph("closed", "set_table")
         orphan.add_node(
             SkillNode(
                 "close_it", "mshab.set_table.close.fridge", {}, achieves=("closed",)
@@ -178,7 +178,7 @@ class ExecutionPlanTests(TestCase):
         graph = SkillCompositionGraph("set_table", subgoal_graph=subgoals)
 
         for subgoal_id in ("a", "b"):
-            subgraph = SubGoalSkillSubgraph(subgoal_id, "set_table")
+            subgraph = SkillSubgraph(subgoal_id, "set_table")
             subgraph.add_node(
                 SkillNode(
                     subgoal_id,
@@ -290,7 +290,7 @@ class PatchAtomicityTests(TestCase):
     def test_rejected_relation_leaves_both_graphs_untouched(self):
         subgoals, graph = _tiny_graph()
         before = self._snapshot(subgoals, graph)
-        stranger = SubGoalSkillSubgraph("inspected", "set_table")
+        stranger = SkillSubgraph("inspected", "set_table")
         stranger.add_node(
             SkillNode(
                 "inspect", "mshab.set_table.pick.all", {"object": "x"},
@@ -332,13 +332,13 @@ class PatchAtomicityTests(TestCase):
             nodes = {}
             edges = ()
 
-        with self.assertRaisesRegex(TypeError, "SubGoalSkillSubgraph"):
+        with self.assertRaisesRegex(TypeError, "SkillSubgraph"):
             SkillGraphPatch(skill_subgraphs=(NotASubgraph(),))
 
     def test_apply_rejects_a_skill_the_library_does_not_have(self):
         subgoals, graph = _tiny_graph()
         before = self._snapshot(subgoals, graph)
-        invented = SubGoalSkillSubgraph("inspected", "set_table")
+        invented = SkillSubgraph("inspected", "set_table")
         invented.add_node(
             SkillNode(
                 "inspect", "mshab.set_table.teleport.moon", {},

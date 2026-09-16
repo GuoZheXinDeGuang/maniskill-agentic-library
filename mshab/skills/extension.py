@@ -7,7 +7,7 @@ declarative :class:`SkillGraphPatch`:
 2. a relation connecting that subgraph to subgraphs that already exist;
 3. a new candidate node inside a subgraph that is already registered.
 
-The third case is what :class:`SubGoalSkillSubgraphExtension` exists for.  A
+The third case is what :class:`SkillSubgraphExtension` exists for.  A
 registered subgraph is sealed, so it is never edited in place: the extension
 builds a validated successor and the aggregate swaps it in.
 """
@@ -22,7 +22,7 @@ from mshab.skills import schema
 from mshab.skills.graph import (
     SubGoal,
     SubGoalGraph,
-    SubGoalSkillSubgraph,
+    SkillSubgraph,
     SubGoalDependency,
     SkillCompositionGraph,
     SkillEdge,
@@ -33,7 +33,7 @@ from mshab.skills.library import ContractLibrary
 
 
 @dataclass(frozen=True)
-class SubGoalSkillSubgraphExtension:
+class SkillSubgraphExtension:
     """Add candidates or internal relations to an already-registered sub-goal.
 
     The extension never mutates the sealed subgraph.  :meth:`rebuild` returns an
@@ -67,7 +67,7 @@ class SubGoalSkillSubgraphExtension:
                     )
                 )
 
-    def rebuild(self, current: SubGoalSkillSubgraph) -> SubGoalSkillSubgraph:
+    def rebuild(self, current: SkillSubgraph) -> SkillSubgraph:
         if current.subgoal_id != self.subgoal_id:
             raise ValueError(
                 "extension targets sub-goal {!r}, not {!r}".format(
@@ -83,7 +83,7 @@ class SubGoalSkillSubgraphExtension:
         return successor
 
     @classmethod
-    def from_dict(cls, payload: Mapping[str, Any]) -> "SubGoalSkillSubgraphExtension":
+    def from_dict(cls, payload: Mapping[str, Any]) -> "SkillSubgraphExtension":
         where = "subgraph_extension"
         payload = schema.require_mapping(payload, where=where)
         schema.require_keys(
@@ -120,16 +120,16 @@ class SkillGraphPatch:
 
     subgoals: Tuple[SubGoal, ...] = ()
     subgoal_dependencies: Tuple[SubGoalDependency, ...] = ()
-    skill_subgraphs: Tuple[SubGoalSkillSubgraph, ...] = ()
+    skill_subgraphs: Tuple[SkillSubgraph, ...] = ()
     subgraph_relations: Tuple[SkillSubgraphRelation, ...] = ()
-    subgraph_extensions: Tuple[SubGoalSkillSubgraphExtension, ...] = ()
+    subgraph_extensions: Tuple[SkillSubgraphExtension, ...] = ()
 
     _FIELD_TYPES = {
         "subgoals": SubGoal,
         "subgoal_dependencies": SubGoalDependency,
-        "skill_subgraphs": SubGoalSkillSubgraph,
+        "skill_subgraphs": SkillSubgraph,
         "subgraph_relations": SkillSubgraphRelation,
-        "subgraph_extensions": SubGoalSkillSubgraphExtension,
+        "subgraph_extensions": SkillSubgraphExtension,
     }
 
     def __post_init__(self) -> None:
@@ -155,7 +155,7 @@ class SkillGraphPatch:
     ) -> "SkillGraphPatch":
         """Return a new patch that also extends an existing sub-goal subgraph."""
 
-        extension = SubGoalSkillSubgraphExtension(
+        extension = SkillSubgraphExtension(
             subgoal_id=subgoal_id, nodes=tuple(nodes), edges=tuple(edges)
         )
         return SkillGraphPatch(
@@ -272,7 +272,7 @@ class SkillGraphPatch:
                 )
             ),
             skill_subgraphs=tuple(
-                SubGoalSkillSubgraph.from_dict(item, task=task)
+                SkillSubgraph.from_dict(item, task=task)
                 for item in schema.require_sequence(
                     payload, "skill_subgraphs", where=where
                 )
@@ -284,7 +284,7 @@ class SkillGraphPatch:
                 )
             ),
             subgraph_extensions=tuple(
-                SubGoalSkillSubgraphExtension.from_dict(item)
+                SkillSubgraphExtension.from_dict(item)
                 for item in schema.require_sequence(
                     payload, "subgraph_extensions", where=where
                 )

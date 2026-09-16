@@ -190,7 +190,7 @@ class SkillCatalog:
             nominal = next(iter(self.execution_plans.values()))
         return {
             "subgoals": len(self.subgoal_graph.subgoals),
-            "subgoal_skill_subgraphs": len(self.skill_graph.subgraphs),
+            "skill_subgraphs": len(self.skill_graph.subgraphs),
             "subgraph_relations": len(self.skill_graph.subgraph_relations),
             "skill_nodes": len(self.skill_graph.nodes),
             "skill_edges": len(self.skill_graph.edges),

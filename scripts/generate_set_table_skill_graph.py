@@ -315,7 +315,7 @@ def set_table_svg(document):
             )
 
     legend = (
-        "Green boxes: one SubGoalSkillSubgraph per sub-goal    "
+        "Green boxes: one SkillSubgraph per sub-goal    "
         "Solid: ENABLES (including cross-subgraph)    Dashed: alternative skill nodes"
     )
     parts.append(text(950, 930, legend, "small"))

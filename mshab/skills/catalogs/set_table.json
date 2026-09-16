@@ -92,7 +92,7 @@
   },
   "summary": {
     "subgoals": 8,
-    "subgoal_skill_subgraphs": 8,
+    "skill_subgraphs": 8,
     "subgraph_relations": 7,
     "skill_nodes": 20,
     "skill_edges": 35,

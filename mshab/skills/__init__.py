@@ -16,7 +16,7 @@ from mshab.skills.environment import (
     MSHabEnvironmentAdapter,
 )
 from mshab.skills.extension import (
-    SubGoalSkillSubgraphExtension,
+    SkillSubgraphExtension,
     SkillGraphBuilder,
     SkillGraphPatch,
 )
@@ -24,7 +24,7 @@ from mshab.skills.graph import (
     SubGoal,
     SubGoalGraph,
     SubGoalDependency,
-    SubGoalSkillSubgraph,
+    SkillSubgraph,
     SkillCompositionGraph,
     SkillEdge,
     SkillNode,
@@ -93,7 +93,7 @@ __all__ = [
     "SubGoal",
     "SubGoalGraph",
     "SubGoalDependency",
-    "SubGoalSkillSubgraph",
+    "SkillSubgraph",
     "MSHabEnvironmentAdapter",
     "NavigateContract",
     "OpenContract",
@@ -121,7 +121,7 @@ __all__ = [
     "SkillPlanner",
     "SkillPlan",
     "NoViableCandidate",
-    "SubGoalSkillSubgraphExtension",
+    "SkillSubgraphExtension",
     "ContractType",
     "ContractViolation",
     "CATALOG_SCHEMA_VERSION",

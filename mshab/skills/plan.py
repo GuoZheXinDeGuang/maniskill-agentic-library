@@ -22,7 +22,7 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional, Set, Tuple
 from mshab.skills import schema
 from mshab.skills.graph import (
     SubGoalGraph,
-    SubGoalSkillSubgraph,
+    SkillSubgraph,
     SkillCompositionGraph,
     SkillNode,
     SkillRelation,
@@ -168,7 +168,7 @@ class SkillPlanner:
 
     def select_achiever(
         self,
-        subgraph: SubGoalSkillSubgraph,
+        subgraph: SkillSubgraph,
         failed: Iterable[str] = (),
     ) -> SkillNode:
         """The first achiever in this sub-goal's fallback chain that has not failed."""
@@ -185,7 +185,7 @@ class SkillPlanner:
         )
 
     @staticmethod
-    def fallback_chain(subgraph: SubGoalSkillSubgraph) -> Tuple[SkillNode, ...]:
+    def fallback_chain(subgraph: SkillSubgraph) -> Tuple[SkillNode, ...]:
         """Achievers ordered primary-first along ``FALLBACK_TO`` edges."""
 
         achievers = {node.id: node for node in subgraph.achievers}
@@ -241,7 +241,7 @@ class SkillPlanner:
         return tuple(chain)
 
     @staticmethod
-    def _causal_closure(subgraph: SubGoalSkillSubgraph, node_id: str) -> Set[str]:
+    def _causal_closure(subgraph: SkillSubgraph, node_id: str) -> Set[str]:
         """``node_id`` plus the instrumental nodes it transitively depends on."""
 
         prerequisites: Dict[str, Set[str]] = {item: set() for item in subgraph.nodes}

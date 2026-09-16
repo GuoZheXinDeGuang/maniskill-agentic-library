@@ -330,7 +330,7 @@ class SkillEdge:
         return _edge_dict(self)
 
 
-class SubGoalSkillSubgraph:
+class SkillSubgraph:
     """Layer-2 implementation subgraph owned by one sub-goal.
 
     A subgraph contains both instrumental nodes (for example, navigation) and
@@ -360,7 +360,7 @@ class SubGoalSkillSubgraph:
         if getattr(self, "_sealed", False):
             raise RuntimeError(
                 "sub-goal skill subgraph {!r} is registered and sealed; build a "
-                "replacement with SubGoalSkillSubgraphExtension instead".format(
+                "replacement with SkillSubgraphExtension instead".format(
                     self._subgoal_id
                 )
             )
@@ -450,10 +450,10 @@ class SubGoalSkillSubgraph:
         self.validate()
         object.__setattr__(self, "_sealed", True)
 
-    def unsealed_copy(self) -> "SubGoalSkillSubgraph":
+    def unsealed_copy(self) -> "SkillSubgraph":
         """A mutable clone: the only supported way to revise a sealed subgraph."""
 
-        clone = SubGoalSkillSubgraph(self._subgoal_id, self._task)
+        clone = SkillSubgraph(self._subgoal_id, self._task)
         for node in self._nodes.values():
             clone.add_node(node)
         for edge in self._edges:
@@ -485,8 +485,8 @@ class SubGoalSkillSubgraph:
     @classmethod
     def from_dict(
         cls, payload: Mapping[str, Any], *, task: str
-    ) -> "SubGoalSkillSubgraph":
-        where = "subgoal_skill_subgraph"
+    ) -> "SkillSubgraph":
+        where = "skill_subgraph"
         payload = schema.require_mapping(payload, where=where)
         schema.require_keys(
             payload,
@@ -563,7 +563,7 @@ class SkillSubgraphRelation:
         return self.source_node is None or self.target_node is None
 
     def endpoints(
-        self, subgraphs: Mapping[str, "SubGoalSkillSubgraph"]
+        self, subgraphs: Mapping[str, "SkillSubgraph"]
     ) -> Tuple[Tuple[str, str], ...]:
         """Resolve to concrete ``(source_node, target_node)`` pairs."""
 
@@ -577,7 +577,7 @@ class SkillSubgraphRelation:
         )
 
     def edges(
-        self, subgraphs: Mapping[str, "SubGoalSkillSubgraph"]
+        self, subgraphs: Mapping[str, "SkillSubgraph"]
     ) -> Tuple[SkillEdge, ...]:
         return tuple(
             SkillEdge(source, target, self.relation)
@@ -588,7 +588,7 @@ class SkillSubgraphRelation:
     def _resolve(
         subgoal_id: str,
         node_id: Optional[str],
-        subgraphs: Mapping[str, "SubGoalSkillSubgraph"],
+        subgraphs: Mapping[str, "SkillSubgraph"],
     ) -> Tuple[str, ...]:
         try:
             subgraph = subgraphs[subgoal_id]
@@ -643,7 +643,7 @@ class SkillCompositionGraph:
     """Layer 2: one sub-goal-owned subgraph per Layer-1 sub-goal.
 
     The composition graph is an aggregate root.  Each
-    :class:`SubGoalSkillSubgraph` owns its nodes and internal relations, while this
+    :class:`SkillSubgraph` owns its nodes and internal relations, while this
     object owns relations crossing sub-goal boundaries.  ``nodes`` and ``edges``
     expose read-only flattened views for planners and legacy query code.
     """
@@ -657,11 +657,11 @@ class SkillCompositionGraph:
             raise ValueError("composition graph task must be non-empty")
         self.task = task
         self.subgoal_graph = subgoal_graph
-        self._subgraphs: Dict[str, SubGoalSkillSubgraph] = {}
+        self._subgraphs: Dict[str, SkillSubgraph] = {}
         self._subgraph_relations: List[SkillSubgraphRelation] = []
 
     @property
-    def subgraphs(self) -> Mapping[str, SubGoalSkillSubgraph]:
+    def subgraphs(self) -> Mapping[str, SkillSubgraph]:
         return dict(self._subgraphs)
 
     @property
@@ -696,7 +696,7 @@ class SkillCompositionGraph:
         )
         return internal + cross
 
-    def add_subgraph(self, subgraph: SubGoalSkillSubgraph) -> None:
+    def add_subgraph(self, subgraph: SkillSubgraph) -> None:
         if subgraph.task != self.task:
             raise ValueError("subgraph task must match composition graph task")
         if subgraph.subgoal_id in self._subgraphs:
@@ -718,11 +718,11 @@ class SkillCompositionGraph:
         subgraph._seal()
         self._subgraphs[subgraph.subgoal_id] = subgraph
 
-    def replace_subgraph(self, subgraph: SubGoalSkillSubgraph) -> None:
+    def replace_subgraph(self, subgraph: SkillSubgraph) -> None:
         """Swap in a revised implementation for an already-registered sub-goal.
 
         This is the commit half of
-        :class:`~mshab.skills.extension.SubGoalSkillSubgraphExtension`: a sealed
+        :class:`~mshab.skills.extension.SkillSubgraphExtension`: a sealed
         subgraph is never edited in place, it is replaced by a validated
         successor.  The replacement must keep every node that a cross-sub-goal
         relation still points at, and must not collide with another sub-goal's ids.
@@ -757,7 +757,7 @@ class SkillCompositionGraph:
 
         A node can only be inserted this way when its owning sub-goal is explicit
         (or uniquely declared by ``node.achieves``).  Instrumental nodes should
-        be added directly to a :class:`SubGoalSkillSubgraph`.
+        be added directly to a :class:`SkillSubgraph`.
         """
 
         owner = subgoal_id
@@ -767,7 +767,7 @@ class SkillCompositionGraph:
             raise ValueError("subgoal_id is required for an instrumental skill node")
         subgraph = self._subgraphs.get(owner)
         if subgraph is None:
-            subgraph = SubGoalSkillSubgraph(owner, self.task)
+            subgraph = SkillSubgraph(owner, self.task)
             subgraph.add_node(node)
             self.add_subgraph(subgraph)
         else:
@@ -828,7 +828,7 @@ class SkillCompositionGraph:
             raise KeyError("unknown skill node {!r}".format(node_id))
         return owners[0]
 
-    def subgraph_for_subgoal(self, subgoal_id: str) -> SubGoalSkillSubgraph:
+    def subgraph_for_subgoal(self, subgoal_id: str) -> SkillSubgraph:
         """Return the Layer-2 implementation owned by a Layer-1 sub-goal."""
 
         if self.subgoal_graph is not None and subgoal_id not in self.subgoal_graph.subgoals:
@@ -1049,7 +1049,7 @@ class SkillCompositionGraph:
             subgoal_graph = SubGoalGraph.from_dict(payload["subgoal_graph"])
         graph = cls(task, subgoal_graph=subgoal_graph)
         for item in schema.require_sequence(payload, "subgraphs", where=where):
-            graph.add_subgraph(SubGoalSkillSubgraph.from_dict(item, task=task))
+            graph.add_subgraph(SkillSubgraph.from_dict(item, task=task))
         for item in schema.require_sequence(payload, "subgraph_relations", where=where):
             relation = SkillSubgraphRelation.from_dict(item)
             graph.relate_subgraphs(
@@ -1073,7 +1073,7 @@ class SkillCompositionGraph:
         except KeyError as exc:
             raise KeyError("unknown skill node {!r}".format(node_id)) from exc
 
-    def _require_subgraph(self, subgoal_id: str) -> SubGoalSkillSubgraph:
+    def _require_subgraph(self, subgoal_id: str) -> SkillSubgraph:
         try:
             return self._subgraphs[subgoal_id]
         except KeyError as exc:

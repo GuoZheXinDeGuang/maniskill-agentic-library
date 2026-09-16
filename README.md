@@ -18,7 +18,7 @@ Official repository for the ManiSkill-HAB project by
 
 This fork includes a four-layer object-oriented skill library. A text task
 description is the *goal*; Layer 1 decomposes it into *sub-goals*. Every
-sub-goal owns one Layer-2 `SubGoalSkillSubgraph` of *skill nodes*; typed
+sub-goal owns one Layer-2 `SkillSubgraph` of *skill nodes*; typed
 relations connect nodes inside and across these subgraphs and encode the
 semantic order of the task. These first two layers are scene-independent. Each
 skill node references one *contract* (Layer 3), whose preconditions decide only

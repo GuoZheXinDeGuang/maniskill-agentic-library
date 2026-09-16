@@ -10,7 +10,7 @@ from mshab.skills.extension import SkillGraphBuilder, SkillGraphPatch
 from mshab.skills.graph import (
     SubGoal,
     SubGoalGraph,
-    SubGoalSkillSubgraph,
+    SkillSubgraph,
     SubGoalDependency,
     SkillCompositionGraph,
     SkillNode,
@@ -169,7 +169,7 @@ def _build_segment_subgraphs(
     navigate_back = "navigate_back_to_{}_source".format(label)
     close_source = "close_{}_source".format(label)
 
-    open_subgraph = SubGoalSkillSubgraph(open_subgoal, task)
+    open_subgraph = SkillSubgraph(open_subgoal, task)
     open_subgraph.add_node(
         SkillNode(navigate_source, prefix + "navigate.all", {"goal": source})
     )
@@ -178,7 +178,7 @@ def _build_segment_subgraphs(
     )
     open_subgraph.relate(navigate_source, open_source, SkillRelation.ENABLES)
 
-    retrieve_subgraph = SubGoalSkillSubgraph(retrieved_subgoal, task)
+    retrieve_subgraph = SkillSubgraph(retrieved_subgoal, task)
     retrieve_subgraph.add_node(
         SkillNode(navigate_object, prefix + "navigate.all", {"goal": object_name})
     )
@@ -210,7 +210,7 @@ def _build_segment_subgraphs(
         pick_specialized, pick_generic, SkillRelation.FALLBACK_TO
     )
 
-    place_subgraph = SubGoalSkillSubgraph(placed_subgoal, task)
+    place_subgraph = SkillSubgraph(placed_subgoal, task)
     place_subgraph.add_node(
         SkillNode(
             navigate_destination,
@@ -248,7 +248,7 @@ def _build_segment_subgraphs(
         place_specialized, place_generic, SkillRelation.FALLBACK_TO
     )
 
-    close_subgraph = SubGoalSkillSubgraph(close_subgoal, task)
+    close_subgraph = SkillSubgraph(close_subgoal, task)
     close_subgraph.add_node(
         SkillNode(navigate_back, prefix + "navigate.all", {"goal": source})
     )

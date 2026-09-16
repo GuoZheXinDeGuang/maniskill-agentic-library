@@ -14,7 +14,7 @@ from mshab.skills import (
     SubGoal,
     SubGoalGraph,
     SubGoalDependency,
-    SubGoalSkillSubgraph,
+    SkillSubgraph,
     MSHabEnvironmentAdapter,
     PickContract,
     SkillGraphPatch,
@@ -106,7 +106,7 @@ class SkillModelTests(TestCase):
             subgoals.add_dependency("reachable", "retrieved")
 
             graph = SkillCompositionGraph("set_table", subgoal_graph=subgoals)
-            reachable_subgraph = SubGoalSkillSubgraph("reachable", "set_table")
+            reachable_subgraph = SkillSubgraph("reachable", "set_table")
             reachable_subgraph.add_node(
                 SkillNode(
                     "navigate",
@@ -115,7 +115,7 @@ class SkillModelTests(TestCase):
                     achieves=("reachable",),
                 )
             )
-            retrieved_subgraph = SubGoalSkillSubgraph("retrieved", "set_table")
+            retrieved_subgraph = SkillSubgraph("retrieved", "set_table")
             retrieved_subgraph.add_node(
                 SkillNode(
                     "pick",
@@ -353,7 +353,7 @@ class SkillModelTests(TestCase):
         subgoals = SubGoalGraph("Retrieve and inspect the apple")
         subgoals.add_subgoal(SubGoal("retrieved", "holding(013_apple)"))
         graph = SkillCompositionGraph("set_table", subgoal_graph=subgoals)
-        retrieved = SubGoalSkillSubgraph("retrieved", "set_table")
+        retrieved = SkillSubgraph("retrieved", "set_table")
         retrieved.add_node(
             SkillNode(
                 "retrieve_apple",
@@ -363,7 +363,7 @@ class SkillModelTests(TestCase):
             )
         )
         graph.add_subgraph(retrieved)
-        inspected = SubGoalSkillSubgraph("inspected", "set_table")
+        inspected = SkillSubgraph("inspected", "set_table")
         inspected.add_node(
             SkillNode(
                 "inspect_apple",
@@ -393,7 +393,7 @@ class SkillModelTests(TestCase):
         self.assertIn("inspect_apple", graph.nodes)
         self.assertEqual(graph.owner_of("inspect_apple"), "inspected")
 
-        broken = SubGoalSkillSubgraph("broken", "set_table")
+        broken = SkillSubgraph("broken", "set_table")
         with self.assertRaisesRegex(ValueError, "outside task namespace"):
             broken.add_node(
                 SkillNode(
@@ -456,7 +456,7 @@ class SkillModelTests(TestCase):
             subgoals = SubGoalGraph("Retrieve the apple")
             subgoals.add_subgoal(SubGoal("retrieved", "holding(013_apple)"))
             graph = SkillCompositionGraph("set_table", subgoals)
-            subgraph = SubGoalSkillSubgraph("retrieved", "set_table")
+            subgraph = SkillSubgraph("retrieved", "set_table")
             subgraph.add_node(
                 SkillNode(
                     "pick",

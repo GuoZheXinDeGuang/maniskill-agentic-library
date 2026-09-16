@@ -42,7 +42,7 @@
   <text class="title" x="600" y="263" text-anchor="middle">2. Sub-goal-owned Candidate Skill Subgraphs</text>
 
   <rect x="45" y="280" width="340" height="165" rx="10" fill="#f8fff9" stroke="#399447" stroke-width="2"/>
-  <text class="label" x="215" y="307" text-anchor="middle">SubGoalSkillSubgraph: retrieved</text>
+  <text class="label" x="215" y="307" text-anchor="middle">SkillSubgraph: retrieved</text>
   <rect x="65" y="330" width="140" height="43" rx="7" fill="#ddeaff" stroke="#5684ce" stroke-width="1.5"/>
   <text class="small" x="135" y="357" text-anchor="middle">PickFromShelf</text>
   <rect x="225" y="330" width="140" height="43" rx="7" fill="#ddeaff" stroke="#5684ce" stroke-width="1.5"/>
@@ -52,7 +52,7 @@
   <text class="small" x="215" y="425" text-anchor="middle">achievers → retrieved(soup)</text>
 
   <rect x="430" y="280" width="340" height="165" rx="10" fill="#f8fff9" stroke="#399447" stroke-width="2"/>
-  <text class="label" x="600" y="307" text-anchor="middle">SubGoalSkillSubgraph: heated</text>
+  <text class="label" x="600" y="307" text-anchor="middle">SkillSubgraph: heated</text>
   <rect x="450" y="330" width="140" height="43" rx="7" fill="#ddeaff" stroke="#5684ce" stroke-width="1.5"/>
   <text class="small" x="520" y="357" text-anchor="middle">MicrowaveHeat</text>
   <rect x="610" y="330" width="140" height="43" rx="7" fill="#ddeaff" stroke="#5684ce" stroke-width="1.5"/>
@@ -62,7 +62,7 @@
   <text class="small" x="600" y="425" text-anchor="middle">achievers → heated(soup)</text>
 
   <rect x="815" y="280" width="340" height="165" rx="10" fill="#f8fff9" stroke="#399447" stroke-width="2"/>
-  <text class="label" x="985" y="307" text-anchor="middle">SubGoalSkillSubgraph: served_at</text>
+  <text class="label" x="985" y="307" text-anchor="middle">SkillSubgraph: served_at</text>
   <rect x="835" y="330" width="140" height="43" rx="7" fill="#ddeaff" stroke="#5684ce" stroke-width="1.5"/>
   <text class="small" x="905" y="357" text-anchor="middle">NavigateToTable</text>
   <rect x="995" y="330" width="140" height="43" rx="7" fill="#ddeaff" stroke="#5684ce" stroke-width="1.5"/>

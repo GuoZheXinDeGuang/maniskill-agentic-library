@@ -23,7 +23,7 @@ The words below are used with exactly one meaning throughout this package.
 | goal | The text task description, for example *"Set the table"* | `SubGoalGraph.goal` (a string) |
 | sub-goal | One symbolic milestone the goal is decomposed into, for example `holding(024_bowl)` | `SubGoal` |
 | skill / skill node | One node of the skill graph. It names a contract and symbolic arguments. **"Skill" never refers to a contract or a policy.** | `SkillNode` |
-| skill subgraph | The nodes and edges that implement one sub-goal. Not necessarily sequential. | `SubGoalSkillSubgraph` |
+| skill subgraph | The nodes and edges that implement one sub-goal. Not necessarily sequential. | `SkillSubgraph` |
 | contract | What a skill node asks for: typed parameters, preconditions, effects, invariants, verification. One node references exactly one contract; one contract may be referenced by many nodes. | `AtomicContract` + `ContractTerms` |
 | policy | A low-level executable model or controller (RL, BC, DP, VLA, script) that executes a contract. | `Policy`, `CheckpointPolicy` |
 
@@ -42,7 +42,7 @@ Two different questions are answered at two different layers:
 | Layer | Main objects | Scene-dependent? | Responsibility |
 | --- | --- | --- | --- |
 | 1. Sub-goals | `SubGoalGraph`, `SubGoal` | No | Decompose the goal into ordered symbolic sub-goal predicates |
-| 2. Skill composition | `SkillCompositionGraph`, `SubGoalSkillSubgraph`, `SkillNode` | No | Give every sub-goal its own skill subgraph and connect those subgraphs |
+| 2. Skill composition | `SkillCompositionGraph`, `SkillSubgraph`, `SkillNode` | No | Give every sub-goal its own skill subgraph and connect those subgraphs |
 | 3. Contracts | `AtomicContract`, `ContractTerms`, `SkillGrounder`, `SkillRuntime` | Yes | Bind a node's arguments to its contract and check the terms against live facts |
 | 4. Policies | `Policy`, `CheckpointPolicy`, `PolicyExecutor` | Yes | Load a low-level policy or controller and interact with the environment |
 
@@ -55,7 +55,7 @@ goal (task text)
 Layer 1: SubGoalGraph                           scene-independent
     │ one sub-goal -> one skill subgraph
     ▼
-Layer 2: SubGoalSkillSubgraph                   scene-independent
+Layer 2: SkillSubgraph                   scene-independent
     │ owns SkillNode + internal SkillEdge
     │ SkillSubgraphRelation connects sub-goal subgraphs
     │ edges = semantic / logical order
@@ -81,7 +81,7 @@ SubGoalGraph
 └── SubGoal (Layer 1 definition)
 
 SkillCompositionGraph (Layer 2 aggregate root)
-├── SubGoalSkillSubgraph[subgoal_id] (exactly one per implemented sub-goal)
+├── SkillSubgraph[subgoal_id] (exactly one per implemented sub-goal)
 │   ├── SkillNode (instrumental or sub-goal-achieving candidate)
 │   └── SkillEdge (relations inside this sub-goal implementation)
 └── SkillSubgraphRelation (relations between two sub-goal subgraphs)
@@ -326,14 +326,14 @@ adapter, not in this graph.
 
 ## Layer 2: one skill subgraph per sub-goal
 
-`SkillCompositionGraph` is the aggregate root. It owns `SubGoalSkillSubgraph`
+`SkillCompositionGraph` is the aggregate root. It owns `SkillSubgraph`
 objects; a subgraph owns its nodes and internal relations. A `SkillNode` is a
 request to run one contract with symbolic arguments, not an executable
 invocation. The nodes inside a subgraph need not be sequential.
 
 ```python
 from mshab.skills import (
-    SubGoalSkillSubgraph,
+    SkillSubgraph,
     SkillCompositionGraph,
     SkillNode,
     SkillRelation,
@@ -341,7 +341,7 @@ from mshab.skills import (
 
 graph = SkillCompositionGraph("set_table", subgoal_graph=subgoals)
 
-reachable = SubGoalSkillSubgraph(subgoal_id="reachable", task="set_table")
+reachable = SkillSubgraph(subgoal_id="reachable", task="set_table")
 reachable.add_node(
     SkillNode(
         id="navigate_to_apple",
@@ -353,7 +353,7 @@ reachable.add_node(
     )
 )
 
-retrieved = SubGoalSkillSubgraph(subgoal_id="retrieved", task="set_table")
+retrieved = SkillSubgraph(subgoal_id="retrieved", task="set_table")
 retrieved.add_node(
     SkillNode(
         id="pick_apple",
@@ -373,7 +373,7 @@ graph.relate("navigate_to_apple", "pick_apple", SkillRelation.ENABLES)
 | Object/API | Important attributes | Responsibility |
 | --- | --- | --- |
 | `SkillCompositionGraph` | `task`, `subgoal_graph`, `subgraphs`, `subgraph_relations` | Own the complete Layer-2 aggregate and cross-sub-goal relations |
-| `SubGoalSkillSubgraph` | `subgoal_id`, `task`, `nodes`, `edges`, `achievers` | Own the complete candidate implementation for one sub-goal |
+| `SkillSubgraph` | `subgoal_id`, `task`, `nodes`, `edges`, `achievers` | Own the complete candidate implementation for one sub-goal |
 | `SkillNode` | `id`, `contract_id`, `arguments`, `achieves` | Refer to one contract with symbolic arguments |
 | `SkillEdge` | `source`, `target`, `relation` | Relate two skill nodes inside the same sub-goal subgraph |
 | `SkillSubgraphRelation` | `source_subgoal`, `target_subgoal`, `source_node`, `target_node`, `relation` | Relate skill nodes belonging to two different sub-goal subgraphs |
@@ -495,14 +495,14 @@ JSON-friendly, reviewable, and validated by the normal graph methods.
 from mshab.skills import (
     SubGoal,
     SubGoalDependency,
-    SubGoalSkillSubgraph,
+    SkillSubgraph,
     SkillGraphPatch,
     SkillNode,
     SkillRelation,
     SkillSubgraphRelation,
 )
 
-inspect_subgraph = SubGoalSkillSubgraph("apple_inspected", "set_table")
+inspect_subgraph = SkillSubgraph("apple_inspected", "set_table")
 inspect_subgraph.add_node(
     SkillNode(
         "inspect_apple",
@@ -555,7 +555,7 @@ patch = SkillGraphPatch().with_extension(
 patch.apply(subgoal_graph, skill_graph, library=library)
 ```
 
-`SubGoalSkillSubgraphExtension.rebuild()` clones the sealed subgraph, applies the
+`SkillSubgraphExtension.rebuild()` clones the sealed subgraph, applies the
 addition, revalidates it, and the aggregate swaps it in under the usual
 global-uniqueness and cycle checks. Existing cross-sub-goal relations keep
 working because they are sub-goal-level.
