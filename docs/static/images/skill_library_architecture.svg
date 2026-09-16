@@ -123,7 +123,7 @@
   </g>
 
   <path class="edge" d="M600 800 V835"/>
-  <text class="label" x="620" y="825">EXECUTED_BY</text>
+  <text class="label" x="620" y="825">EXECUTED_BY (many-to-many)</text>
 
   <!-- Layer 4 -->
   <rect class="box" x="20" y="840" width="1160" height="115" fill="#f2eaff" stroke="#8660b4"/>

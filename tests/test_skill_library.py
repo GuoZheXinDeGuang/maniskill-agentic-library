@@ -16,6 +16,7 @@ from mshab.skills import (
     SubGoalDependency,
     SkillSubgraph,
     MSHabEnvironmentAdapter,
+    NavigateContract,
     PickContract,
     SkillGraphPatch,
     SkillGraph,
@@ -36,6 +37,15 @@ from mshab.skills import (
 from scripts.generate_set_table_skill_graph import graph_document, set_table_svg
 
 
+CATALOG_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "mshab"
+    / "skills"
+    / "catalogs"
+    / "set_table.json"
+)
+
+
 class SkillModelTests(TestCase):
     def test_specialized_atomic_skill_binds_target_and_contract(self):
         contract = PickContract(task="set_table", target="013_apple")
@@ -51,11 +61,11 @@ class SkillModelTests(TestCase):
         with self.assertRaisesRegex(ValueError, "specialized"):
             contract.bind({"object": "024_bowl"})
 
-    def test_checkpoint_backend_reports_missing_partial_and_ready(self):
+    def test_checkpoint_policy_reports_missing_partial_and_ready(self):
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
             policy = CheckpointPolicy(
-                key="rl",
+                id="rl.set_table.pick.013_apple",
                 family="rl",
                 checkpoint_path=root / "policy.pt",
                 config_path=root / "config.yml",
@@ -66,21 +76,50 @@ class SkillModelTests(TestCase):
             (root / "policy.pt").write_bytes(b"weights")
             self.assertEqual(policy.status, ArtifactStatus.READY)
 
-    def test_discovery_groups_policy_families_as_alternative_backends(self):
+    def test_discovery_binds_families_and_generic_checkpoints_many_to_many(self):
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
-            for family in ("rl", "bc"):
-                leaf = root / family / "set_table" / "pick" / "013_apple"
+            for family, target in (
+                ("rl", "013_apple"),
+                ("bc", "013_apple"),
+                ("rl", "all"),
+            ):
+                leaf = root / family / "set_table" / "pick" / target
                 leaf.mkdir(parents=True)
                 (leaf / "config.yml").write_text("name: {}\n".format(family))
                 (leaf / "policy.pt").write_bytes(b"weights")
 
             library = ContractLibrary.from_checkpoint_root(root)
-            contracts = library.find(task="set_table", contract_type=ContractType.PICK)
+            apple = library.get("mshab.set_table.pick.013_apple")
+            generic = library.get("mshab.set_table.pick.all")
 
-            self.assertEqual(len(contracts), 1)
-            self.assertEqual(set(contracts[0].policies), {"rl", "bc"})
-            self.assertTrue(contracts[0].ready)
+            self.assertEqual(
+                len(library.find(task="set_table", contract_type=ContractType.PICK)), 2
+            )
+            # One contract <- several policies: its own two families first (in
+            # discovery order), then the all-object checkpoint as the
+            # Layer-4 fallback.
+            self.assertEqual(
+                [policy.id for policy in library.policies_for(apple.id)],
+                [
+                    "bc.set_table.pick.013_apple",
+                    "rl.set_table.pick.013_apple",
+                    "rl.set_table.pick.all",
+                ],
+            )
+            # One policy -> several contracts.
+            self.assertEqual(
+                [contract.id for contract in library.contracts_for("rl.set_table.pick.all")],
+                [apple.id, generic.id],
+            )
+            self.assertEqual(
+                [policy.id for policy in library.policies_for(generic.id)],
+                ["rl.set_table.pick.all"],
+            )
+            self.assertTrue(library.ready(apple.id))
+            self.assertEqual(
+                library.select_policy(apple.id).id, "bc.set_table.pick.013_apple"
+            )
 
     def test_composition_is_expressed_only_with_graph_relations(self):
         with TemporaryDirectory() as tmp:
@@ -185,7 +224,7 @@ class SkillModelTests(TestCase):
 
             grounder = SkillGrounder(library)
             self.assertEqual(
-                grounder.ground(graph.nodes["pick"], "rl").effects,
+                grounder.ground(graph.nodes["pick"]).effects,
                 ("holding(013_apple)",),
             )
 
@@ -209,7 +248,7 @@ class SkillModelTests(TestCase):
             dict(graph.nodes["navigate_to_object"].arguments),
             {"goal": "013_apple"},
         )
-        self.assertNotIn("policy_key", graph.as_dict()["nodes"][0])
+        self.assertNotIn("policy_id", graph.as_dict()["nodes"][0])
         self.assertEqual(
             set(graph.subgraphs),
             {"source_open", "object_retrieved", "object_placed", "source_closed"},
@@ -347,7 +386,18 @@ class SkillModelTests(TestCase):
                 stack.grounded_skills["place_object_specialized"].effects,
                 ("at(013_apple,dining_table)", "gripper_empty()"),
             )
-            self.assertEqual(len(stack.library.find(ready=True)), 7)
+            # Seven contracts have their own checkpoint.  pick.024_bowl and
+            # place.024_bowl have none, but the all-object checkpoints are
+            # bound to them too, so nine of the eleven contracts are executable.
+            self.assertEqual(len(stack.library.find(ready=True)), 9)
+            self.assertEqual(
+                stack.library.select_policy("mshab.set_table.pick.024_bowl").id,
+                "rl.set_table.pick.all",
+            )
+            self.assertEqual(
+                stack.library.select_policy("mshab.set_table.pick.013_apple").id,
+                "rl.set_table.pick.013_apple",
+            )
 
     def test_graph_patch_can_place_a_new_skill_subgraph(self):
         subgoals = SubGoalGraph("Retrieve and inspect the apple")
@@ -447,12 +497,15 @@ class SkillModelTests(TestCase):
             (root / "config.yml").write_text("name: ppo\n")
             (root / "policy.pt").write_bytes(b"weights")
             contract = PickContract("set_table", "013_apple")
-            contract.add_policy(
-                CheckpointPolicy(
-                    "rl", "rl", root / "policy.pt", root / "config.yml"
-                )
+            policy = CheckpointPolicy(
+                "rl.set_table.pick.013_apple",
+                "rl",
+                root / "policy.pt",
+                root / "config.yml",
             )
-            library = ContractLibrary((contract,))
+            library = ContractLibrary(
+                (contract,), (policy,), ((contract.id, policy.id),)
+            )
             subgoals = SubGoalGraph("Retrieve the apple")
             subgoals.add_subgoal(SubGoal("retrieved", "holding(013_apple)"))
             graph = SkillGraph("set_table", subgoals)
@@ -489,10 +542,210 @@ class SkillModelTests(TestCase):
             self.assertEqual(
                 tuple(node.id for node in runtime.ready_nodes(graph)), ("pick",)
             )
-            result = runtime.execute_node(graph, "pick", FakeExecutor(), "rl")
+            # Pinning a policy that is not bound to the contract makes the
+            # node unexecutable rather than raising.
+            self.assertEqual(
+                runtime.ready_nodes(graph, policy_ids={"pick": "vla.manipulation"}),
+                (),
+            )
+            result = runtime.execute_node(graph, "pick", FakeExecutor(), policy.id)
 
             self.assertTrue(result.success)
-            self.assertEqual(result.policy_key, "rl")
+            self.assertEqual(result.policy_id, policy.id)
             self.assertEqual(result.unretracted_deletes, ())
             self.assertEqual(result.violated_invariants, ())
             self.assertNotIn("gripper_empty()", result.after.facts)
+
+
+class LibraryBindingTests(TestCase):
+    """Contract <-> policy is a many-to-many relation owned by the library."""
+
+    @staticmethod
+    def _checkpoint(root, policy_id, ready=True):
+        leaf = root / policy_id
+        leaf.mkdir(parents=True)
+        if ready:
+            (leaf / "config.yml").write_text("name: ppo\n")
+            (leaf / "policy.pt").write_bytes(b"weights")
+        return CheckpointPolicy(
+            policy_id, "rl", leaf / "policy.pt", leaf / "config.yml"
+        )
+
+    def test_one_policy_executes_several_contracts_and_vice_versa(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            apple = PickContract("set_table", "013_apple")
+            bowl = PickContract("set_table", "024_bowl")
+            generic = PickContract("set_table", "all")
+            per_apple = self._checkpoint(root, "rl.set_table.pick.013_apple")
+            all_objects = self._checkpoint(root, "rl.set_table.pick.all")
+            vla = self._checkpoint(root, "vla.manipulation")
+            library = ContractLibrary(
+                contracts=(apple, bowl, generic),
+                policies=(per_apple, all_objects, vla),
+                bindings=(
+                    (apple.id, per_apple.id),
+                    (apple.id, all_objects.id),
+                    (bowl.id, all_objects.id),
+                    (generic.id, all_objects.id),
+                    (apple.id, vla.id),
+                    (bowl.id, vla.id),
+                ),
+            )
+
+            self.assertEqual(
+                [policy.id for policy in library.policies_for(apple.id)],
+                [per_apple.id, all_objects.id, vla.id],
+            )
+            self.assertEqual(
+                [contract.id for contract in library.contracts_for(all_objects.id)],
+                [apple.id, bowl.id, generic.id],
+            )
+            self.assertEqual(
+                [contract.id for contract in library.contracts_for(vla.id)],
+                [apple.id, bowl.id],
+            )
+            self.assertEqual(
+                [policy.id for policy in library.policies],
+                [per_apple.id, all_objects.id, vla.id],
+            )
+            # Neither side owns the other.
+            self.assertNotIn("policies", apple.as_dict())
+            self.assertNotIn("policies", apple.as_dict()["execution"])
+            self.assertNotIn("contracts", vla.as_dict())
+
+            exported = library.to_dict()
+            self.assertEqual(
+                exported["contracts"][0]["policies"],
+                [per_apple.id, all_objects.id, vla.id],
+            )
+            self.assertEqual(
+                exported["policies"][1]["contracts"], [apple.id, bowl.id, generic.id]
+            )
+            self.assertTrue(json.dumps(exported))
+
+    def test_default_policy_is_the_first_ready_one_in_binding_order(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            apple = PickContract("set_table", "013_apple")
+            own = self._checkpoint(root, "rl.set_table.pick.013_apple", ready=False)
+            fallback = self._checkpoint(root, "rl.set_table.pick.all")
+            library = ContractLibrary(
+                (apple,), (own, fallback), ((apple.id, own.id), (apple.id, fallback.id))
+            )
+
+            self.assertTrue(library.ready(apple.id))
+            self.assertIs(library.select_policy(apple.id), fallback)
+            # An explicit request only has to be bound; readiness is the
+            # caller's concern (SkillRuntime.ready_nodes checks it).
+            self.assertIs(library.select_policy(apple.id, own.id), own)
+            with self.assertRaisesRegex(KeyError, "not bound"):
+                library.select_policy(apple.id, "vla.manipulation")
+
+            (root / own.id / "config.yml").write_text("name: ppo\n")
+            (root / own.id / "policy.pt").write_bytes(b"weights")
+            self.assertIs(library.select_policy(apple.id), own)
+
+    def test_bindings_need_registered_ids_and_reject_duplicates(self):
+        apple = PickContract("set_table", "013_apple")
+        policy = CheckpointPolicy(
+            "rl.set_table.pick.013_apple",
+            "rl",
+            Path("policy.pt"),
+            Path("config.yml"),
+        )
+        library = ContractLibrary((apple,), (policy,))
+
+        with self.assertRaisesRegex(KeyError, "unknown policy"):
+            library.bind(apple.id, "vla.manipulation")
+        with self.assertRaisesRegex(KeyError, "unknown contract"):
+            library.bind("mshab.set_table.pick.all", policy.id)
+        self.assertEqual(library.policies_for(apple.id), ())
+        self.assertEqual(library.contracts_for(policy.id), ())
+
+        library.bind(apple.id, policy.id)
+        with self.assertRaisesRegex(ValueError, "already bound"):
+            library.bind(apple.id, policy.id)
+        with self.assertRaisesRegex(ValueError, "duplicate policy id"):
+            library.register_policy(policy)
+        self.assertFalse(library.ready(apple.id))
+        self.assertEqual(library.find(ready=True), [])
+        with self.assertRaisesRegex(RuntimeError, "no ready policy"):
+            library.select_policy(apple.id)
+
+    def test_generic_policies_bind_only_to_same_task_and_type(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            apple = PickContract("set_table", "013_apple")
+            generic = PickContract("set_table", "all")
+            navigate = NavigateContract("set_table")
+            other_task = PickContract("tidy_house", "all")
+            all_pick = self._checkpoint(root, "rl.set_table.pick.all")
+            all_navigate = self._checkpoint(root, "rl.set_table.navigate.all")
+            tidy_pick = self._checkpoint(root, "rl.tidy_house.pick.all")
+            library = ContractLibrary(
+                (apple, generic, navigate, other_task),
+                (all_pick, all_navigate, tidy_pick),
+                (
+                    (generic.id, all_pick.id),
+                    (navigate.id, all_navigate.id),
+                    (other_task.id, tidy_pick.id),
+                ),
+            )
+            self.assertEqual(library.policies_for(apple.id), ())
+
+            library.bind_generic_policies()
+            library.bind_generic_policies()  # idempotent
+
+            self.assertEqual(
+                [policy.id for policy in library.policies_for(apple.id)],
+                [all_pick.id],
+            )
+            self.assertEqual(
+                [contract.id for contract in library.contracts_for(all_navigate.id)],
+                [navigate.id],
+            )
+            self.assertEqual(
+                [contract.id for contract in library.contracts_for(tidy_pick.id)],
+                [other_task.id],
+            )
+
+    def test_catalog_layer_four_lists_bindings_from_both_sides(self):
+        document = json.loads(CATALOG_PATH.read_text())
+        layer_4 = document["layers"]["4_contracts_and_policies"]
+        by_contract = {record["id"]: record for record in layer_4["contracts"]}
+        by_policy = {record["id"]: record for record in layer_4["policies"]}
+
+        self.assertEqual(
+            by_contract["mshab.set_table.pick.013_apple"]["policies"],
+            ["rl.set_table.pick.013_apple", "rl.set_table.pick.all"],
+        )
+        self.assertEqual(
+            by_contract["mshab.set_table.open.fridge"]["policies"],
+            ["rl.set_table.open.fridge"],
+        )
+        self.assertEqual(
+            by_policy["rl.set_table.pick.all"]["contracts"],
+            [
+                "mshab.set_table.pick.013_apple",
+                "mshab.set_table.pick.024_bowl",
+                "mshab.set_table.pick.all",
+            ],
+        )
+        self.assertEqual(document["summary"]["registered_contracts"], 11)
+        self.assertEqual(document["summary"]["registered_policies"], 11)
+        self.assertEqual(document["summary"]["policy_bindings"], 15)
+
+        stale = json.loads(json.dumps(document))
+        for record in stale["layers"]["4_contracts_and_policies"]["policies"]:
+            if record["id"] == "rl.set_table.pick.all":
+                record["contracts"].pop()
+        with self.assertRaisesRegex(ValueError, "contracts view is stale"):
+            LibraryCatalog.from_dict(stale)
+
+        dangling = json.loads(json.dumps(document))
+        dangling["layers"]["4_contracts_and_policies"]["contracts"][0][
+            "policies"
+        ].append("vla.manipulation")
+        with self.assertRaisesRegex(ValueError, "unknown policies"):
+            LibraryCatalog.from_dict(dangling)

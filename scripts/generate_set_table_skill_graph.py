@@ -78,37 +78,41 @@ def graph_document(stack, checkpoint_root):
         for node_id, node in sorted(stack.skill_graph.nodes.items())
     }
 
-    layer_4 = []
-    for contract in stack.library.find(task="set_table"):
-        policies = {}
-        for key, policy in sorted(contract.policies.items()):
-            record = {
-                "kind": policy.kind.value,
-            }
-            if isinstance(policy, CheckpointPolicy):
-                record.update(
-                    {
-                        "family": policy.family,
-                        "policy_type": policy.policy_type,
-                        "checkpoint": relative_path(
-                            policy.checkpoint_path, checkpoint_root
-                        ),
-                        "config": relative_path(
-                            policy.config_path, checkpoint_root
-                        ),
-                    }
-                )
-            policies[key] = record
-        layer_4.append(
-            {
-                "id": contract.id,
-                "contract_type": contract.contract_type_name,
-                "target": contract.target,
-                "env_id": contract.env_id,
-                "max_episode_steps": contract.max_episode_steps,
-                "policies": policies,
-            }
-        )
+    # Layer 4 is stored from both sides of the many-to-many binding: each
+    # contract lists its policies in preference order, each policy lists the
+    # contracts it executes.  Local ready/missing state is deliberately absent.
+    library = stack.library
+    contract_records = [
+        {
+            "id": contract.id,
+            "contract_type": contract.contract_type_name,
+            "target": contract.target,
+            "env_id": contract.env_id,
+            "max_episode_steps": contract.max_episode_steps,
+            "policies": [
+                policy.id for policy in library.policies_for(contract.id)
+            ],
+        }
+        for contract in library.find(task="set_table")
+    ]
+    policy_records = []
+    for policy in library.policies:
+        record = {"id": policy.id, "kind": policy.kind.value}
+        if isinstance(policy, CheckpointPolicy):
+            record.update(
+                {
+                    "family": policy.family,
+                    "policy_type": policy.policy_type,
+                    "checkpoint": relative_path(
+                        policy.checkpoint_path, checkpoint_root
+                    ),
+                    "config": relative_path(policy.config_path, checkpoint_root),
+                }
+            )
+        record["contracts"] = [
+            contract.id for contract in library.contracts_for(policy.id)
+        ]
+        policy_records.append(record)
 
     return LibraryCatalog(
         task="set_table",
@@ -141,7 +145,8 @@ def graph_document(stack, checkpoint_root):
         subgoal_graph=stack.subgoal_graph,
         skill_graph=stack.skill_graph,
         grounded_skills=layer_3,
-        contracts=layer_4,
+        contracts=contract_records,
+        policies=policy_records,
     ).as_dict()
 
 
@@ -357,24 +362,39 @@ def set_table_svg(document):
         parts.append(text(x + 162, 1144, effect, "small"))
         parts.append(text(x + 162, 1165, "physical feasibility only: verify effect + collision invariant", "tiny"))
 
-    # Layer 4: all 11 contracts and the downloaded RL policies that execute them.
+    # Layer 4: all 11 contracts, each with the policies bound to execute it.
     parts.append(
         '<rect class="layer" x="24" y="1260" width="1852" height="225" '
         'fill="#f5f3ff" stroke="#8b5cf6"/>'
     )
-    parts.append(text(950, 1300, "4. Contracts and Downloaded Policies", "title"))
+    parts.append(
+        text(950, 1300, "4. Contracts and the Policies Bound to Them", "title")
+    )
     parts.append(text(1815, 1298, "ENVIRONMENT-SPECIFIC", "subtitle", "end"))
-    contracts = document["layers"]["4_contracts_and_policies"]
-    for index, contract in enumerate(contracts):
+    layer_4 = document["layers"]["4_contracts_and_policies"]
+    for index, contract in enumerate(layer_4["contracts"]):
         row, column = divmod(index, 6)
         x = 55 + column * 300
         y = 1330 + row * 70
         label = contract["id"].replace("mshab.set_table.", "")
-        policy = contract["policies"].get("rl", {})
-        implementation = "rl · " + policy.get("kind", "checkpoint")
-        parts.extend(
-            node(x, y, label, implementation, "#ffffff", width=265, height=56)
+        bound = " + ".join(
+            policy_id.replace("set_table.", "") for policy_id in contract["policies"]
         )
+        parts.extend(node(x, y, label, bound, "#ffffff", width=265, height=56))
+    summary = document["summary"]
+    parts.append(
+        text(
+            950,
+            1476,
+            "{} contracts · {} policies · {} bindings (many-to-many): an all-object "
+            "checkpoint is also bound to every specialized contract of its type".format(
+                summary["registered_contracts"],
+                summary["registered_policies"],
+                summary["policy_bindings"],
+            ),
+            "small",
+        )
+    )
 
     parts.append("</svg>")
     return "\n".join(parts) + "\n"

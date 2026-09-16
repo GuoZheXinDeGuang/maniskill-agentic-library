@@ -316,7 +316,7 @@ _SET_TABLE_GOAL = (
 # Canonical SetTable contract inventory.  This is a manifest, not filesystem
 # discovery: the semantic library and its contracts must be constructible on a
 # clean clone even before the external policy artifacts have been downloaded.
-_SET_TABLE_ATOMIC_SKILLS = (
+_SET_TABLE_CONTRACTS = (
     (NavigateContract, "navigate", "all"),
     (OpenContract, "open", "fridge"),
     (OpenContract, "open", "kitchen_counter"),
@@ -332,29 +332,28 @@ _SET_TABLE_ATOMIC_SKILLS = (
 
 
 def build_set_table_library(checkpoint_root: Path) -> ContractLibrary:
-    """Build the canonical 11-contract inventory around an optional RL layout.
+    """Build the canonical SetTable inventory around the official RL layout.
 
-    The returned contracts always exist and therefore always expose their
-    contracts.  Each checkpoint policy computes ``ready/missing/partial`` at
-    runtime from ``checkpoint_root``; artifact availability never changes the
-    canonical Layer-1/2 graph or prevents documentation from being generated.
+    The 11 contracts and their 11 RL checkpoint policies always exist; each
+    policy computes ``ready/missing/partial`` at runtime from
+    ``checkpoint_root``, so artifact availability never changes the canonical
+    Layer-1/2 graph or prevents documentation from being generated.
+
+    Bindings are many-to-many.  Every contract is first bound to its own
+    checkpoint, then :meth:`ContractLibrary.bind_generic_policies` also binds
+    the ``pick.all`` and ``place.all`` checkpoints to the specialized
+    ``pick.*``/``place.*`` contracts they can execute: 15 bindings in total.
     """
 
     root = Path(checkpoint_root)
     library = ContractLibrary()
-    for contract_class, raw_type, target in _SET_TABLE_ATOMIC_SKILLS:
+    for contract_class, raw_type, target in _SET_TABLE_CONTRACTS:
         contract = contract_class(task="set_table", target=target)
-        leaf = root / "rl" / "set_table" / raw_type / target
-        contract.add_policy(
-            CheckpointPolicy(
-                key="rl",
-                family="rl",
-                checkpoint_path=leaf / "policy.pt",
-                config_path=leaf / "config.yml",
-                policy_type="rl_all_obj" if target == "all" else "rl_per_obj",
-            )
-        )
         library.register(contract)
+        policy = CheckpointPolicy.from_leaf(root, "rl", "set_table", raw_type, target)
+        library.register_policy(policy)
+        library.bind(contract.id, policy.id)
+    library.bind_generic_policies()
     return library
 
 

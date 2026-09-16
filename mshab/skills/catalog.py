@@ -4,13 +4,14 @@ The checked-in catalog is a portable description of the four-layer library,
 not an inventory of one workstation.  Checkpoint readiness is deliberately
 excluded: it belongs to :class:`ContractLibrary` runtime discovery.  Loading a
 catalog reconstructs and validates Layer 1/2 rather than trusting duplicated
-derived views such as flattened nodes, edges, or execution order.
+derived views such as flattened nodes, edges, execution order, or the
+per-policy list of contracts.
 """
 
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, Mapping, Sequence
+from typing import Any, Dict, Mapping, Sequence, Tuple
 
 from mshab.skills import schema
 from mshab.skills.graph import SubGoalGraph, SkillGraph
@@ -40,6 +41,7 @@ class LibraryCatalog:
         skill_graph: SkillGraph,
         grounded_skills: Mapping[str, Mapping[str, Any]],
         contracts: Sequence[Mapping[str, Any]],
+        policies: Sequence[Mapping[str, Any]],
     ) -> None:
         schema.require_identifier({"task": task}, "task", where="library_catalog")
         if skill_graph.task != task:
@@ -64,9 +66,10 @@ class LibraryCatalog:
         self.skill_graph = skill_graph
         self.grounded_skills = _json_copy(grounded_skills, "grounded_skills")
         self.contracts = tuple(_json_copy(contracts, "contracts"))
+        self.policies = tuple(_json_copy(policies, "policies"))
         self._validate_plans()
         self._validate_grounded_skills()
-        self._validate_contracts()
+        self._validate_contracts_and_policies()
 
     @classmethod
     def from_dict(cls, payload: Mapping[str, Any]) -> "LibraryCatalog":
@@ -163,6 +166,15 @@ class LibraryCatalog:
         if not plans:
             raise schema.SchemaError("catalog must contain at least one execution plan")
 
+        raw_layer_4 = schema.require_mapping(
+            layers[_LAYER_KEYS[3]], where="skill_catalog.layer_4"
+        )
+        schema.require_keys(
+            raw_layer_4,
+            where="skill_catalog.layer_4",
+            required=("contracts", "policies"),
+        )
+
         catalog = cls(
             task=task,
             construction=schema.require_mapping(
@@ -176,7 +188,10 @@ class LibraryCatalog:
                 layers[_LAYER_KEYS[2]], where="skill_catalog.layer_3"
             ),
             contracts=schema.require_sequence(
-                layers, _LAYER_KEYS[3], where="skill_catalog.layers"
+                raw_layer_4, "contracts", where="skill_catalog.layer_4"
+            ),
+            policies=schema.require_sequence(
+                raw_layer_4, "policies", where="skill_catalog.layer_4"
             ),
         )
         if _json_copy(payload["summary"], "summary") != catalog.summary:
@@ -197,6 +212,10 @@ class LibraryCatalog:
             "planned_steps": len(nominal.order),
             "grounded_skills": len(self.grounded_skills),
             "registered_contracts": len(self.contracts),
+            "registered_policies": len(self.policies),
+            "policy_bindings": sum(
+                len(record["policies"]) for record in self.contracts
+            ),
         }
 
     def as_dict(self) -> Dict[str, Any]:
@@ -223,9 +242,10 @@ class LibraryCatalog:
                 _LAYER_KEYS[2]: _json_copy(
                     self.grounded_skills, "grounded_skills"
                 ),
-                _LAYER_KEYS[3]: list(
-                    _json_copy(self.contracts, "contracts")
-                ),
+                _LAYER_KEYS[3]: {
+                    "contracts": list(_json_copy(self.contracts, "contracts")),
+                    "policies": list(_json_copy(self.policies, "policies")),
+                },
             },
         }
 
@@ -316,8 +336,15 @@ class LibraryCatalog:
             ):
                 schema.require_str_tuple(record, key, where=where)
 
-    def _validate_contracts(self) -> None:
-        ids = set()
+    def _validate_contracts_and_policies(self) -> None:
+        """Layer 4: contract records, policy records, and their bindings.
+
+        Bindings are stored on both sides -- ``contract.policies`` in
+        preference order and ``policy.contracts`` sorted -- so the two views
+        are cross-checked the same way the derived Layer-2 views are.
+        """
+
+        bound_by_contract: Dict[str, Tuple[str, ...]] = {}
         for index, raw in enumerate(self.contracts):
             where = "contracts[{}]".format(index)
             record = schema.require_mapping(raw, where=where)
@@ -334,50 +361,86 @@ class LibraryCatalog:
                 ),
             )
             contract_id = schema.require_contract_id(record, "id", where=where)
-            if contract_id in ids:
+            if contract_id in bound_by_contract:
                 raise ValueError("duplicate contract id {!r}".format(contract_id))
-            ids.add(contract_id)
             schema.require_str(record, "contract_type", where=where)
             schema.require_str(record, "target", where=where)
             schema.require_str(record, "env_id", where=where)
             steps = record["max_episode_steps"]
             if isinstance(steps, bool) or not isinstance(steps, int) or steps <= 0:
                 raise schema.SchemaError("{}.max_episode_steps must be positive".format(where))
-            policies = schema.require_mapping(
-                record["policies"], where="{}.policies".format(where)
-            )
-            if not policies:
+            policy_ids = schema.require_str_tuple(record, "policies", where=where)
+            if not policy_ids:
                 raise schema.SchemaError("{}.policies cannot be empty".format(where))
-            for policy_key, raw_policy in policies.items():
+            if len(set(policy_ids)) != len(policy_ids):
+                raise schema.SchemaError("{}.policies has duplicates".format(where))
+            for policy_id in policy_ids:
                 schema.require_identifier(
-                    {"key": policy_key}, "key", where="{}.policies".format(where)
+                    {"policy": policy_id}, "policy", where="{}.policies".format(where)
                 )
-                policy_where = "{}.policies.{}".format(where, policy_key)
-                policy = schema.require_mapping(raw_policy, where=policy_where)
-                schema.require_keys(
-                    policy,
-                    where=policy_where,
-                    required=("kind",),
-                    optional=(
-                        "family",
-                        "policy_type",
-                        "checkpoint",
-                        "config",
-                        "checkpoint_sha256",
-                    ),
-                )
-                schema.require_str(policy, "kind", where=policy_where)
-                for key in (
+            bound_by_contract[contract_id] = policy_ids
+
+        contracts_by_policy: Dict[str, Tuple[str, ...]] = {}
+        for index, raw in enumerate(self.policies):
+            where = "policies[{}]".format(index)
+            record = schema.require_mapping(raw, where=where)
+            schema.require_keys(
+                record,
+                where=where,
+                required=("id", "kind", "contracts"),
+                optional=(
                     "family",
                     "policy_type",
                     "checkpoint",
                     "config",
                     "checkpoint_sha256",
-                ):
-                    if key in policy and policy[key] is not None:
-                        schema.require_str(policy, key, where=policy_where)
+                ),
+            )
+            policy_id = schema.require_identifier(record, "id", where=where)
+            if policy_id in contracts_by_policy:
+                raise ValueError("duplicate policy id {!r}".format(policy_id))
+            schema.require_str(record, "kind", where=where)
+            for key in (
+                "family",
+                "policy_type",
+                "checkpoint",
+                "config",
+                "checkpoint_sha256",
+            ):
+                if key in record and record[key] is not None:
+                    schema.require_str(record, key, where=where)
+            contracts_by_policy[policy_id] = schema.require_str_tuple(
+                record, "contracts", where=where
+            )
+
+        for contract_id, policy_ids in bound_by_contract.items():
+            unknown = sorted(set(policy_ids) - set(contracts_by_policy))
+            if unknown:
+                raise ValueError(
+                    "contract {!r} is bound to unknown policies {}".format(
+                        contract_id, unknown
+                    )
+                )
+        for policy_id, declared in contracts_by_policy.items():
+            derived = tuple(
+                sorted(
+                    contract_id
+                    for contract_id, policy_ids in bound_by_contract.items()
+                    if policy_id in policy_ids
+                )
+            )
+            if not derived:
+                raise ValueError(
+                    "policy {!r} is not bound to any contract".format(policy_id)
+                )
+            if declared != derived:
+                raise schema.SchemaError(
+                    "catalog policy {!r} contracts view is stale: declared={}, "
+                    "derived={}".format(policy_id, list(declared), list(derived))
+                )
+
         referenced = {node.contract_id for node in self.skill_graph.nodes.values()}
-        missing = sorted(referenced - ids)
+        missing = sorted(referenced - set(bound_by_contract))
         if missing:
             raise ValueError("catalog has no contract records for {}".format(missing))
 

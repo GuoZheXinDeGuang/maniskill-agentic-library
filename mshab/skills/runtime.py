@@ -11,6 +11,7 @@ from mshab.skills.environment import EnvironmentAdapter, EnvironmentSnapshot
 from mshab.skills.graph import SkillGraph, SkillNode
 from mshab.skills.library import ContractLibrary
 from mshab.skills.model import (
+    ArtifactStatus,
     GroundedSkill,
     Policy,
 )
@@ -65,7 +66,7 @@ class SkillExecutionResult:
     """Auditable outcome combining policy status with contract evidence."""
 
     grounded: GroundedSkill
-    policy_key: str
+    policy_id: str
     environment_id: str
     before: EnvironmentSnapshot
     after: EnvironmentSnapshot
@@ -99,16 +100,18 @@ class SkillExecutionResult:
 
 
 class SkillGrounder:
-    """Layer-2 skill node -> Layer-3 GroundedSkill boundary."""
+    """Layer-2 skill node -> Layer-3 GroundedSkill boundary.
+
+    Grounding binds a node to its contract only.  The policy that will run
+    the contract is chosen later, by the library, at execution time.
+    """
 
     def __init__(self, library: ContractLibrary) -> None:
         self.library = library
 
-    def ground(
-        self, node: SkillNode, policy_key: Optional[str] = None
-    ) -> GroundedSkill:
+    def ground(self, node: SkillNode) -> GroundedSkill:
         contract = self.library.get(node.contract_id)
-        return contract.bind(node.arguments, policy_key=policy_key)
+        return contract.bind(node.arguments)
 
     def grounded_skills(
         self, graph: SkillGraph
@@ -137,23 +140,37 @@ class SkillRuntime:
         self,
         graph: SkillGraph,
         completed: Tuple[str, ...] = (),
-        policy_keys: Optional[Mapping[str, str]] = None,
+        policy_ids: Optional[Mapping[str, str]] = None,
     ) -> Tuple[SkillNode, ...]:
-        """Dependency-, artifact-, environment-, and contract-ready nodes."""
+        """Dependency-, artifact-, environment-, and contract-ready nodes.
+
+        ``policy_ids`` optionally pins one policy per node id; such a node is
+        ready only if that policy is bound to its contract and its artifacts
+        are available.  Otherwise any ready bound policy suffices.
+        """
 
         facts = self.environment.snapshot().facts
-        policy_keys = policy_keys or {}
+        policy_ids = policy_ids or {}
         ready = []
         for node in graph.ready_nodes(completed):
             try:
-                grounded = self.grounder.ground(node, policy_keys.get(node.id))
+                grounded = self.grounder.ground(node)
             except (KeyError, ValueError):
                 # An unregistered or unbindable contract makes the node
                 # unexecutable, not the whole schedule unanswerable.
                 continue
             contract = grounded.contract
-            if not contract.ready:
-                continue
+            requested = policy_ids.get(node.id)
+            if requested is None:
+                if not self.library.ready(contract.id):
+                    continue
+            else:
+                try:
+                    policy = self.library.select_policy(contract.id, requested)
+                except KeyError:
+                    continue
+                if policy.status != ArtifactStatus.READY:
+                    continue
             if not self.environment.supports_contract_env(contract.env_id):
                 continue
             if not grounded.can_start(facts):
@@ -168,13 +185,19 @@ class SkillRuntime:
         graph: SkillGraph,
         node_id: str,
         executor: PolicyExecutor,
-        policy_key: Optional[str] = None,
+        policy_id: Optional[str] = None,
     ) -> SkillExecutionResult:
+        """Ground one node, admit it, and run it with a policy bound to its contract.
+
+        ``policy_id`` selects one of the contract's bound policies explicitly;
+        by default the first ready one in binding order is used.
+        """
+
         try:
             node = graph.nodes[node_id]
         except KeyError as exc:
             raise KeyError("unknown skill node {!r}".format(node_id)) from exc
-        grounded = self.grounder.ground(node, policy_key)
+        grounded = self.grounder.ground(node)
         contract = grounded.contract
         if not self.environment.supports_contract_env(contract.env_id):
             raise RuntimeError(
@@ -182,7 +205,7 @@ class SkillRuntime:
                     self.environment.description.environment_id, contract.env_id
                 )
             )
-        policy = contract.policy(grounded.policy_key)
+        policy = self.library.select_policy(contract.id, policy_id)
         before = self.environment.snapshot()
         self._admit(grounded, before)
 
@@ -207,7 +230,7 @@ class SkillRuntime:
         # can route to its fallback instead of unwinding the whole rollout.
         return SkillExecutionResult(
             grounded=grounded,
-            policy_key=policy.key,
+            policy_id=policy.id,
             environment_id=self.environment.description.environment_id,
             before=before,
             after=after,

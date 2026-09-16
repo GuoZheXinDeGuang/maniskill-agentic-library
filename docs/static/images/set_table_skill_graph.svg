@@ -202,39 +202,40 @@
 <text class="small" x="1677" y="1144" text-anchor="middle">effect: closed(articulation)</text>
 <text class="tiny" x="1677" y="1165" text-anchor="middle">physical feasibility only: verify effect + collision invariant</text>
 <rect class="layer" x="24" y="1260" width="1852" height="225" fill="#f5f3ff" stroke="#8b5cf6"/>
-<text class="title" x="950" y="1300" text-anchor="middle">4. Contracts and Downloaded Policies</text>
+<text class="title" x="950" y="1300" text-anchor="middle">4. Contracts and the Policies Bound to Them</text>
 <text class="subtitle" x="1815" y="1298" text-anchor="end">ENVIRONMENT-SPECIFIC</text>
 <rect class="node" x="55" y="1330" width="265" height="56" fill="#ffffff"/>
 <text class="node-title" x="187" y="1359" text-anchor="middle">close.fridge</text>
-<text class="small" x="187" y="1383" text-anchor="middle">rl · checkpoint</text>
+<text class="small" x="187" y="1383" text-anchor="middle">rl.close.fridge</text>
 <rect class="node" x="355" y="1330" width="265" height="56" fill="#ffffff"/>
 <text class="node-title" x="487" y="1359" text-anchor="middle">close.kitchen_counter</text>
-<text class="small" x="487" y="1383" text-anchor="middle">rl · checkpoint</text>
+<text class="small" x="487" y="1383" text-anchor="middle">rl.close.kitchen_counter</text>
 <rect class="node" x="655" y="1330" width="265" height="56" fill="#ffffff"/>
 <text class="node-title" x="787" y="1359" text-anchor="middle">navigate.all</text>
-<text class="small" x="787" y="1383" text-anchor="middle">rl · checkpoint</text>
+<text class="small" x="787" y="1383" text-anchor="middle">rl.navigate.all</text>
 <rect class="node" x="955" y="1330" width="265" height="56" fill="#ffffff"/>
 <text class="node-title" x="1087" y="1359" text-anchor="middle">open.fridge</text>
-<text class="small" x="1087" y="1383" text-anchor="middle">rl · checkpoint</text>
+<text class="small" x="1087" y="1383" text-anchor="middle">rl.open.fridge</text>
 <rect class="node" x="1255" y="1330" width="265" height="56" fill="#ffffff"/>
 <text class="node-title" x="1387" y="1359" text-anchor="middle">open.kitchen_counter</text>
-<text class="small" x="1387" y="1383" text-anchor="middle">rl · checkpoint</text>
+<text class="small" x="1387" y="1383" text-anchor="middle">rl.open.kitchen_counter</text>
 <rect class="node" x="1555" y="1330" width="265" height="56" fill="#ffffff"/>
 <text class="node-title" x="1687" y="1359" text-anchor="middle">pick.013_apple</text>
-<text class="small" x="1687" y="1383" text-anchor="middle">rl · checkpoint</text>
+<text class="small" x="1687" y="1383" text-anchor="middle">rl.pick.013_apple + rl.pick.all</text>
 <rect class="node" x="55" y="1400" width="265" height="56" fill="#ffffff"/>
 <text class="node-title" x="187" y="1429" text-anchor="middle">pick.024_bowl</text>
-<text class="small" x="187" y="1453" text-anchor="middle">rl · checkpoint</text>
+<text class="small" x="187" y="1453" text-anchor="middle">rl.pick.024_bowl + rl.pick.all</text>
 <rect class="node" x="355" y="1400" width="265" height="56" fill="#ffffff"/>
 <text class="node-title" x="487" y="1429" text-anchor="middle">pick.all</text>
-<text class="small" x="487" y="1453" text-anchor="middle">rl · checkpoint</text>
+<text class="small" x="487" y="1453" text-anchor="middle">rl.pick.all</text>
 <rect class="node" x="655" y="1400" width="265" height="56" fill="#ffffff"/>
 <text class="node-title" x="787" y="1429" text-anchor="middle">place.013_apple</text>
-<text class="small" x="787" y="1453" text-anchor="middle">rl · checkpoint</text>
+<text class="small" x="787" y="1453" text-anchor="middle">rl.place.013_apple + rl.place.all</text>
 <rect class="node" x="955" y="1400" width="265" height="56" fill="#ffffff"/>
 <text class="node-title" x="1087" y="1429" text-anchor="middle">place.024_bowl</text>
-<text class="small" x="1087" y="1453" text-anchor="middle">rl · checkpoint</text>
+<text class="small" x="1087" y="1453" text-anchor="middle">rl.place.024_bowl + rl.place.all</text>
 <rect class="node" x="1255" y="1400" width="265" height="56" fill="#ffffff"/>
 <text class="node-title" x="1387" y="1429" text-anchor="middle">place.all</text>
-<text class="small" x="1387" y="1453" text-anchor="middle">rl · checkpoint</text>
+<text class="small" x="1387" y="1453" text-anchor="middle">rl.place.all</text>
+<text class="small" x="950" y="1476" text-anchor="middle">11 contracts · 11 policies · 15 bindings (many-to-many): an all-object checkpoint is also bound to every specialized contract of its type</text>
 </svg>

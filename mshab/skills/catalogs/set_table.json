@@ -98,7 +98,9 @@
     "skill_edges": 35,
     "planned_steps": 16,
     "grounded_skills": 20,
-    "registered_contracts": 11
+    "registered_contracts": 11,
+    "registered_policies": 11,
+    "policy_bindings": 15
   },
   "layers": {
     "1_subgoal_graph": {
@@ -1520,183 +1522,250 @@
         ]
       }
     },
-    "4_contracts_and_policies": [
-      {
-        "id": "mshab.set_table.close.fridge",
-        "contract_type": "close",
-        "target": "fridge",
-        "env_id": "CloseSubtaskTrain-v0",
-        "max_episode_steps": 200,
-        "policies": {
-          "rl": {
-            "kind": "checkpoint",
-            "family": "rl",
-            "policy_type": "rl_per_obj",
-            "checkpoint": "rl/set_table/close/fridge/policy.pt",
-            "config": "rl/set_table/close/fridge/config.yml"
-          }
+    "4_contracts_and_policies": {
+      "contracts": [
+        {
+          "id": "mshab.set_table.close.fridge",
+          "contract_type": "close",
+          "target": "fridge",
+          "env_id": "CloseSubtaskTrain-v0",
+          "max_episode_steps": 200,
+          "policies": [
+            "rl.set_table.close.fridge"
+          ]
+        },
+        {
+          "id": "mshab.set_table.close.kitchen_counter",
+          "contract_type": "close",
+          "target": "kitchen_counter",
+          "env_id": "CloseSubtaskTrain-v0",
+          "max_episode_steps": 200,
+          "policies": [
+            "rl.set_table.close.kitchen_counter"
+          ]
+        },
+        {
+          "id": "mshab.set_table.navigate.all",
+          "contract_type": "navigate",
+          "target": "all",
+          "env_id": "NavigateSubtaskTrain-v0",
+          "max_episode_steps": 1000,
+          "policies": [
+            "rl.set_table.navigate.all"
+          ]
+        },
+        {
+          "id": "mshab.set_table.open.fridge",
+          "contract_type": "open",
+          "target": "fridge",
+          "env_id": "OpenSubtaskTrain-v0",
+          "max_episode_steps": 200,
+          "policies": [
+            "rl.set_table.open.fridge"
+          ]
+        },
+        {
+          "id": "mshab.set_table.open.kitchen_counter",
+          "contract_type": "open",
+          "target": "kitchen_counter",
+          "env_id": "OpenSubtaskTrain-v0",
+          "max_episode_steps": 200,
+          "policies": [
+            "rl.set_table.open.kitchen_counter"
+          ]
+        },
+        {
+          "id": "mshab.set_table.pick.013_apple",
+          "contract_type": "pick",
+          "target": "013_apple",
+          "env_id": "PickSubtaskTrain-v0",
+          "max_episode_steps": 200,
+          "policies": [
+            "rl.set_table.pick.013_apple",
+            "rl.set_table.pick.all"
+          ]
+        },
+        {
+          "id": "mshab.set_table.pick.024_bowl",
+          "contract_type": "pick",
+          "target": "024_bowl",
+          "env_id": "PickSubtaskTrain-v0",
+          "max_episode_steps": 200,
+          "policies": [
+            "rl.set_table.pick.024_bowl",
+            "rl.set_table.pick.all"
+          ]
+        },
+        {
+          "id": "mshab.set_table.pick.all",
+          "contract_type": "pick",
+          "target": "all",
+          "env_id": "PickSubtaskTrain-v0",
+          "max_episode_steps": 200,
+          "policies": [
+            "rl.set_table.pick.all"
+          ]
+        },
+        {
+          "id": "mshab.set_table.place.013_apple",
+          "contract_type": "place",
+          "target": "013_apple",
+          "env_id": "PlaceSubtaskTrain-v0",
+          "max_episode_steps": 200,
+          "policies": [
+            "rl.set_table.place.013_apple",
+            "rl.set_table.place.all"
+          ]
+        },
+        {
+          "id": "mshab.set_table.place.024_bowl",
+          "contract_type": "place",
+          "target": "024_bowl",
+          "env_id": "PlaceSubtaskTrain-v0",
+          "max_episode_steps": 200,
+          "policies": [
+            "rl.set_table.place.024_bowl",
+            "rl.set_table.place.all"
+          ]
+        },
+        {
+          "id": "mshab.set_table.place.all",
+          "contract_type": "place",
+          "target": "all",
+          "env_id": "PlaceSubtaskTrain-v0",
+          "max_episode_steps": 200,
+          "policies": [
+            "rl.set_table.place.all"
+          ]
         }
-      },
-      {
-        "id": "mshab.set_table.close.kitchen_counter",
-        "contract_type": "close",
-        "target": "kitchen_counter",
-        "env_id": "CloseSubtaskTrain-v0",
-        "max_episode_steps": 200,
-        "policies": {
-          "rl": {
-            "kind": "checkpoint",
-            "family": "rl",
-            "policy_type": "rl_per_obj",
-            "checkpoint": "rl/set_table/close/kitchen_counter/policy.pt",
-            "config": "rl/set_table/close/kitchen_counter/config.yml"
-          }
+      ],
+      "policies": [
+        {
+          "id": "rl.set_table.close.fridge",
+          "kind": "checkpoint",
+          "family": "rl",
+          "policy_type": "rl_per_obj",
+          "checkpoint": "rl/set_table/close/fridge/policy.pt",
+          "config": "rl/set_table/close/fridge/config.yml",
+          "contracts": [
+            "mshab.set_table.close.fridge"
+          ]
+        },
+        {
+          "id": "rl.set_table.close.kitchen_counter",
+          "kind": "checkpoint",
+          "family": "rl",
+          "policy_type": "rl_per_obj",
+          "checkpoint": "rl/set_table/close/kitchen_counter/policy.pt",
+          "config": "rl/set_table/close/kitchen_counter/config.yml",
+          "contracts": [
+            "mshab.set_table.close.kitchen_counter"
+          ]
+        },
+        {
+          "id": "rl.set_table.navigate.all",
+          "kind": "checkpoint",
+          "family": "rl",
+          "policy_type": "rl_all_obj",
+          "checkpoint": "rl/set_table/navigate/all/policy.pt",
+          "config": "rl/set_table/navigate/all/config.yml",
+          "contracts": [
+            "mshab.set_table.navigate.all"
+          ]
+        },
+        {
+          "id": "rl.set_table.open.fridge",
+          "kind": "checkpoint",
+          "family": "rl",
+          "policy_type": "rl_per_obj",
+          "checkpoint": "rl/set_table/open/fridge/policy.pt",
+          "config": "rl/set_table/open/fridge/config.yml",
+          "contracts": [
+            "mshab.set_table.open.fridge"
+          ]
+        },
+        {
+          "id": "rl.set_table.open.kitchen_counter",
+          "kind": "checkpoint",
+          "family": "rl",
+          "policy_type": "rl_per_obj",
+          "checkpoint": "rl/set_table/open/kitchen_counter/policy.pt",
+          "config": "rl/set_table/open/kitchen_counter/config.yml",
+          "contracts": [
+            "mshab.set_table.open.kitchen_counter"
+          ]
+        },
+        {
+          "id": "rl.set_table.pick.013_apple",
+          "kind": "checkpoint",
+          "family": "rl",
+          "policy_type": "rl_per_obj",
+          "checkpoint": "rl/set_table/pick/013_apple/policy.pt",
+          "config": "rl/set_table/pick/013_apple/config.yml",
+          "contracts": [
+            "mshab.set_table.pick.013_apple"
+          ]
+        },
+        {
+          "id": "rl.set_table.pick.024_bowl",
+          "kind": "checkpoint",
+          "family": "rl",
+          "policy_type": "rl_per_obj",
+          "checkpoint": "rl/set_table/pick/024_bowl/policy.pt",
+          "config": "rl/set_table/pick/024_bowl/config.yml",
+          "contracts": [
+            "mshab.set_table.pick.024_bowl"
+          ]
+        },
+        {
+          "id": "rl.set_table.pick.all",
+          "kind": "checkpoint",
+          "family": "rl",
+          "policy_type": "rl_all_obj",
+          "checkpoint": "rl/set_table/pick/all/policy.pt",
+          "config": "rl/set_table/pick/all/config.yml",
+          "contracts": [
+            "mshab.set_table.pick.013_apple",
+            "mshab.set_table.pick.024_bowl",
+            "mshab.set_table.pick.all"
+          ]
+        },
+        {
+          "id": "rl.set_table.place.013_apple",
+          "kind": "checkpoint",
+          "family": "rl",
+          "policy_type": "rl_per_obj",
+          "checkpoint": "rl/set_table/place/013_apple/policy.pt",
+          "config": "rl/set_table/place/013_apple/config.yml",
+          "contracts": [
+            "mshab.set_table.place.013_apple"
+          ]
+        },
+        {
+          "id": "rl.set_table.place.024_bowl",
+          "kind": "checkpoint",
+          "family": "rl",
+          "policy_type": "rl_per_obj",
+          "checkpoint": "rl/set_table/place/024_bowl/policy.pt",
+          "config": "rl/set_table/place/024_bowl/config.yml",
+          "contracts": [
+            "mshab.set_table.place.024_bowl"
+          ]
+        },
+        {
+          "id": "rl.set_table.place.all",
+          "kind": "checkpoint",
+          "family": "rl",
+          "policy_type": "rl_all_obj",
+          "checkpoint": "rl/set_table/place/all/policy.pt",
+          "config": "rl/set_table/place/all/config.yml",
+          "contracts": [
+            "mshab.set_table.place.013_apple",
+            "mshab.set_table.place.024_bowl",
+            "mshab.set_table.place.all"
+          ]
         }
-      },
-      {
-        "id": "mshab.set_table.navigate.all",
-        "contract_type": "navigate",
-        "target": "all",
-        "env_id": "NavigateSubtaskTrain-v0",
-        "max_episode_steps": 1000,
-        "policies": {
-          "rl": {
-            "kind": "checkpoint",
-            "family": "rl",
-            "policy_type": "rl_all_obj",
-            "checkpoint": "rl/set_table/navigate/all/policy.pt",
-            "config": "rl/set_table/navigate/all/config.yml"
-          }
-        }
-      },
-      {
-        "id": "mshab.set_table.open.fridge",
-        "contract_type": "open",
-        "target": "fridge",
-        "env_id": "OpenSubtaskTrain-v0",
-        "max_episode_steps": 200,
-        "policies": {
-          "rl": {
-            "kind": "checkpoint",
-            "family": "rl",
-            "policy_type": "rl_per_obj",
-            "checkpoint": "rl/set_table/open/fridge/policy.pt",
-            "config": "rl/set_table/open/fridge/config.yml"
-          }
-        }
-      },
-      {
-        "id": "mshab.set_table.open.kitchen_counter",
-        "contract_type": "open",
-        "target": "kitchen_counter",
-        "env_id": "OpenSubtaskTrain-v0",
-        "max_episode_steps": 200,
-        "policies": {
-          "rl": {
-            "kind": "checkpoint",
-            "family": "rl",
-            "policy_type": "rl_per_obj",
-            "checkpoint": "rl/set_table/open/kitchen_counter/policy.pt",
-            "config": "rl/set_table/open/kitchen_counter/config.yml"
-          }
-        }
-      },
-      {
-        "id": "mshab.set_table.pick.013_apple",
-        "contract_type": "pick",
-        "target": "013_apple",
-        "env_id": "PickSubtaskTrain-v0",
-        "max_episode_steps": 200,
-        "policies": {
-          "rl": {
-            "kind": "checkpoint",
-            "family": "rl",
-            "policy_type": "rl_per_obj",
-            "checkpoint": "rl/set_table/pick/013_apple/policy.pt",
-            "config": "rl/set_table/pick/013_apple/config.yml"
-          }
-        }
-      },
-      {
-        "id": "mshab.set_table.pick.024_bowl",
-        "contract_type": "pick",
-        "target": "024_bowl",
-        "env_id": "PickSubtaskTrain-v0",
-        "max_episode_steps": 200,
-        "policies": {
-          "rl": {
-            "kind": "checkpoint",
-            "family": "rl",
-            "policy_type": "rl_per_obj",
-            "checkpoint": "rl/set_table/pick/024_bowl/policy.pt",
-            "config": "rl/set_table/pick/024_bowl/config.yml"
-          }
-        }
-      },
-      {
-        "id": "mshab.set_table.pick.all",
-        "contract_type": "pick",
-        "target": "all",
-        "env_id": "PickSubtaskTrain-v0",
-        "max_episode_steps": 200,
-        "policies": {
-          "rl": {
-            "kind": "checkpoint",
-            "family": "rl",
-            "policy_type": "rl_all_obj",
-            "checkpoint": "rl/set_table/pick/all/policy.pt",
-            "config": "rl/set_table/pick/all/config.yml"
-          }
-        }
-      },
-      {
-        "id": "mshab.set_table.place.013_apple",
-        "contract_type": "place",
-        "target": "013_apple",
-        "env_id": "PlaceSubtaskTrain-v0",
-        "max_episode_steps": 200,
-        "policies": {
-          "rl": {
-            "kind": "checkpoint",
-            "family": "rl",
-            "policy_type": "rl_per_obj",
-            "checkpoint": "rl/set_table/place/013_apple/policy.pt",
-            "config": "rl/set_table/place/013_apple/config.yml"
-          }
-        }
-      },
-      {
-        "id": "mshab.set_table.place.024_bowl",
-        "contract_type": "place",
-        "target": "024_bowl",
-        "env_id": "PlaceSubtaskTrain-v0",
-        "max_episode_steps": 200,
-        "policies": {
-          "rl": {
-            "kind": "checkpoint",
-            "family": "rl",
-            "policy_type": "rl_per_obj",
-            "checkpoint": "rl/set_table/place/024_bowl/policy.pt",
-            "config": "rl/set_table/place/024_bowl/config.yml"
-          }
-        }
-      },
-      {
-        "id": "mshab.set_table.place.all",
-        "contract_type": "place",
-        "target": "all",
-        "env_id": "PlaceSubtaskTrain-v0",
-        "max_episode_steps": 200,
-        "policies": {
-          "rl": {
-            "kind": "checkpoint",
-            "family": "rl",
-            "policy_type": "rl_all_obj",
-            "checkpoint": "rl/set_table/place/all/policy.pt",
-            "config": "rl/set_table/place/all/config.yml"
-          }
-        }
-      }
-    ]
+      ]
+    }
   }
 }

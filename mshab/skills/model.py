@@ -10,6 +10,13 @@ only whether the contract can physically start and what it changes in the
 current world state.  They never encode task order or semantic plausibility;
 that belongs to the relations between Layer-2 skill nodes.
 
+A :class:`Contract` knows nothing about policies and a :class:`Policy` knows
+nothing about contracts.  Which policy executes which contract is a
+many-to-many relation owned by :class:`~mshab.skills.library.ContractLibrary`:
+one contract may be executed by several policies (an RL and a BC checkpoint
+for the same pick), and one policy may execute several contracts (the
+``pick.all`` checkpoint executes every ``pick.*`` contract of its task).
+
 This module deliberately has no torch or ManiSkill imports.  Listing and
 planning with the contract library must not allocate a GPU or load checkpoints.
 """
@@ -138,7 +145,6 @@ class GroundedSkill:
     verification: Tuple[str, ...]
     failure_modes: Tuple[str, ...]
     deletes: Tuple[str, ...] = ()
-    policy_key: Optional[str] = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "arguments", MappingProxyType(dict(self.arguments)))
@@ -209,12 +215,17 @@ def _validate_parameter(parameter: ContractParameter, value: Any) -> None:
 
 
 class Policy(ABC):
-    """One low-level policy (checkpoint, VLA, controller, or script) that executes a contract."""
+    """One low-level executable: a checkpoint, VLA, controller, or script.
 
-    def __init__(self, key: str, kind: PolicyKind) -> None:
-        if not key:
-            raise ValueError("policy key cannot be empty")
-        self.key = key
+    A policy is identified by a library-wide ``id`` and carries no reference
+    to the contracts it executes; those bindings belong to
+    :class:`~mshab.skills.library.ContractLibrary`.
+    """
+
+    def __init__(self, id: str, kind: PolicyKind) -> None:
+        if not isinstance(id, str) or not id.strip():
+            raise ValueError("policy id must be a non-empty string")
+        self.id = id
         self.kind = PolicyKind(kind)
 
     @property
@@ -232,19 +243,48 @@ class CheckpointPolicy(Policy):
 
     def __init__(
         self,
-        key: str,
+        id: str,
         family: str,
         checkpoint_path: Path,
         config_path: Path,
         policy_type: Optional[str] = None,
         checkpoint_sha256: Optional[str] = None,
     ) -> None:
-        super().__init__(key=key, kind=PolicyKind.CHECKPOINT)
+        super().__init__(id=id, kind=PolicyKind.CHECKPOINT)
         self.family = family
         self.checkpoint_path = Path(checkpoint_path)
         self.config_path = Path(config_path)
         self.policy_type = policy_type or family
         self.checkpoint_sha256 = checkpoint_sha256
+
+    @classmethod
+    def from_leaf(
+        cls,
+        checkpoint_root: Path,
+        family: str,
+        task: str,
+        contract_type: Union[ContractType, str],
+        target: str,
+    ) -> "CheckpointPolicy":
+        """The policy stored at ``<root>/<family>/<task>/<type>/<target>/``.
+
+        Its id is ``<family>.<task>.<type>.<target>``, so one checkpoint keeps
+        one id however many contracts it is later bound to.
+        """
+
+        type_name = (
+            contract_type.value
+            if isinstance(contract_type, ContractType)
+            else str(contract_type)
+        )
+        leaf = Path(checkpoint_root) / family / task / type_name / target
+        return cls(
+            id=".".join((family, task, type_name, target)),
+            family=family,
+            checkpoint_path=leaf / "policy.pt",
+            config_path=leaf / "config.yml",
+            policy_type=_checkpoint_policy_type(family, target),
+        )
 
     @property
     def status(self) -> ArtifactStatus:
@@ -257,7 +297,7 @@ class CheckpointPolicy(Policy):
 
     def as_dict(self) -> Dict[str, Any]:
         return {
-            "key": self.key,
+            "id": self.id,
             "kind": self.kind.value,
             "family": self.family,
             "policy_type": self.policy_type,
@@ -266,6 +306,14 @@ class CheckpointPolicy(Policy):
             "checkpoint_sha256": self.checkpoint_sha256,
             "status": self.status.value,
         }
+
+
+def _checkpoint_policy_type(family: str, target: str) -> str:
+    """The ``policy_type`` vocabulary ``mshab.evaluate`` uses for a checkpoint."""
+
+    if family == "rl":
+        return "rl_all_obj" if target == "all" else "rl_per_obj"
+    return family
 
 
 _TARGET_PARAMETER = {
@@ -284,9 +332,9 @@ class Contract:
     example ``holding({object})``.  They stay lightweight strings here; a
     simulator adapter is responsible for evaluating them against live state.
 
-    A contract also lists the low-level policies registered to execute it.
-    (Today one contract may list several alternative checkpoints; the target
-    model is one policy per contract.)
+    A contract does not know which policies execute it.  That many-to-many
+    relation, including the preference order among a contract's policies, is
+    owned by :class:`~mshab.skills.library.ContractLibrary`.
     """
 
     def __init__(
@@ -358,7 +406,6 @@ class Contract:
         self.target = target
         self.env_id = env_id
         self.max_episode_steps = max_episode_steps
-        self._policies: Dict[str, Policy] = {}
 
     @property
     def id(self) -> str:
@@ -372,56 +419,14 @@ class Contract:
             else self.contract_type
         )
 
-    # -- policies -----------------------------------------------------------
-
-    @property
-    def policies(self) -> Mapping[str, Policy]:
-        return dict(self._policies)
-
-    def add_policy(self, policy: Policy) -> None:
-        if policy.key in self._policies:
-            raise ValueError(
-                "contract {} already has policy {!r}".format(self.id, policy.key)
-            )
-        self._policies[policy.key] = policy
-
-    def policy(self, key: Optional[str] = None) -> Policy:
-        if key is not None:
-            try:
-                return self._policies[key]
-            except KeyError as exc:
-                raise KeyError(
-                    "contract {} has no policy {!r}; available={}".format(
-                        self.id, key, sorted(self._policies)
-                    )
-                ) from exc
-        ready = sorted(
-            (
-                policy
-                for policy in self._policies.values()
-                if policy.status == ArtifactStatus.READY
-            ),
-            key=lambda item: item.key,
-        )
-        if not ready:
-            raise RuntimeError("contract {} has no ready policy".format(self.id))
-        return ready[0]
-
-    @property
-    def ready(self) -> bool:
-        """Whether at least one registered policy is fully available."""
-
-        return any(
-            policy.status == ArtifactStatus.READY
-            for policy in self._policies.values()
-        )
-
     # -- grounding ----------------------------------------------------------
 
-    def bind(
-        self, arguments: Mapping[str, Any], policy_key: Optional[str] = None
-    ) -> GroundedSkill:
-        """Ground this contract for one skill node's symbolic arguments."""
+    def bind(self, arguments: Mapping[str, Any]) -> GroundedSkill:
+        """Ground this contract for one skill node's symbolic arguments.
+
+        Grounding involves no policy: which bound policy runs the result is a
+        Layer-4 decision the library makes at execution time.
+        """
 
         values = dict(arguments)
         if self.target != "all":
@@ -433,8 +438,6 @@ class Contract:
                     )
                 )
             values[self.target_parameter] = self.target
-        if policy_key is not None:
-            self.policy(policy_key)
 
         known = {parameter.name: parameter for parameter in self.parameters}
         missing = sorted(
@@ -469,7 +472,6 @@ class Contract:
             verification=ground(self.verification),
             failure_modes=self.failure_modes,
             deletes=ground(self.deletes),
-            policy_key=policy_key,
         )
 
     def as_dict(self) -> Dict[str, Any]:
@@ -499,12 +501,7 @@ class Contract:
             "execution": {
                 "env_id": self.env_id,
                 "max_episode_steps": self.max_episode_steps,
-                "policies": {
-                    key: policy.as_dict()
-                    for key, policy in sorted(self._policies.items())
-                },
             },
-            "ready": self.ready,
         }
 
 

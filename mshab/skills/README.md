@@ -25,7 +25,7 @@ The words below are used with exactly one meaning throughout this package.
 | skill / skill node | One node of the skill graph. It names a contract and symbolic arguments. **"Skill" never refers to a contract or a policy.** | `SkillNode` |
 | skill subgraph | The nodes and edges that implement one sub-goal. Not necessarily sequential. | `SkillSubgraph` |
 | contract | What a skill node asks for: typed parameters, preconditions, effects, invariants, verification, all held directly as attributes. One node references exactly one contract; one contract may be referenced by many nodes. | `Contract` |
-| policy | A low-level executable model or controller (RL, BC, DP, VLA, script) that executes a contract. | `Policy`, `CheckpointPolicy` |
+| policy | A low-level executable model or controller (RL, BC, DP, VLA, script). Contracts and policies are bound many-to-many in `ContractLibrary`: one contract may be executed by several policies, and one policy may execute several contracts. | `Policy`, `CheckpointPolicy` |
 | grounded skill | A skill node bound to its contract with concrete arguments, so its predicates can be checked against live facts. | `GroundedSkill` |
 
 Two different questions are answered at two different layers:
@@ -45,7 +45,7 @@ Two different questions are answered at two different layers:
 | 1. Sub-goals | `SubGoalGraph`, `SubGoal` | No | Decompose the goal into ordered symbolic sub-goal predicates |
 | 2. Skill graph | `SkillGraph`, `SkillSubgraph`, `SkillNode` | No | Give every sub-goal its own skill subgraph and connect those subgraphs |
 | 3. Contracts | `Contract`, `GroundedSkill`, `SkillGrounder`, `SkillRuntime` | Yes | Bind a node's arguments to its contract and check its predicates against live facts |
-| 4. Policies | `Policy`, `CheckpointPolicy`, `PolicyExecutor` | Yes | Load a low-level policy or controller and interact with the environment |
+| 4. Policies | `Policy`, `CheckpointPolicy`, `ContractLibrary` bindings, `PolicyExecutor` | Yes | Pick a policy bound to the contract, load it, and interact with the environment |
 
 The dependency direction is one-way:
 
@@ -63,6 +63,7 @@ Layer 2: SkillGraph / SkillSubgraph              scene-independent
     ▼
 Layer 3: GroundedSkill                          environment-specific
     │ node -> one contract; preconditions checked against current facts
+    │ contract <-> policies: many-to-many bindings, ordered by preference
     ▼
 EnvironmentAdapter ◄────► Layer 4 PolicyExecutor
                          RL / BC / DP / VLA / controller / script policies
@@ -107,7 +108,7 @@ determines whether they are stored inside a subgraph or between subgraphs.
 | `environment.py` | Environment description, entity mapping, snapshots, and adapter |
 | `runtime.py` | Node grounding, contract monitoring, and policy dispatch |
 | `your_contract.py` | Copyable `YourContract` extension template |
-| `library.py` | Registration, checkpoint discovery, querying, and JSON export |
+| `library.py` | `ContractLibrary`: contracts, policies, their many-to-many bindings, checkpoint discovery, and JSON export |
 | `scripts/generate_set_table_skill_graph.py` | Rebuild SetTable JSON and SVG artifacts |
 | `scripts/build_set_table_graph_plan.py` | Ground a catalog-selected sequence with official scene data |
 | `scripts/evaluate_set_table_graph_plan.sh` | Execute that sequence and record an MS-HAB video |
@@ -122,11 +123,11 @@ determines whether they are stored inside a subgraph or between subgraphs.
 The first complete manual SetTable graph follows the official 16-step task
 order: bowl from `kitchen_counter`, then apple from `fridge`. It includes 8
 sub-goals, **8 sub-goal-owned skill subgraphs**, 20 candidate skill nodes, 24
-internal edges, 7 cross-subgraph edges, 20 grounded skills, and all 11
-canonical contract records. The cross-subgraph edges
-leave their source endpoint open (any achiever of that sub-goal), so the
-flattened `graph.edges` view expands them into 11 concrete edges, for 35 in
-total.
+internal edges, 7 cross-subgraph edges, 20 grounded skills, 11 canonical
+contracts, 11 RL checkpoint policies, and 15 contract-policy bindings. The
+cross-subgraph edges leave their source endpoint open (any achiever of that
+sub-goal), so the flattened `graph.edges` view expands them into 11 concrete
+edges, for 35 in total.
 
 The generated machine-readable graph is
 [`catalogs/set_table.json`](./catalogs/set_table.json).
@@ -247,8 +248,9 @@ print(stack.skill_graph.execution_order())
 # Layer 3: one skill node grounded to its contract
 print(stack.grounded_skills["pick_object_specialized"].preconditions)
 
-# Layer 4: the downloaded checkpoint policies registered for one contract
-print(stack.library.get("mshab.set_table.pick.013_apple").policies)
+# Layer 4: the policies bound to one contract, in preference order
+print([p.id for p in stack.library.policies_for("mshab.set_table.pick.013_apple")])
+# ['rl.set_table.pick.013_apple', 'rl.set_table.pick.all']
 ```
 
 The starter Layer-1 sub-goals are:
@@ -572,7 +574,8 @@ task's namespace.
 
 The complete checked-in four-layer artifact uses `LibraryCatalog`. It validates
 derived orders, flattened nodes/edges, plans, one grounded skill per node,
-and contract/policy records, then reconstructs the authoritative Layer-1/2 objects:
+and contract/policy records with their bindings listed from both sides, then
+reconstructs the authoritative Layer-1/2 objects:
 
 ```python
 import json
@@ -663,14 +666,16 @@ from mshab.skills import SkillGrounder
 
 grounder = SkillGrounder(stack.library)
 node = stack.skill_graph.nodes["pick_object_specialized"]
-grounded = grounder.ground(node, policy_key="rl")
+grounded = grounder.ground(node)
 
 assert dict(grounded.arguments) == {"object": "013_apple"}
 assert grounded.effects == ("holding(013_apple)",)
 ```
 
-Contract predicates only become meaningful when an environment adapter
-produces matching facts.
+Grounding involves no policy. A `GroundedSkill` knows its contract and its
+concrete predicates; which of the contract's bound policies runs it is a
+Layer-4 decision made at execution time. Contract predicates only become
+meaningful when an environment adapter produces matching facts.
 
 ## How Layer 3 and Layer 4 communicate with an environment
 
@@ -739,7 +744,7 @@ set.
 Layer-2 SkillNode
     -> SkillGrounder binds the node to its contract (GroundedSkill)
     -> adapter snapshot supplies precondition/invariant facts
-    -> a policy registered for the contract is selected
+    -> ContractLibrary.select_policy picks a bound policy (explicit id, else first ready)
     -> PolicyExecutor loads the policy/controller and calls adapter.step(action)
     -> invariant monitor checks every step
     -> adapter supplies final effect/verification facts
@@ -775,8 +780,8 @@ include a production PPO loader or complete vectorized SetTable fact extractor.
 
 A policy is a low-level executable: an RL/BC/DP checkpoint, a VLA, a
 controller, or a script. Policies never appear in the skill graph; they are
-reached only through the contract they execute. The downloaded checkpoint
-layout currently provides policies for 11 SetTable contracts:
+reached only through the contracts they are bound to. The downloaded
+checkpoint layout currently provides one RL policy per SetTable contract:
 
 ```text
 navigate.all
@@ -787,21 +792,62 @@ pick.024_bowl                place.024_bowl
 pick.all                     place.all
 ```
 
-Each `Contract` owns an environment id, horizon, its predicates, and the
-policy records registered to execute it. RL/BC/DP checkpoints are
-listed as alternative policies under one contract; they are not skill-node
-relations. (The current model lets one contract list several policies; the
-target architecture is one policy per contract, with one policy allowed to
-serve several contracts. That multiplicity change is tracked separately.)
+### Contracts and policies are many-to-many
+
+A `Contract` owns its environment id, horizon, and predicates. It does not
+own policies. A `Policy` owns its artifacts and knows nothing about
+contracts. `ContractLibrary` owns both and the *bindings* between them:
+
+- **One contract, several policies.** `open.fridge` is executed by the RL,
+  BC, and DP checkpoints trained for it. Bindings are ordered and
+  `library.select_policy(contract_id)` returns the first ready one, so the
+  binding order is the default preference; `select_policy(contract_id,
+  policy_id)` picks one explicitly.
+- **One policy, several contracts.** The `pick.all` checkpoint was trained
+  over every SetTable object, so it is bound not only to `pick.all` but also
+  to `pick.013_apple` and `pick.024_bowl`. `bind_generic_policies()` adds
+  these bindings after each contract's own checkpoint; both
+  `ContractLibrary.from_checkpoint_root()` and the SetTable manifest call it.
 
 ```text
-mshab.set_table.pick.013_apple            (Contract)
-├── preconditions/effects: reachable -> holding
-├── environment: PickSubtaskTrain-v0
-└── policies                              (CheckpointPolicy)
-    ├── rl -> config.yml + policy.pt
-    ├── bc -> config.yml + policy.pt
-    └── dp -> config.yml + policy.pt
+ContractLibrary (SetTable manifest: 11 contracts, 11 policies, 15 bindings)
+
+contract                        bound policies, in preference order
+mshab.set_table.pick.013_apple  rl.set_table.pick.013_apple, rl.set_table.pick.all
+mshab.set_table.pick.024_bowl   rl.set_table.pick.024_bowl,  rl.set_table.pick.all
+mshab.set_table.pick.all        rl.set_table.pick.all
+mshab.set_table.open.fridge     rl.set_table.open.fridge
+...
+
+policy                          executes
+rl.set_table.pick.all           pick.013_apple, pick.024_bowl, pick.all
+rl.set_table.pick.013_apple     pick.013_apple
+```
+
+A `CheckpointPolicy` id is `<family>.<task>.<type>.<target>`, mirroring the
+checkpoint directory, so one checkpoint keeps one id however many contracts
+it serves.
+
+Policy choice and graph fallback live on different layers.
+`pick_bowl_specialized` falling back to `pick_bowl_generic` is a Layer-2 edge
+between two skill nodes that reference two contracts. `pick.024_bowl` being
+executed by the `all` checkpoint when its own checkpoint is missing is a
+Layer-4 binding; the skill node, its contract, and its grounded predicates do
+not change.
+
+```python
+from mshab.skills import build_set_table_library
+
+library = build_set_table_library(checkpoint_root)
+
+library.policies_for("mshab.set_table.pick.024_bowl")   # own checkpoint, then pick.all
+library.contracts_for("rl.set_table.pick.all")          # the three pick contracts
+library.select_policy("mshab.set_table.pick.024_bowl")  # first ready in that order
+library.select_policy("mshab.set_table.pick.024_bowl", "rl.set_table.pick.all")
+
+library.register_policy(my_vla)                          # any Policy subclass
+library.bind("mshab.set_table.pick.013_apple", my_vla.id)
+library.bind("mshab.set_table.place.013_apple", my_vla.id)
 ```
 
 ## Add your own contract (`YourContract`)
@@ -827,7 +873,9 @@ assert contract.id == "mshab.set_table.your_contract.013_apple"
 To make it executable:
 
 1. replace the template predicates with real ones;
-2. add a `Policy` describing checkpoint artifacts or a controller;
+2. register a `Policy` (checkpoint artifacts or a controller) and bind it to
+   the contract with `library.bind(contract.id, policy.id)`; a policy that is
+   already registered can be bound to the new contract as well;
 3. implement a `PolicyExecutor` that runs that policy;
 4. add compatible entity/fact extraction to the environment adapter;
 5. add a `SkillNode` through `SkillGraphPatch` and validate the contract id;
@@ -851,17 +899,26 @@ library = ContractLibrary.from_checkpoint_root(
 )
 
 for contract in library.find(task="set_table", ready=True):
-    print(contract.id, sorted(contract.policies))
+    print(contract.id, [p.id for p in library.policies_for(contract.id)])
 
 apple_pick = library.find(
     task="set_table",
     contract_type=ContractType.PICK,
     target="013_apple",
 )[0]
+generic_pick_contracts = library.contracts_for("rl.set_table.pick.all")
 ```
 
+Discovery registers one `CheckpointPolicy` per `family/task/type/target`
+leaf, binds it to the contract the path names, and then binds every `all`
+checkpoint to the specialized contracts of its type. With the full download,
+`open.fridge` is bound to `bc.`, `dp.`, and `rl.set_table.open.fridge`, and
+`pick.013_apple` to its own RL checkpoint plus the three `pick.all`
+checkpoints.
+
 Upper layers query by contract id and do not hard-code checkpoint paths.
-`library.save_index(path)` exports metadata without copying weights.
+`library.save_index(path)` exports contracts, policies, and bindings without
+copying weights.
 
 ## Installation
 
@@ -1003,7 +1060,7 @@ Implemented now:
 - complete SetTable and smaller apple graphs covering all four layers;
 - a declarative patch boundary for manual construction and future skill-node placement;
 - extensible custom contract types;
-- checkpoint discovery and policy selection;
+- checkpoint discovery, many-to-many contract/policy bindings, and policy selection;
 - environment entity/fact/snapshot adapter interface;
 - contract grounding, admission, invariant monitoring, and verification;
 - policy executor interface and auditable execution results.
@@ -1016,5 +1073,4 @@ Environment-specific follow-up work:
 - production insertion-VLM proposal parsing and validation;
 - the trained graph-conditioned decision VLM and fallback execution;
 - the runtime goal -> sub-goal decomposition VLM (Layer 1 is hand-authored today);
-- one policy per contract, with policies shared across contracts (Layer 3/4 multiplicity);
 - insertion and decision quality evaluation.

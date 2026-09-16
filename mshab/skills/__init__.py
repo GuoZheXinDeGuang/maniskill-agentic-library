@@ -2,7 +2,7 @@
 
 Vocabulary: a *goal* is the task text; it decomposes into *sub-goals*; every
 sub-goal owns a subgraph of *skill nodes*; a node references one *contract*;
-a contract is executed by low-level *policies*.
+contracts and low-level *policies* are bound many-to-many in the library.
 """
 
 from mshab.skills import schema
