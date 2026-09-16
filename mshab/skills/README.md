@@ -24,8 +24,9 @@ The words below are used with exactly one meaning throughout this package.
 | sub-goal | One symbolic milestone the goal is decomposed into, for example `holding(024_bowl)` | `SubGoal` |
 | skill / skill node | One node of the skill graph. It names a contract and symbolic arguments. **"Skill" never refers to a contract or a policy.** | `SkillNode` |
 | skill subgraph | The nodes and edges that implement one sub-goal. Not necessarily sequential. | `SkillSubgraph` |
-| contract | What a skill node asks for: typed parameters, preconditions, effects, invariants, verification. One node references exactly one contract; one contract may be referenced by many nodes. | `AtomicContract` + `ContractTerms` |
+| contract | What a skill node asks for: typed parameters, preconditions, effects, invariants, verification, all held directly as attributes. One node references exactly one contract; one contract may be referenced by many nodes. | `Contract` |
 | policy | A low-level executable model or controller (RL, BC, DP, VLA, script) that executes a contract. | `Policy`, `CheckpointPolicy` |
+| grounded skill | A skill node bound to its contract with concrete arguments, so its predicates can be checked against live facts. | `GroundedSkill` |
 
 Two different questions are answered at two different layers:
 
@@ -42,8 +43,8 @@ Two different questions are answered at two different layers:
 | Layer | Main objects | Scene-dependent? | Responsibility |
 | --- | --- | --- | --- |
 | 1. Sub-goals | `SubGoalGraph`, `SubGoal` | No | Decompose the goal into ordered symbolic sub-goal predicates |
-| 2. Skill composition | `SkillCompositionGraph`, `SkillSubgraph`, `SkillNode` | No | Give every sub-goal its own skill subgraph and connect those subgraphs |
-| 3. Contracts | `AtomicContract`, `ContractTerms`, `SkillGrounder`, `SkillRuntime` | Yes | Bind a node's arguments to its contract and check the terms against live facts |
+| 2. Skill graph | `SkillGraph`, `SkillSubgraph`, `SkillNode` | No | Give every sub-goal its own skill subgraph and connect those subgraphs |
+| 3. Contracts | `Contract`, `GroundedSkill`, `SkillGrounder`, `SkillRuntime` | Yes | Bind a node's arguments to its contract and check its predicates against live facts |
 | 4. Policies | `Policy`, `CheckpointPolicy`, `PolicyExecutor` | Yes | Load a low-level policy or controller and interact with the environment |
 
 The dependency direction is one-way:
@@ -55,13 +56,13 @@ goal (task text)
 Layer 1: SubGoalGraph                           scene-independent
     │ one sub-goal -> one skill subgraph
     ▼
-Layer 2: SkillSubgraph                   scene-independent
+Layer 2: SkillGraph / SkillSubgraph              scene-independent
     │ owns SkillNode + internal SkillEdge
-    │ SkillSubgraphRelation connects sub-goal subgraphs
+    │ CrossSubgraphEdge connects sub-goal subgraphs
     │ edges = semantic / logical order
     ▼
-Layer 3: SkillInvocation + BoundTerms           environment-specific
-    │ node -> one contract; terms checked against current facts
+Layer 3: GroundedSkill                          environment-specific
+    │ node -> one contract; preconditions checked against current facts
     ▼
 EnvironmentAdapter ◄────► Layer 4 PolicyExecutor
                          RL / BC / DP / VLA / controller / script policies
@@ -80,11 +81,11 @@ The OOP ownership hierarchy is:
 SubGoalGraph
 └── SubGoal (Layer 1 definition)
 
-SkillCompositionGraph (Layer 2 aggregate root)
+SkillGraph (Layer 2 aggregate root)
 ├── SkillSubgraph[subgoal_id] (exactly one per implemented sub-goal)
 │   ├── SkillNode (instrumental or sub-goal-achieving candidate)
 │   └── SkillEdge (relations inside this sub-goal implementation)
-└── SkillSubgraphRelation (relations between two sub-goal subgraphs)
+└── CrossSubgraphEdge (relations between two sub-goal subgraphs)
 ```
 
 Composition has exactly one source of truth: graph relations. There is no
@@ -121,8 +122,8 @@ determines whether they are stored inside a subgraph or between subgraphs.
 The first complete manual SetTable graph follows the official 16-step task
 order: bowl from `kitchen_counter`, then apple from `fridge`. It includes 8
 sub-goals, **8 sub-goal-owned skill subgraphs**, 20 candidate skill nodes, 24
-internal relations, 7 cross-subgraph relations, 20 sets of bound contract
-terms, and all 11 canonical contract records. The cross-subgraph relations
+internal edges, 7 cross-subgraph edges, 20 grounded skills, and all 11
+canonical contract records. The cross-subgraph edges
 leave their source endpoint open (any achiever of that sub-goal), so the
 flattened `graph.edges` view expands them into 11 concrete edges, for 35 in
 total.
@@ -243,8 +244,8 @@ print(stack.subgoal_graph.execution_order())
 # Layer 2 candidate partial order (not an execution plan)
 print(stack.skill_graph.execution_order())
 
-# Layer 3: contract terms bound to one skill node
-print(stack.bound_terms["pick_object_specialized"].preconditions)
+# Layer 3: one skill node grounded to its contract
+print(stack.grounded_skills["pick_object_specialized"].preconditions)
 
 # Layer 4: the downloaded checkpoint policies registered for one contract
 print(stack.library.get("mshab.set_table.pick.013_apple").policies)
@@ -326,7 +327,7 @@ adapter, not in this graph.
 
 ## Layer 2: one skill subgraph per sub-goal
 
-`SkillCompositionGraph` is the aggregate root. It owns `SkillSubgraph`
+`SkillGraph` is the aggregate root. It owns `SkillSubgraph`
 objects; a subgraph owns its nodes and internal relations. A `SkillNode` is a
 request to run one contract with symbolic arguments, not an executable
 invocation. The nodes inside a subgraph need not be sequential.
@@ -334,12 +335,12 @@ invocation. The nodes inside a subgraph need not be sequential.
 ```python
 from mshab.skills import (
     SkillSubgraph,
-    SkillCompositionGraph,
+    SkillGraph,
     SkillNode,
     SkillRelation,
 )
 
-graph = SkillCompositionGraph("set_table", subgoal_graph=subgoals)
+graph = SkillGraph("set_table", subgoal_graph=subgoals)
 
 reachable = SkillSubgraph(subgoal_id="reachable", task="set_table")
 reachable.add_node(
@@ -372,11 +373,11 @@ graph.relate("navigate_to_apple", "pick_apple", SkillRelation.ENABLES)
 
 | Object/API | Important attributes | Responsibility |
 | --- | --- | --- |
-| `SkillCompositionGraph` | `task`, `subgoal_graph`, `subgraphs`, `subgraph_relations` | Own the complete Layer-2 aggregate and cross-sub-goal relations |
+| `SkillGraph` | `task`, `subgoal_graph`, `subgraphs`, `cross_edges` | Own the complete Layer-2 aggregate and cross-sub-goal relations |
 | `SkillSubgraph` | `subgoal_id`, `task`, `nodes`, `edges`, `achievers` | Own the complete candidate implementation for one sub-goal |
 | `SkillNode` | `id`, `contract_id`, `arguments`, `achieves` | Refer to one contract with symbolic arguments |
 | `SkillEdge` | `source`, `target`, `relation` | Relate two skill nodes inside the same sub-goal subgraph |
-| `SkillSubgraphRelation` | `source_subgoal`, `target_subgoal`, `source_node`, `target_node`, `relation` | Relate skill nodes belonging to two different sub-goal subgraphs |
+| `CrossSubgraphEdge` | `source_subgoal`, `target_subgoal`, `source_node`, `target_node`, `relation` | Relate skill nodes belonging to two different sub-goal subgraphs |
 
 Important invariants are enforced by methods rather than convention:
 
@@ -385,7 +386,7 @@ Important invariants are enforced by methods rather than convention:
 - a node inside a subgraph may only claim that subgraph's sub-goal;
 - registering a subgraph seals it against later structural mutation;
 - node ids are unique across the aggregate;
-- a cross-subgraph relation verifies both node owners;
+- a cross-subgraph edge verifies both node owners;
 - causal cycles and duplicate relations are rejected;
 - a cross-sub-goal relation may name any achiever of its source sub-goal, so
   a fallback candidate satisfies downstream dependencies;
@@ -402,7 +403,7 @@ Important invariants are enforced by methods rather than convention:
 | `ALTERNATIVE_TO` | symmetric | Peer candidates for the same role |
 | `FALLBACK_TO` | primary -> fallback | Try target after source fails |
 
-### Edges are about semantics; contract terms are about physics
+### Edges are about semantics; contracts are about physics
 
 Every relation above states that an order is *logically* sensible for the
 task: the counter is opened before the bowl is picked, the bowl is placed
@@ -410,10 +411,10 @@ before the counter is closed, food is heated before it is served. Nothing in
 the graph consults the live scene.
 
 Whether a node can *physically* start right now is a different question and
-is answered only by its contract terms (Layer 3): `reachable(024_bowl)` and
+is answered only by its contract (Layer 3): `reachable(024_bowl)` and
 `gripper_empty()` must be present in the current environment snapshot before
-`pick_bowl_specialized` may be admitted. Contract terms never encode task
-order, and edges never restate physical preconditions. Keeping the two apart
+`pick_bowl_specialized` may be admitted. Contracts never encode task order,
+and edges never restate physical preconditions. Keeping the two apart
 is what lets one contract be reused by many skill nodes in different places
 of the graph.
 
@@ -428,13 +429,13 @@ candidate pair.
 does not inspect facts, contracts, checkpoints, or environments. Use
 `SkillRuntime.ready_nodes(...)` for complete Layer-3/4 admission.
 
-### Cross-subgraph relations are sub-goal-level by default
+### Cross-subgraph edges are sub-goal-level by default
 
-A `SkillSubgraphRelation` endpoint is either a node id or `None`, meaning *any
+A `CrossSubgraphEdge` endpoint is either a node id or `None`, meaning *any
 achiever of that sub-goal*:
 
 ```python
-SkillSubgraphRelation("bowl_retrieved", "bowl_placed", None,
+CrossSubgraphEdge("bowl_retrieved", "bowl_placed", None,
                       "navigate_bowl_to_destination", SkillRelation.ENABLES)
 ```
 
@@ -447,7 +448,7 @@ and `ready_nodes` schedules against those groups rather than a flat set.
 
 ### Candidate graph versus one-node decisions
 
-`SkillCompositionGraph` stores every candidate, including specialized and
+`SkillGraph` stores every candidate, including specialized and
 generic fallback nodes. Consequently, its `execution_order()` is a stable
 topological order over **all candidates**; it is not an execution plan and must
 not be sent directly to Layer 3.
@@ -499,7 +500,7 @@ from mshab.skills import (
     SkillGraphPatch,
     SkillNode,
     SkillRelation,
-    SkillSubgraphRelation,
+    CrossSubgraphEdge,
 )
 
 inspect_subgraph = SkillSubgraph("apple_inspected", "set_table")
@@ -518,8 +519,8 @@ patch = SkillGraphPatch(
         SubGoalDependency("object_retrieved", "apple_inspected"),
     ),
     skill_subgraphs=(inspect_subgraph,),
-    subgraph_relations=(
-        SkillSubgraphRelation(
+    cross_edges=(
+        CrossSubgraphEdge(
             source_subgoal="object_retrieved",
             target_subgoal="apple_inspected",
             source_node="pick_object_specialized",
@@ -569,18 +570,18 @@ and unsupported `schema_version` values. `task` is supplied by the caller,
 never read from the payload, so a proposer cannot redirect a patch into another
 task's namespace.
 
-The complete checked-in four-layer artifact uses `SkillCatalog`. It validates
-derived orders, flattened nodes/edges, plans, bound terms for every node, and
-contract/policy records, then reconstructs the authoritative Layer-1/2 objects:
+The complete checked-in four-layer artifact uses `LibraryCatalog`. It validates
+derived orders, flattened nodes/edges, plans, one grounded skill per node,
+and contract/policy records, then reconstructs the authoritative Layer-1/2 objects:
 
 ```python
 import json
 from pathlib import Path
 
-from mshab.skills import SkillCatalog
+from mshab.skills import LibraryCatalog
 
 payload = json.loads(Path("mshab/skills/catalogs/set_table.json").read_text())
-catalog = SkillCatalog.from_dict(payload)
+catalog = LibraryCatalog.from_dict(payload)
 assert catalog.as_dict() == payload
 ```
 
@@ -616,7 +617,7 @@ The second VLM is a decision model that will be trained later. It is not a
 Layer-4 policy and it does not create the graph. Its interface is:
 
 ```text
-input:  candidate SkillCompositionGraph
+input:  candidate SkillGraph
         + completed/failed skill-node history
         + current environment summary
 
@@ -635,9 +636,9 @@ catalog.
 
 ## Layer 3: contracts and environment facts
 
-A skill node names one `AtomicContract` by `contract_id`. Many nodes may name
+A skill node names one `Contract` by `contract_id`. Many nodes may name
 the same contract: every `navigate_*` node in SetTable references
-`mshab.set_table.navigate.all`. The contract's `ContractTerms` declare:
+`mshab.set_table.navigate.all`. A `Contract` declares directly as attributes:
 
 | Attribute | Meaning |
 | --- | --- |
@@ -649,22 +650,23 @@ the same contract: every `navigate_*` node in SetTable references
 | `deletes` | Predicates this contract retracts (negative effects) |
 | `failure_modes` | Named failures for recovery/fallback |
 
-These terms describe physical feasibility in the current world state only.
-They are deliberately silent about task order; see
-[Edges are about semantics](#edges-are-about-semantics-contract-terms-are-about-physics).
+These predicates describe physical feasibility in the current world state
+only. They are deliberately silent about task order; see
+[Edges are about semantics](#edges-are-about-semantics-contracts-are-about-physics).
 
-Layer-2 nodes do not bind terms themselves. `SkillGrounder` performs that
-transition:
+Layer-2 nodes do not ground themselves. `SkillGrounder` binds a node to its
+contract and returns a `GroundedSkill`, whose predicates have the node's
+arguments substituted:
 
 ```python
 from mshab.skills import SkillGrounder
 
 grounder = SkillGrounder(stack.library)
 node = stack.skill_graph.nodes["pick_object_specialized"]
-invocation = grounder.ground(node, policy_key="rl")
+grounded = grounder.ground(node, policy_key="rl")
 
-assert dict(invocation.arguments) == {"object": "013_apple"}
-assert invocation.terms.effects == ("holding(013_apple)",)
+assert dict(grounded.arguments) == {"object": "013_apple"}
+assert grounded.effects == ("holding(013_apple)",)
 ```
 
 Contract predicates only become meaningful when an environment adapter
@@ -735,7 +737,7 @@ set.
 
 ```text
 Layer-2 SkillNode
-    -> SkillGrounder binds the node's contract terms
+    -> SkillGrounder binds the node to its contract (GroundedSkill)
     -> adapter snapshot supplies precondition/invariant facts
     -> a policy registered for the contract is selected
     -> PolicyExecutor loads the policy/controller and calls adapter.step(action)
@@ -751,17 +753,17 @@ loaders:
 from mshab.skills import PolicyExecution, PolicyExecutor
 
 class YourPolicyExecutor(PolicyExecutor):
-    def execute(self, invocation, policy, environment, monitor):
+    def execute(self, grounded, policy, environment, monitor):
         model = self.load_or_get_cached_model(policy)
-        for step in range(invocation.contract.max_episode_steps):
+        for step in range(grounded.contract.max_episode_steps):
             action = model(environment.snapshot().observation)
             snapshot = environment.step(action)
             monitor(snapshot)
-            if invocation.terms.verified(snapshot.facts):
+            if grounded.verified(snapshot.facts):
                 return PolicyExecution(success=True, steps=step + 1)
         return PolicyExecution(
             success=False,
-            steps=invocation.contract.max_episode_steps,
+            steps=grounded.contract.max_episode_steps,
             failure_mode="execution_timeout",
         )
 ```
@@ -785,16 +787,16 @@ pick.024_bowl                place.024_bowl
 pick.all                     place.all
 ```
 
-Each `AtomicContract` owns an environment id, horizon, its `ContractTerms`,
-and the policy records registered to execute it. RL/BC/DP checkpoints are
+Each `Contract` owns an environment id, horizon, its predicates, and the
+policy records registered to execute it. RL/BC/DP checkpoints are
 listed as alternative policies under one contract; they are not skill-node
 relations. (The current model lets one contract list several policies; the
 target architecture is one policy per contract, with one policy allowed to
 serve several contracts. That multiplicity change is tracked separately.)
 
 ```text
-mshab.set_table.pick.013_apple            (AtomicContract)
-├── terms: reachable -> holding           (ContractTerms)
+mshab.set_table.pick.013_apple            (Contract)
+├── preconditions/effects: reachable -> holding
 ├── environment: PickSubtaskTrain-v0
 └── policies                              (CheckpointPolicy)
     ├── rl -> config.yml + policy.pt
@@ -805,7 +807,7 @@ mshab.set_table.pick.013_apple            (AtomicContract)
 ## Add your own contract (`YourContract`)
 
 `your_contract.py` is a copyable extension point. New contract types do not
-require editing the `ContractType` enum: `AtomicContract` accepts a validated
+require editing the `ContractType` enum: `Contract` accepts a validated
 custom string plus an explicit target parameter.
 
 ```python
@@ -824,14 +826,14 @@ assert contract.id == "mshab.set_table.your_contract.013_apple"
 
 To make it executable:
 
-1. replace the template vocabulary with real `ContractTerms`;
+1. replace the template predicates with real ones;
 2. add a `Policy` describing checkpoint artifacts or a controller;
 3. implement a `PolicyExecutor` that runs that policy;
 4. add compatible entity/fact extraction to the environment adapter;
 5. add a `SkillNode` through `SkillGraphPatch` and validate the contract id;
 6. test admission, invariant monitoring, effects, and verification.
 
-This is OOP extension: `YourContract` is an `AtomicContract`, a new policy is a
+This is OOP extension: `YourContract` is an `Contract`, a new policy is a
 `Policy`, and a runner is a `PolicyExecutor`. Relationships between the skill
 nodes that reference this contract and other skill nodes remain graph edges.
 

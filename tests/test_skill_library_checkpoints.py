@@ -50,26 +50,26 @@ class DownloadedCheckpointTests(TestCase):
             contract_type=ContractType.PICK,
             target="013_apple",
         )[0]
-        invocation = specialized.bind({}, policy_key=specialized.policy().key)
+        grounded = specialized.bind({}, policy_key=specialized.policy().key)
 
-        self.assertEqual(invocation.arguments, {"object": "013_apple"})
+        self.assertEqual(grounded.arguments, {"object": "013_apple"})
         self.assertEqual(
-            invocation.terms.preconditions,
+            grounded.preconditions,
             ("reachable(013_apple)", "gripper_empty()"),
         )
         self.assertEqual(
-            invocation.terms.effects,
+            grounded.effects,
             ("holding(013_apple)",),
         )
 
     def test_complete_manual_graph_grounds_all_twenty_nodes(self):
         stack = build_set_table_stack(CHECKPOINT_ROOT)
-        bound_terms = SkillGrounder(self.library).bound_terms(stack.skill_graph)
+        grounded_skills = SkillGrounder(self.library).grounded_skills(stack.skill_graph)
 
         self.assertEqual(len(stack.subgoal_graph.subgoals), 8)
         self.assertEqual(len(stack.skill_graph.subgraphs), 8)
         self.assertEqual(len(stack.skill_graph.nodes), 20)
-        self.assertEqual(len(bound_terms), 20)
+        self.assertEqual(len(grounded_skills), 20)
         self.assertEqual(
             contracts["place_apple_specialized"].effects,
             ("at(013_apple,dining_table)", "gripper_empty()"),

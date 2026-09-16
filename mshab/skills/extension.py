@@ -24,10 +24,10 @@ from mshab.skills.graph import (
     SubGoalGraph,
     SkillSubgraph,
     SubGoalDependency,
-    SkillCompositionGraph,
+    SkillGraph,
     SkillEdge,
     SkillNode,
-    SkillSubgraphRelation,
+    CrossSubgraphEdge,
 )
 from mshab.skills.library import ContractLibrary
 
@@ -121,14 +121,14 @@ class SkillGraphPatch:
     subgoals: Tuple[SubGoal, ...] = ()
     subgoal_dependencies: Tuple[SubGoalDependency, ...] = ()
     skill_subgraphs: Tuple[SkillSubgraph, ...] = ()
-    subgraph_relations: Tuple[SkillSubgraphRelation, ...] = ()
+    cross_edges: Tuple[CrossSubgraphEdge, ...] = ()
     subgraph_extensions: Tuple[SkillSubgraphExtension, ...] = ()
 
     _FIELD_TYPES = {
         "subgoals": SubGoal,
         "subgoal_dependencies": SubGoalDependency,
         "skill_subgraphs": SkillSubgraph,
-        "subgraph_relations": SkillSubgraphRelation,
+        "cross_edges": CrossSubgraphEdge,
         "subgraph_extensions": SkillSubgraphExtension,
     }
 
@@ -162,14 +162,14 @@ class SkillGraphPatch:
             subgoals=self.subgoals,
             subgoal_dependencies=self.subgoal_dependencies,
             skill_subgraphs=self.skill_subgraphs,
-            subgraph_relations=self.subgraph_relations,
+            cross_edges=self.cross_edges,
             subgraph_extensions=self.subgraph_extensions + (extension,),
         )
 
     def apply(
         self,
         subgoal_graph: SubGoalGraph,
-        skill_graph: SkillCompositionGraph,
+        skill_graph: SkillGraph,
         library: Optional[ContractLibrary] = None,
     ) -> None:
         """Atomically apply this patch, or leave both graphs untouched.
@@ -192,7 +192,7 @@ class SkillGraphPatch:
     def _apply_to(
         self,
         subgoal_graph: SubGoalGraph,
-        skill_graph: SkillCompositionGraph,
+        skill_graph: SkillGraph,
         library: Optional[ContractLibrary],
     ) -> None:
         if library is not None:
@@ -206,7 +206,7 @@ class SkillGraphPatch:
         for extension in self.subgraph_extensions:
             current = skill_graph.subgraph_for_subgoal(extension.subgoal_id)
             skill_graph.replace_subgraph(extension.rebuild(current))
-        for relation in self.subgraph_relations:
+        for relation in self.cross_edges:
             skill_graph.relate_subgraphs(
                 relation.source_subgoal,
                 relation.target_subgoal,
@@ -255,7 +255,7 @@ class SkillGraphPatch:
                 "subgoals",
                 "subgoal_dependencies",
                 "skill_subgraphs",
-                "subgraph_relations",
+                "cross_edges",
                 "subgraph_extensions",
                 "schema_version",
             ),
@@ -277,10 +277,10 @@ class SkillGraphPatch:
                     payload, "skill_subgraphs", where=where
                 )
             ),
-            subgraph_relations=tuple(
-                SkillSubgraphRelation.from_dict(item)
+            cross_edges=tuple(
+                CrossSubgraphEdge.from_dict(item)
                 for item in schema.require_sequence(
-                    payload, "subgraph_relations", where=where
+                    payload, "cross_edges", where=where
                 )
             ),
             subgraph_extensions=tuple(
@@ -301,8 +301,8 @@ class SkillGraphPatch:
             "skill_subgraphs": [
                 subgraph.as_dict() for subgraph in self.skill_subgraphs
             ],
-            "subgraph_relations": [
-                relation.as_dict() for relation in self.subgraph_relations
+            "cross_edges": [
+                relation.as_dict() for relation in self.cross_edges
             ],
             "subgraph_extensions": [
                 extension.as_dict() for extension in self.subgraph_extensions
@@ -328,9 +328,9 @@ class SkillGraphBuilder(ABC):
         task: str,
         context: Optional[Mapping[str, Any]] = None,
         library: Optional[ContractLibrary] = None,
-    ) -> Tuple[SubGoalGraph, SkillCompositionGraph]:
+    ) -> Tuple[SubGoalGraph, SkillGraph]:
         subgoal_graph = SubGoalGraph(goal)
-        skill_graph = SkillCompositionGraph(task, subgoal_graph=subgoal_graph)
+        skill_graph = SkillGraph(task, subgoal_graph=subgoal_graph)
         patch = self.propose(goal, task, context or {})
         patch.apply(subgoal_graph, skill_graph, library=library)
         return subgoal_graph, skill_graph
@@ -338,17 +338,17 @@ class SkillGraphBuilder(ABC):
 
 def _staging_copy(
     subgoal_graph: SubGoalGraph,
-    skill_graph: SkillCompositionGraph,
-) -> Tuple[SubGoalGraph, SkillCompositionGraph]:
+    skill_graph: SkillGraph,
+) -> Tuple[SubGoalGraph, SkillGraph]:
     staging_subgoals = SubGoalGraph(subgoal_graph.goal)
-    staging_skills = SkillCompositionGraph(skill_graph.task, subgoal_graph=staging_subgoals)
+    staging_skills = SkillGraph(skill_graph.task, subgoal_graph=staging_subgoals)
     for subgoal in subgoal_graph.subgoals.values():
         staging_subgoals.add_subgoal(subgoal)
     for dependency in subgoal_graph.dependencies:
         staging_subgoals.add_dependency(dependency.source, dependency.target)
     for subgraph in skill_graph.subgraphs.values():
         staging_skills.add_subgraph(subgraph.unsealed_copy())
-    for relation in skill_graph.subgraph_relations:
+    for relation in skill_graph.cross_edges:
         staging_skills.relate_subgraphs(
             relation.source_subgoal,
             relation.target_subgoal,

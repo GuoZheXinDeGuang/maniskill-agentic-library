@@ -174,7 +174,7 @@
 <path class="edge" d="M 950 955 L 950 978" marker-end="url(#arrow)"/>
 <text class="tiny" x="970" y="972" text-anchor="start">future decision VLM: graph + state → one next skill</text>
 <rect class="layer" x="24" y="980" width="1852" height="255" fill="#fffbeb" stroke="#eab308"/>
-<text class="title" x="950" y="1020" text-anchor="middle">3. Bound Contract Terms</text>
+<text class="title" x="950" y="1020" text-anchor="middle">3. Grounded Skills</text>
 <text class="subtitle" x="1815" y="1018" text-anchor="end">ENVIRONMENT-SPECIFIC</text>
 <rect class="node" x="55" y="1060" width="325" height="120" fill="#ffffff"/>
 <text class="node-title" x="217" y="1089" text-anchor="middle">Navigate</text>

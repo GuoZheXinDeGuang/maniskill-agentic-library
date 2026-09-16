@@ -6,7 +6,7 @@ a contract is executed by low-level *policies*.
 """
 
 from mshab.skills import schema
-from mshab.skills.catalog import CATALOG_SCHEMA_VERSION, SkillCatalog
+from mshab.skills.catalog import CATALOG_SCHEMA_VERSION, LibraryCatalog
 from mshab.skills.library import ContractLibrary
 from mshab.skills.environment import (
     EnvironmentAdapter,
@@ -25,28 +25,25 @@ from mshab.skills.graph import (
     SubGoalGraph,
     SubGoalDependency,
     SkillSubgraph,
-    SkillCompositionGraph,
+    SkillGraph,
     SkillEdge,
     SkillNode,
     SkillRelation,
-    SkillSubgraphRelation,
+    CrossSubgraphEdge,
 )
 from mshab.skills.model import (
     ArtifactStatus,
-    AtomicContract,
-    BoundTerms,
     CheckpointPolicy,
     CloseContract,
     Policy,
-    ExecutorType,
+    PolicyKind,
     NavigateContract,
     OpenContract,
     ParameterType,
     PickContract,
     PlaceContract,
     Contract,
-    ContractTerms,
-    SkillInvocation,
+    GroundedSkill,
     ContractParameter,
     ContractType,
 )
@@ -78,14 +75,12 @@ from mshab.skills.your_contract import YourContract
 
 __all__ = [
     "ArtifactStatus",
-    "AtomicContract",
-    "BoundTerms",
     "PolicyExecution",
     "PolicyExecutor",
     "CheckpointPolicy",
     "CloseContract",
     "Policy",
-    "ExecutorType",
+    "PolicyKind",
     "EnvironmentAdapter",
     "EnvironmentDescription",
     "EnvironmentEntity",
@@ -105,16 +100,15 @@ __all__ = [
     "SkillGraphBuilder",
     "SkillGraphPatch",
     "SkillGrounder",
-    "SkillCompositionGraph",
-    "SkillCatalog",
-    "ContractTerms",
+    "SkillGraph",
+    "LibraryCatalog",
     "SkillEdge",
-    "SkillInvocation",
+    "GroundedSkill",
     "ContractLibrary",
     "SkillNode",
     "ContractParameter",
     "SkillRelation",
-    "SkillSubgraphRelation",
+    "CrossSubgraphEdge",
     "SkillRuntime",
     "schema",
     "SchemaError",

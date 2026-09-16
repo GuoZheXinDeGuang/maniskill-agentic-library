@@ -13,20 +13,20 @@ import json
 from typing import Any, Dict, Mapping, Sequence
 
 from mshab.skills import schema
-from mshab.skills.graph import SubGoalGraph, SkillCompositionGraph
+from mshab.skills.graph import SubGoalGraph, SkillGraph
 from mshab.skills.plan import SkillPlan
 
 
-CATALOG_SCHEMA_VERSION = "mshab.skill-catalog.v1"
+CATALOG_SCHEMA_VERSION = "mshab.library-catalog.v1"
 _LAYER_KEYS = (
     "1_subgoal_graph",
-    "2_skill_composition_graph",
-    "3_bound_contract_terms",
+    "2_skill_graph",
+    "3_grounded_skills",
     "4_contracts_and_policies",
 )
 
 
-class SkillCatalog:
+class LibraryCatalog:
     """Validated four-layer artifact suitable for source control and VLM input."""
 
     def __init__(
@@ -37,13 +37,13 @@ class SkillCatalog:
         execution_plan_note: str,
         execution_plans: Mapping[str, SkillPlan],
         subgoal_graph: SubGoalGraph,
-        skill_graph: SkillCompositionGraph,
-        bound_terms: Mapping[str, Mapping[str, Any]],
+        skill_graph: SkillGraph,
+        grounded_skills: Mapping[str, Mapping[str, Any]],
         contracts: Sequence[Mapping[str, Any]],
     ) -> None:
-        schema.require_identifier({"task": task}, "task", where="skill_catalog")
+        schema.require_identifier({"task": task}, "task", where="library_catalog")
         if skill_graph.task != task:
-            raise ValueError("catalog task must match its skill composition graph")
+            raise ValueError("catalog task must match its skill graph")
         if skill_graph.subgoal_graph is not subgoal_graph:
             raise ValueError("catalog graphs must share the same sub-goal graph object")
         skill_graph.validate()
@@ -53,8 +53,8 @@ class SkillCatalog:
             raise ValueError("catalog execution-plan note must be a non-empty string")
         if not isinstance(execution_plans, Mapping):
             raise TypeError("catalog execution_plans must be a mapping")
-        if not isinstance(bound_terms, Mapping):
-            raise TypeError("catalog bound_terms must be a mapping")
+        if not isinstance(grounded_skills, Mapping):
+            raise TypeError("catalog grounded_skills must be a mapping")
 
         self.task = task
         self.construction = _json_copy(construction, "construction")
@@ -62,15 +62,15 @@ class SkillCatalog:
         self.execution_plans = dict(execution_plans)
         self.subgoal_graph = subgoal_graph
         self.skill_graph = skill_graph
-        self.bound_terms = _json_copy(bound_terms, "bound_terms")
+        self.grounded_skills = _json_copy(grounded_skills, "grounded_skills")
         self.contracts = tuple(_json_copy(contracts, "contracts"))
         self._validate_plans()
-        self._validate_bound_terms()
+        self._validate_grounded_skills()
         self._validate_contracts()
 
     @classmethod
-    def from_dict(cls, payload: Mapping[str, Any]) -> "SkillCatalog":
-        where = "skill_catalog"
+    def from_dict(cls, payload: Mapping[str, Any]) -> "LibraryCatalog":
+        where = "library_catalog"
         payload = schema.require_mapping(payload, where=where)
         schema.require_keys(
             payload,
@@ -119,14 +119,14 @@ class SkillCatalog:
             required=(
                 "task",
                 "subgraphs",
-                "subgraph_relations",
+                "cross_edges",
                 "_derived",
                 "nodes",
                 "edges",
                 "candidate_partial_order",
             ),
         )
-        skill_graph = SkillCompositionGraph.from_dict(
+        skill_graph = SkillGraph.from_dict(
             raw_layer_2, subgoal_graph=subgoal_graph
         )
         declared_candidate_order = schema.require_str_tuple(
@@ -172,7 +172,7 @@ class SkillCatalog:
             execution_plans=plans,
             subgoal_graph=subgoal_graph,
             skill_graph=skill_graph,
-            bound_terms=schema.require_mapping(
+            grounded_skills=schema.require_mapping(
                 layers[_LAYER_KEYS[2]], where="skill_catalog.layer_3"
             ),
             contracts=schema.require_sequence(
@@ -191,11 +191,11 @@ class SkillCatalog:
         return {
             "subgoals": len(self.subgoal_graph.subgoals),
             "skill_subgraphs": len(self.skill_graph.subgraphs),
-            "subgraph_relations": len(self.skill_graph.subgraph_relations),
+            "cross_edges": len(self.skill_graph.cross_edges),
             "skill_nodes": len(self.skill_graph.nodes),
             "skill_edges": len(self.skill_graph.edges),
             "planned_steps": len(nominal.order),
-            "bound_terms": len(self.bound_terms),
+            "grounded_skills": len(self.grounded_skills),
             "registered_contracts": len(self.contracts),
         }
 
@@ -221,7 +221,7 @@ class SkillCatalog:
                 _LAYER_KEYS[0]: layer_1,
                 _LAYER_KEYS[1]: layer_2,
                 _LAYER_KEYS[2]: _json_copy(
-                    self.bound_terms, "bound_terms"
+                    self.grounded_skills, "grounded_skills"
                 ),
                 _LAYER_KEYS[3]: list(
                     _json_copy(self.contracts, "contracts")
@@ -279,11 +279,11 @@ class SkillCatalog:
                     )
                 completed.add(node_id)
 
-    def _validate_bound_terms(self) -> None:
-        if set(self.bound_terms) != set(self.skill_graph.nodes):
-            raise ValueError("catalog must contain bound terms for every skill node")
-        for node_id, raw in self.bound_terms.items():
-            where = "bound_terms.{}".format(node_id)
+    def _validate_grounded_skills(self) -> None:
+        if set(self.grounded_skills) != set(self.skill_graph.nodes):
+            raise ValueError("catalog must contain one grounded skill per skill node")
+        for node_id, raw in self.grounded_skills.items():
+            where = "grounded_skills.{}".format(node_id)
             record = schema.require_mapping(raw, where=where)
             schema.require_keys(
                 record,
@@ -301,11 +301,11 @@ class SkillCatalog:
             )
             node = self.skill_graph.nodes[node_id]
             if schema.require_contract_id(record, "contract_id", where=where) != node.contract_id:
-                raise ValueError("catalog bound terms contract_id does not match its node")
+                raise ValueError("catalog grounded skill contract_id does not match its node")
             if schema.require_arguments(record, "arguments", where=where) != dict(
                 node.arguments
             ):
-                raise ValueError("catalog bound terms arguments do not match its node")
+                raise ValueError("catalog grounded skill arguments do not match its node")
             for key in (
                 "preconditions",
                 "effects",
@@ -357,7 +357,7 @@ class SkillCatalog:
                 schema.require_keys(
                     policy,
                     where=policy_where,
-                    required=("executor_type",),
+                    required=("kind",),
                     optional=(
                         "family",
                         "policy_type",
@@ -366,7 +366,7 @@ class SkillCatalog:
                         "checkpoint_sha256",
                     ),
                 )
-                schema.require_str(policy, "executor_type", where=policy_where)
+                schema.require_str(policy, "kind", where=policy_where)
                 for key in (
                     "family",
                     "policy_type",

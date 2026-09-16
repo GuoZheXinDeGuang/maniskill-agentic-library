@@ -7,8 +7,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Union
 
 from mshab.skills.model import (
-    ATOMIC_CONTRACT_CLASSES,
-    AtomicContract,
+    CONTRACT_CLASSES,
     CheckpointPolicy,
     Contract,
     ContractType,
@@ -57,14 +56,9 @@ class ContractLibrary:
                     if isinstance(contract_type, ContractType)
                     else str(contract_type)
                 )
-                if (
-                    not isinstance(contract, AtomicContract)
-                    or contract.contract_type_name != requested_type
-                ):
+                if contract.contract_type_name != requested_type:
                     continue
-            if target is not None and (
-                not isinstance(contract, AtomicContract) or contract.target != target
-            ):
+            if target is not None and contract.target != target:
                 continue
             result.append(contract)
         return sorted(result, key=lambda item: item.id)
@@ -88,7 +82,7 @@ class ContractLibrary:
 
         A leaf is registered even when just one artifact is present, allowing
         callers to report ``partial`` downloads instead of silently hiding them.
-        Multiple policy families are folded into one AtomicContract as
+        Multiple policy families are folded into one Contract as
         interchangeable policies.
         """
 
@@ -115,13 +109,11 @@ class ContractLibrary:
             contract_id = "mshab.{}.{}.{}".format(task, contract_type.value, target)
             existing = library._contracts.get(contract_id)
             if existing is None:
-                contract_class = ATOMIC_CONTRACT_CLASSES[contract_type]
+                contract_class = CONTRACT_CLASSES[contract_type]
                 contract = contract_class(task=task, target=target)
                 library.register(contract)
-            elif isinstance(existing, AtomicContract):
-                contract = existing
             else:
-                raise TypeError("{} is not atomic".format(contract_id))
+                contract = existing
 
             policy_type = _policy_type(family, target)
             contract.add_policy(

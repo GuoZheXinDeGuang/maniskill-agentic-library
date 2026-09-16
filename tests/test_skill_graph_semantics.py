@@ -19,14 +19,14 @@ from mshab.skills import (
     SkillSubgraphExtension,
     NoViableCandidate,
     SchemaError,
-    SkillCompositionGraph,
+    SkillGraph,
     SkillEdge,
     SkillGraphPatch,
     ContractLibrary,
     SkillNode,
     SkillPlanner,
     SkillRelation,
-    SkillSubgraphRelation,
+    CrossSubgraphEdge,
     build_set_table_graph,
 )
 
@@ -44,7 +44,7 @@ def _tiny_graph():
     subgoals.add_subgoal(SubGoal("retrieved", "holding(024_bowl)"))
     subgoals.add_subgoal(SubGoal("placed", "at(024_bowl,table)"))
     subgoals.add_dependency("retrieved", "placed")
-    graph = SkillCompositionGraph("set_table", subgoal_graph=subgoals)
+    graph = SkillGraph("set_table", subgoal_graph=subgoals)
 
     retrieved = SkillSubgraph("retrieved", "set_table")
     retrieved.add_node(_pick("pick_primary", "024_bowl", "retrieved"))
@@ -175,7 +175,7 @@ class ExecutionPlanTests(TestCase):
         subgoals = SubGoalGraph("two otherwise independent outcomes")
         subgoals.add_subgoal(SubGoal("a", "a_done()"))
         subgoals.add_subgoal(SubGoal("b", "b_done()"))
-        graph = SkillCompositionGraph("set_table", subgoal_graph=subgoals)
+        graph = SkillGraph("set_table", subgoal_graph=subgoals)
 
         for subgoal_id in ("a", "b"):
             subgraph = SkillSubgraph(subgoal_id, "set_table")
@@ -301,8 +301,8 @@ class PatchAtomicityTests(TestCase):
             subgoals=(SubGoal("inspected", "inspected(x)"),),
             subgoal_dependencies=(SubGoalDependency("placed", "inspected"),),
             skill_subgraphs=(stranger,),
-            subgraph_relations=(
-                SkillSubgraphRelation("placed", "inspected", None, "does_not_exist"),
+            cross_edges=(
+                CrossSubgraphEdge("placed", "inspected", None, "does_not_exist"),
             ),
         )
 
@@ -394,7 +394,7 @@ class PatchSchemaTests(TestCase):
     def test_set_table_catalog_subgraphs_round_trip(self):
         _, graph = build_set_table_graph()
 
-        restored = SkillCompositionGraph.from_dict(
+        restored = SkillGraph.from_dict(
             json.loads(json.dumps(graph.as_dict()))
         )
 
@@ -406,7 +406,7 @@ class PatchSchemaTests(TestCase):
             "unknown goal key": {"subgoals": [{"id": "g", "predicate": "p()", "x": 1}]},
             "bad identifier": {"subgoals": [{"id": "../etc", "predicate": "p()"}]},
             "unknown relation": {
-                "subgraph_relations": [
+                "cross_edges": [
                     {"source_subgoal": "a", "target_subgoal": "b", "relation": "teleports"}
                 ]
             },

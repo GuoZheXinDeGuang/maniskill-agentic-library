@@ -15,9 +15,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
 from mshab.skills import (
-    AtomicContract,
     CheckpointPolicy,
-    SkillCatalog,
+    LibraryCatalog,
     SkillPlanner,
     build_set_table_stack,
 )
@@ -39,14 +38,14 @@ def parse_args():
     return parser.parse_args()
 
 
-def terms_dict(terms):
+def predicates_dict(grounded):
     return {
-        "preconditions": list(terms.preconditions),
-        "effects": list(terms.effects),
-        "invariants": list(terms.invariants),
-        "verification": list(terms.verification),
-        "failure_modes": list(terms.failure_modes),
-        "deletes": list(terms.deletes),
+        "preconditions": list(grounded.preconditions),
+        "effects": list(grounded.effects),
+        "invariants": list(grounded.invariants),
+        "verification": list(grounded.verification),
+        "failure_modes": list(grounded.failure_modes),
+        "deletes": list(grounded.deletes),
     }
 
 
@@ -58,7 +57,7 @@ def relative_path(path, root):
 
 
 def graph_document(stack, checkpoint_root):
-    bound_terms = stack.bound_terms
+    grounded_skills = stack.grounded_skills
 
     planner = SkillPlanner(stack.subgoal_graph, stack.skill_graph)
     nominal = planner.plan()
@@ -74,19 +73,17 @@ def graph_document(stack, checkpoint_root):
         node_id: {
             "contract_id": node.contract_id,
             "arguments": dict(node.arguments),
-            **terms_dict(bound_terms[node_id]),
+            **predicates_dict(grounded_skills[node_id]),
         }
         for node_id, node in sorted(stack.skill_graph.nodes.items())
     }
 
     layer_4 = []
     for contract in stack.library.find(task="set_table"):
-        if not isinstance(contract, AtomicContract):
-            continue
         policies = {}
         for key, policy in sorted(contract.policies.items()):
             record = {
-                "executor_type": policy.executor_type.value,
+                "kind": policy.kind.value,
             }
             if isinstance(policy, CheckpointPolicy):
                 record.update(
@@ -113,7 +110,7 @@ def graph_document(stack, checkpoint_root):
             }
         )
 
-    return SkillCatalog(
+    return LibraryCatalog(
         task="set_table",
         construction={
             "method": "manual",
@@ -143,7 +140,7 @@ def graph_document(stack, checkpoint_root):
         },
         subgoal_graph=stack.subgoal_graph,
         skill_graph=stack.skill_graph,
-        bound_terms=layer_3,
+        grounded_skills=layer_3,
         contracts=layer_4,
     ).as_dict()
 
@@ -330,12 +327,12 @@ def set_table_svg(document):
         )
     )
 
-    # Layer 3: built-in contract terms bound by the 20 graph nodes.
+    # Layer 3: the 20 graph nodes grounded to their contracts.
     parts.append(
         '<rect class="layer" x="24" y="980" width="1852" height="255" '
         'fill="#fffbeb" stroke="#eab308"/>'
     )
-    parts.append(text(950, 1020, "3. Bound Contract Terms", "title"))
+    parts.append(text(950, 1020, "3. Grounded Skills", "title"))
     parts.append(text(1815, 1018, "ENVIRONMENT-SPECIFIC", "subtitle", "end"))
     contract_specs = [
         ("Navigate", "pre: present(goal)", "effect: reachable(goal)"),
@@ -374,7 +371,7 @@ def set_table_svg(document):
         y = 1330 + row * 70
         label = contract["id"].replace("mshab.set_table.", "")
         policy = contract["policies"].get("rl", {})
-        implementation = "rl · " + policy.get("executor_type", "checkpoint")
+        implementation = "rl · " + policy.get("kind", "checkpoint")
         parts.extend(
             node(x, y, label, implementation, "#ffffff", width=265, height=56)
         )

@@ -18,14 +18,14 @@ from mshab.skills import (
     MSHabEnvironmentAdapter,
     PickContract,
     SkillGraphPatch,
-    SkillCompositionGraph,
-    SkillCatalog,
+    SkillGraph,
+    LibraryCatalog,
     SkillGrounder,
     ContractLibrary,
     SkillNode,
     SkillRelation,
     SkillRuntime,
-    SkillSubgraphRelation,
+    CrossSubgraphEdge,
     ContractType,
     YourContract,
     build_set_table_apple_graph,
@@ -39,14 +39,14 @@ from scripts.generate_set_table_skill_graph import graph_document, set_table_svg
 class SkillModelTests(TestCase):
     def test_specialized_atomic_skill_binds_target_and_contract(self):
         contract = PickContract(task="set_table", target="013_apple")
-        invocation = contract.bind({})
+        grounded = contract.bind({})
 
-        self.assertEqual(invocation.arguments, {"object": "013_apple"})
+        self.assertEqual(grounded.arguments, {"object": "013_apple"})
         self.assertEqual(
-            invocation.terms.preconditions,
+            grounded.preconditions,
             ("reachable(013_apple)", "gripper_empty()"),
         )
-        self.assertEqual(invocation.terms.effects, ("holding(013_apple)",))
+        self.assertEqual(grounded.effects, ("holding(013_apple)",))
 
         with self.assertRaisesRegex(ValueError, "specialized"):
             contract.bind({"object": "024_bowl"})
@@ -105,7 +105,7 @@ class SkillModelTests(TestCase):
             subgoals.add_subgoal(SubGoal("retrieved", "holding(013_apple)"))
             subgoals.add_dependency("reachable", "retrieved")
 
-            graph = SkillCompositionGraph("set_table", subgoal_graph=subgoals)
+            graph = SkillGraph("set_table", subgoal_graph=subgoals)
             reachable_subgraph = SkillSubgraph("reachable", "set_table")
             reachable_subgraph.add_node(
                 SkillNode(
@@ -185,7 +185,7 @@ class SkillModelTests(TestCase):
 
             grounder = SkillGrounder(library)
             self.assertEqual(
-                grounder.ground(graph.nodes["pick"], "rl").terms.effects,
+                grounder.ground(graph.nodes["pick"], "rl").effects,
                 ("holding(013_apple)",),
             )
 
@@ -237,9 +237,9 @@ class SkillModelTests(TestCase):
         # 24 internal edges + 7 cross-goal relations that expand to 11
         # concrete edges (a goal-level endpoint yields one per achiever).
         self.assertEqual(len(graph.edges), 35)
-        self.assertEqual(len(graph.subgraph_relations), 7)
+        self.assertEqual(len(graph.cross_edges), 7)
         self.assertEqual(
-            sum(len(item.edges(graph.subgraphs)) for item in graph.subgraph_relations),
+            sum(len(item.edges(graph.subgraphs)) for item in graph.cross_edges),
             11,
         )
         self.assertEqual(graph.uncovered_subgoals(), ())
@@ -282,24 +282,24 @@ class SkillModelTests(TestCase):
         )
         subgoals, graph = build_set_table_graph()
         layer_1 = document["layers"]["1_subgoal_graph"]
-        layer_2 = document["layers"]["2_skill_composition_graph"]
+        layer_2 = document["layers"]["2_skill_graph"]
 
         self.assertEqual(
             layer_1["execution_order"], list(subgoals.execution_order())
         )
         self.assertEqual(layer_2["subgraphs"], graph.as_dict()["subgraphs"])
         self.assertEqual(
-            layer_2["subgraph_relations"], graph.as_dict()["subgraph_relations"]
+            layer_2["cross_edges"], graph.as_dict()["cross_edges"]
         )
         self.assertNotIn("/home/", json.dumps(document))
-        restored = SkillCatalog.from_dict(document)
+        restored = LibraryCatalog.from_dict(document)
         self.assertEqual(restored.as_dict(), document)
         stale = json.loads(json.dumps(document))
-        stale["layers"]["2_skill_composition_graph"]["nodes"][0][
+        stale["layers"]["2_skill_graph"]["nodes"][0][
             "contract_id"
         ] = "mshab.set_table.pick.all"
         with self.assertRaisesRegex(ValueError, "derived nodes view is stale"):
-            SkillCatalog.from_dict(stale)
+            LibraryCatalog.from_dict(stale)
 
         svg_path = (
             repository_root
@@ -342,9 +342,9 @@ class SkillModelTests(TestCase):
 
             stack = build_set_table_starter(root)
 
-            self.assertEqual(len(stack.bound_terms), 10)
+            self.assertEqual(len(stack.grounded_skills), 10)
             self.assertEqual(
-                stack.bound_terms["place_object_specialized"].effects,
+                stack.grounded_skills["place_object_specialized"].effects,
                 ("at(013_apple,dining_table)", "gripper_empty()"),
             )
             self.assertEqual(len(stack.library.find(ready=True)), 7)
@@ -352,7 +352,7 @@ class SkillModelTests(TestCase):
     def test_graph_patch_can_place_a_new_skill_subgraph(self):
         subgoals = SubGoalGraph("Retrieve and inspect the apple")
         subgoals.add_subgoal(SubGoal("retrieved", "holding(013_apple)"))
-        graph = SkillCompositionGraph("set_table", subgoal_graph=subgoals)
+        graph = SkillGraph("set_table", subgoal_graph=subgoals)
         retrieved = SkillSubgraph("retrieved", "set_table")
         retrieved.add_node(
             SkillNode(
@@ -376,8 +376,8 @@ class SkillModelTests(TestCase):
             subgoals=(SubGoal("inspected", "inspected(013_apple)"),),
             subgoal_dependencies=(SubGoalDependency("retrieved", "inspected"),),
             skill_subgraphs=(inspected,),
-            subgraph_relations=(
-                SkillSubgraphRelation(
+            cross_edges=(
+                CrossSubgraphEdge(
                     "retrieved",
                     "inspected",
                     "retrieve_apple",
@@ -411,7 +411,7 @@ class SkillModelTests(TestCase):
         self.assertEqual(contract.contract_type, "your_contract")
         self.assertEqual(call.arguments, {"target": "013_apple"})
         self.assertEqual(
-            call.terms.effects, ("your_contract_done(013_apple)",)
+            call.effects, ("your_contract_done(013_apple)",)
         )
 
     def test_runtime_uses_environment_facts_and_verifies_contract(self):
@@ -432,11 +432,11 @@ class SkillModelTests(TestCase):
                 return {}, 1.0, False, False, {"facts": set(self.facts)}
 
         class FakeExecutor(PolicyExecutor):
-            def execute(self, invocation, policy, environment, monitor):
+            def execute(self, grounded, policy, environment, monitor):
                 snapshot = environment.step(
                     {
-                        "add_facts": set(invocation.terms.effects),
-                        "delete_facts": set(invocation.terms.deletes),
+                        "add_facts": set(grounded.effects),
+                        "delete_facts": set(grounded.deletes),
                     }
                 )
                 monitor(snapshot)
@@ -455,7 +455,7 @@ class SkillModelTests(TestCase):
             library = ContractLibrary((contract,))
             subgoals = SubGoalGraph("Retrieve the apple")
             subgoals.add_subgoal(SubGoal("retrieved", "holding(013_apple)"))
-            graph = SkillCompositionGraph("set_table", subgoals)
+            graph = SkillGraph("set_table", subgoals)
             subgraph = SkillSubgraph("retrieved", "set_table")
             subgraph.add_node(
                 SkillNode(

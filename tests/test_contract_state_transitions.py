@@ -1,9 +1,9 @@
-"""Contract terms as state transitions: what a contract asserts *and* what it retracts.
+"""Contracts as state transitions: what a contract asserts *and* what it retracts.
 
 Without delete effects the symbolic state is monotone, so a SetTable rollout
 ends with ``open(kitchen_counter)`` and ``closed(kitchen_counter)`` both true
 and the bowl still ``holding`` after it was placed.  These tests pin the
-transition semantics that ``BoundTerms.deletes``/``apply_to`` restore.
+transition semantics that ``GroundedSkill.deletes``/``apply_to`` restore.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from mshab.skills import (
     OpenContract,
     PickContract,
     PlaceContract,
-    ContractTerms,
+    Contract,
     ContractParameter,
     ParameterType,
     SkillPlanner,
@@ -39,10 +39,26 @@ def _set_table_library():
     return library
 
 
+def _probe(**predicates):
+    """A minimal generic contract for exercising predicate validation."""
+
+    return Contract(
+        "probe",
+        "set_table",
+        "all",
+        target_parameter="object",
+        parameters=(ContractParameter("object", ParameterType.ENTITY),),
+        preconditions=(),
+        env_id="Probe-v0",
+        max_episode_steps=1,
+        **predicates
+    )
+
+
 class DeleteEffectTests(TestCase):
     def test_open_and_close_retract_each_other(self):
-        opened = OpenContract("set_table", "fridge").bind({}).terms
-        closed = CloseContract("set_table", "fridge").bind({}).terms
+        opened = OpenContract("set_table", "fridge").bind({})
+        closed = CloseContract("set_table", "fridge").bind({})
 
         after_open = opened.apply_to({"closed(fridge)", "reachable(fridge)"})
         after_close = closed.apply_to(after_open)
@@ -56,7 +72,6 @@ class DeleteEffectTests(TestCase):
         contract = (
             PlaceContract("set_table", "024_bowl")
             .bind({"destination": "dining_table"})
-            .terms
         )
 
         after = contract.apply_to({"holding(024_bowl)", "reachable(dining_table)"})
@@ -66,7 +81,7 @@ class DeleteEffectTests(TestCase):
         self.assertNotIn("holding(024_bowl)", after)
 
     def test_pick_consumes_the_empty_gripper(self):
-        contract = PickContract("set_table", "024_bowl").bind({}).terms
+        contract = PickContract("set_table", "024_bowl").bind({})
 
         after = contract.apply_to({"gripper_empty()", "reachable(024_bowl)"})
 
@@ -75,29 +90,19 @@ class DeleteEffectTests(TestCase):
 
     def test_a_predicate_cannot_be_both_asserted_and_retracted(self):
         with self.assertRaisesRegex(ValueError, "asserted and retracted"):
-            ContractTerms(
-                parameters=(ContractParameter("object", ParameterType.ENTITY),),
-                preconditions=(),
-                effects=("holding({object})",),
-                deletes=("holding({object})",),
-            )
+            _probe(effects=("holding({object})",), deletes=("holding({object})",))
 
     def test_a_skill_cannot_retract_its_own_invariant(self):
         with self.assertRaisesRegex(ValueError, "retract its own invariants"):
-            ContractTerms(
-                parameters=(ContractParameter("object", ParameterType.ENTITY),),
-                preconditions=(),
+            _probe(
                 effects=("holding({object})",),
                 invariants=("collision_safe()",),
                 deletes=("collision_safe()",),
             )
 
     def test_grounding_cannot_create_an_assert_delete_conflict(self):
-        contract = ContractTerms(
-            parameters=(ContractParameter("object", ParameterType.ENTITY),),
-            preconditions=(),
-            effects=("holding({object})",),
-            deletes=("holding(013_apple)",),
+        contract = _probe(
+            effects=("holding({object})",), deletes=("holding(013_apple)",)
         )
 
         with self.assertRaisesRegex(ValueError, "grounded predicates"):
@@ -131,16 +136,16 @@ class SetTableStateTransitionTests(TestCase):
         at_goal_completion = {}
         for node_id in plan.order:
             node = graph.nodes[node_id]
-            terms = library.get(node.contract_id).bind(node.arguments).terms
-            missing = [item for item in terms.preconditions if item not in facts]
+            grounded = library.get(node.contract_id).bind(node.arguments)
+            missing = [item for item in grounded.preconditions if item not in facts]
             self.assertEqual(
                 missing, [], "{} cannot start: missing {}".format(node_id, missing)
             )
             self.assertTrue(
-                set(terms.invariants).issubset(facts),
+                set(grounded.invariants).issubset(facts),
                 "{} invariants do not hold".format(node_id),
             )
-            facts = set(terms.apply_to(facts))
+            facts = set(grounded.apply_to(facts))
             for subgoal_id in node.achieves:
                 at_goal_completion[subgoal_id] = frozenset(facts)
         return subgoals, facts, at_goal_completion

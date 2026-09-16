@@ -1,7 +1,7 @@
 """Selecting one execution path out of the candidate graph.
 
 The Layer-2 graph is a *candidate* structure: a sub-goal subgraph may hold several
-achievers, and ``SkillCompositionGraph.execution_order()`` is therefore only a
+achievers, and ``SkillGraph.execution_order()`` is therefore only a
 partial order over candidates -- never a plan.  Something has to choose.  That
 chooser is a deterministic policy here and a trained decision model later; both
 answer the same question, one node at a time:
@@ -23,7 +23,7 @@ from mshab.skills import schema
 from mshab.skills.graph import (
     SubGoalGraph,
     SkillSubgraph,
-    SkillCompositionGraph,
+    SkillGraph,
     SkillNode,
     SkillRelation,
 )
@@ -82,7 +82,7 @@ class SkillPlan:
 
 
 class SkillPlanner:
-    """Deterministic reference decision model over a candidate skill-composition graph.
+    """Deterministic reference decision model over a candidate skill graph.
 
     Candidate choice is read from the graph rather than hard-coded: within a
     sub-goal subgraph the achiever that is the *source* of a ``FALLBACK_TO`` chain
@@ -93,7 +93,7 @@ class SkillPlanner:
     def __init__(
         self,
         subgoals: SubGoalGraph,
-        graph: SkillCompositionGraph,
+        graph: SkillGraph,
     ) -> None:
         if graph.subgoal_graph is not None and graph.subgoal_graph is not subgoals:
             raise ValueError("graph is bound to a different sub-goal graph")

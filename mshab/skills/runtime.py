@@ -8,18 +8,16 @@ from types import MappingProxyType
 from typing import Any, Callable, Mapping, Optional, Tuple
 
 from mshab.skills.environment import EnvironmentAdapter, EnvironmentSnapshot
-from mshab.skills.graph import SkillCompositionGraph, SkillNode
+from mshab.skills.graph import SkillGraph, SkillNode
 from mshab.skills.library import ContractLibrary
 from mshab.skills.model import (
-    AtomicContract,
-    BoundTerms,
+    GroundedSkill,
     Policy,
-    SkillInvocation,
 )
 
 
 class ContractViolation(RuntimeError):
-    """Raised when an invocation cannot safely start or continue."""
+    """Raised when a grounded skill cannot safely start or continue."""
 
 
 @dataclass(frozen=True)
@@ -54,7 +52,7 @@ class PolicyExecutor(ABC):
     @abstractmethod
     def execute(
         self,
-        invocation: SkillInvocation,
+        grounded: GroundedSkill,
         policy: Policy,
         environment: EnvironmentAdapter,
         monitor: ContractMonitor,
@@ -66,7 +64,7 @@ class PolicyExecutor(ABC):
 class SkillExecutionResult:
     """Auditable outcome combining policy status with contract evidence."""
 
-    invocation: SkillInvocation
+    grounded: GroundedSkill
     policy_key: str
     environment_id: str
     before: EnvironmentSnapshot
@@ -101,23 +99,23 @@ class SkillExecutionResult:
 
 
 class SkillGrounder:
-    """Layer-2 skill node -> Layer-3 grounded contract boundary."""
+    """Layer-2 skill node -> Layer-3 GroundedSkill boundary."""
 
     def __init__(self, library: ContractLibrary) -> None:
         self.library = library
 
     def ground(
         self, node: SkillNode, policy_key: Optional[str] = None
-    ) -> SkillInvocation:
+    ) -> GroundedSkill:
         contract = self.library.get(node.contract_id)
         return contract.bind(node.arguments, policy_key=policy_key)
 
-    def bound_terms(
-        self, graph: SkillCompositionGraph
-    ) -> Mapping[str, BoundTerms]:
+    def grounded_skills(
+        self, graph: SkillGraph
+    ) -> Mapping[str, GroundedSkill]:
         return MappingProxyType(
             {
-                node_id: self.ground(node).terms
+                node_id: self.ground(node)
                 for node_id, node in graph.nodes.items()
             }
         )
@@ -137,7 +135,7 @@ class SkillRuntime:
 
     def ready_nodes(
         self,
-        graph: SkillCompositionGraph,
+        graph: SkillGraph,
         completed: Tuple[str, ...] = (),
         policy_keys: Optional[Mapping[str, str]] = None,
     ) -> Tuple[SkillNode, ...]:
@@ -148,26 +146,26 @@ class SkillRuntime:
         ready = []
         for node in graph.ready_nodes(completed):
             try:
-                invocation = self.grounder.ground(node, policy_keys.get(node.id))
+                grounded = self.grounder.ground(node, policy_keys.get(node.id))
             except (KeyError, ValueError):
                 # An unregistered or unbindable contract makes the node
                 # unexecutable, not the whole schedule unanswerable.
                 continue
-            contract = invocation.contract
-            if not isinstance(contract, AtomicContract) or not contract.ready:
+            contract = grounded.contract
+            if not contract.ready:
                 continue
             if not self.environment.supports_contract_env(contract.env_id):
                 continue
-            if not invocation.terms.can_start(facts):
+            if not grounded.can_start(facts):
                 continue
-            if not set(invocation.terms.invariants).issubset(facts):
+            if not set(grounded.invariants).issubset(facts):
                 continue
             ready.append(node)
         return tuple(ready)
 
     def execute_node(
         self,
-        graph: SkillCompositionGraph,
+        graph: SkillGraph,
         node_id: str,
         executor: PolicyExecutor,
         policy_key: Optional[str] = None,
@@ -176,31 +174,29 @@ class SkillRuntime:
             node = graph.nodes[node_id]
         except KeyError as exc:
             raise KeyError("unknown skill node {!r}".format(node_id)) from exc
-        invocation = self.grounder.ground(node, policy_key)
-        contract = invocation.contract
-        if not isinstance(contract, AtomicContract):
-            raise TypeError("runtime can execute only AtomicContract instances")
+        grounded = self.grounder.ground(node, policy_key)
+        contract = grounded.contract
         if not self.environment.supports_contract_env(contract.env_id):
             raise RuntimeError(
                 "environment {!r} is not compatible with contract environment {!r}".format(
                     self.environment.description.environment_id, contract.env_id
                 )
             )
-        policy = contract.policy(invocation.policy_key)
+        policy = contract.policy(grounded.policy_key)
         before = self.environment.snapshot()
-        self._admit(invocation.terms, before)
+        self._admit(grounded, before)
 
         def monitor(snapshot: EnvironmentSnapshot) -> None:
-            missing = _missing(invocation.terms.invariants, snapshot.facts)
+            missing = _missing(grounded.invariants, snapshot.facts)
             if missing:
                 raise ContractViolation(
                     "invariants violated during {}: {}".format(
-                        invocation.id, list(missing)
+                        grounded.id, list(missing)
                     )
                 )
 
         execution = executor.execute(
-            invocation=invocation,
+            grounded=grounded,
             policy=policy,
             environment=self.environment,
             monitor=monitor,
@@ -210,28 +206,28 @@ class SkillRuntime:
         # result, not raised: a failed node must stay auditable so the planner
         # can route to its fallback instead of unwinding the whole rollout.
         return SkillExecutionResult(
-            invocation=invocation,
+            grounded=grounded,
             policy_key=policy.key,
             environment_id=self.environment.description.environment_id,
             before=before,
             after=after,
             policy_execution=execution,
-            missing_effects=_missing(invocation.terms.effects, after.facts),
+            missing_effects=_missing(grounded.effects, after.facts),
             missing_verification=_missing(
-                invocation.terms.verification, after.facts
+                grounded.verification, after.facts
             ),
             unretracted_deletes=tuple(
                 predicate
-                for predicate in invocation.terms.deletes
+                for predicate in grounded.deletes
                 if predicate in after.facts
             ),
-            violated_invariants=_missing(invocation.terms.invariants, after.facts),
+            violated_invariants=_missing(grounded.invariants, after.facts),
         )
 
     @staticmethod
-    def _admit(contract: BoundTerms, snapshot: EnvironmentSnapshot) -> None:
-        missing_preconditions = _missing(contract.preconditions, snapshot.facts)
-        missing_invariants = _missing(contract.invariants, snapshot.facts)
+    def _admit(grounded: GroundedSkill, snapshot: EnvironmentSnapshot) -> None:
+        missing_preconditions = _missing(grounded.preconditions, snapshot.facts)
+        missing_invariants = _missing(grounded.invariants, snapshot.facts)
         if missing_preconditions or missing_invariants:
             raise ContractViolation(
                 "contract cannot start: missing_preconditions={}, "

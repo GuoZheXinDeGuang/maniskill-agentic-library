@@ -13,7 +13,7 @@ import json
 from pathlib import Path
 from unittest import TestCase
 
-from mshab.skills import SkillCatalog, SkillPlanner, build_set_table_graph
+from mshab.skills import LibraryCatalog, SkillPlanner, build_set_table_graph
 from scripts.build_set_table_graph_plan import build_plan_data
 
 
@@ -175,7 +175,7 @@ class SetTableGraphDecisionTests(TestCase):
         )
 
     def test_catalog_plan_is_grounded_into_executable_mshab_plan_data(self):
-        catalog = SkillCatalog.from_dict(json.loads(CATALOG.read_text()))
+        catalog = LibraryCatalog.from_dict(json.loads(CATALOG.read_text()))
         subtasks = []
         for index, contract_type in enumerate(self.EXPECTED_SKILL_TYPES):
             item = {"type": contract_type}

@@ -12,10 +12,10 @@ from mshab.skills.graph import (
     SubGoalGraph,
     SkillSubgraph,
     SubGoalDependency,
-    SkillCompositionGraph,
+    SkillGraph,
     SkillNode,
     SkillRelation,
-    SkillSubgraphRelation,
+    CrossSubgraphEdge,
 )
 from mshab.skills.library import ContractLibrary
 from mshab.skills.model import (
@@ -65,7 +65,7 @@ class SetTableAppleGraphBuilder(SkillGraphBuilder):
             subgoals=segment.subgoals,
             subgoal_dependencies=segment.dependencies,
             skill_subgraphs=segment.subgraphs,
-            subgraph_relations=segment.relations,
+            cross_edges=segment.relations,
         )
 
 
@@ -118,7 +118,7 @@ class SetTableGraphBuilder(SkillGraphBuilder):
                 dependencies.append(SubGoalDependency(previous_close_subgoal, open_subgoal))
             if previous_close_subgoal is not None:
                 relations.append(
-                    SkillSubgraphRelation(
+                    CrossSubgraphEdge(
                         previous_close_subgoal,
                         open_subgoal,
                         None,
@@ -132,7 +132,7 @@ class SetTableGraphBuilder(SkillGraphBuilder):
             subgoals=tuple(subgoals),
             subgoal_dependencies=tuple(dependencies),
             skill_subgraphs=tuple(subgraphs),
-            subgraph_relations=tuple(relations),
+            cross_edges=tuple(relations),
         )
 
 
@@ -273,21 +273,21 @@ def _build_segment_subgraphs(
     # generic fallback a dead end: recovering through it would never enable the
     # next sub-goal.
     relations = (
-        SkillSubgraphRelation(
+        CrossSubgraphEdge(
             open_subgoal,
             retrieved_subgoal,
             None,
             navigate_object,
             SkillRelation.ENABLES,
         ),
-        SkillSubgraphRelation(
+        CrossSubgraphEdge(
             retrieved_subgoal,
             placed_subgoal,
             None,
             navigate_destination,
             SkillRelation.ENABLES,
         ),
-        SkillSubgraphRelation(
+        CrossSubgraphEdge(
             placed_subgoal,
             close_subgoal,
             None,
@@ -363,15 +363,15 @@ class StarterSkillStack:
     """Concrete handles for all four layers of the starter example."""
 
     subgoal_graph: SubGoalGraph
-    skill_graph: SkillCompositionGraph
+    skill_graph: SkillGraph
     library: ContractLibrary
     grounder: SkillGrounder
 
     @property
-    def bound_terms(self):
-        """Layer-3 bound contract terms keyed by Layer-2 node id."""
+    def grounded_skills(self):
+        """Layer-3 grounded skills keyed by Layer-2 node id."""
 
-        return self.grounder.bound_terms(self.skill_graph)
+        return self.grounder.grounded_skills(self.skill_graph)
 
 
 def build_set_table_apple_graph(
@@ -399,7 +399,7 @@ def build_set_table_starter(checkpoint_root: Path, **context: Any) -> StarterSki
     )
     grounder = SkillGrounder(library)
     # Eagerly bind every Layer-3 contract so an invalid manual graph fails now.
-    grounder.bound_terms(graph)
+    grounder.grounded_skills(graph)
     return StarterSkillStack(subgoals, graph, library, grounder)
 
 
@@ -432,5 +432,5 @@ def build_set_table_stack(
         library=library,
     )
     grounder = SkillGrounder(library)
-    grounder.bound_terms(graph)
+    grounder.grounded_skills(graph)
     return StarterSkillStack(subgoals, graph, library, grounder)

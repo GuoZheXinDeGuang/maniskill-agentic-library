@@ -18,7 +18,7 @@ from typing import Any, Dict, Mapping
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-from mshab.skills import SkillCatalog
+from mshab.skills import LibraryCatalog
 
 
 SUBTASK_HORIZONS = {
@@ -78,7 +78,7 @@ def _validate_grounding(
 
 
 def build_plan_data(
-    catalog: SkillCatalog,
+    catalog: LibraryCatalog,
     source: Mapping[str, Any],
     *,
     execution_plan: str,
@@ -116,7 +116,7 @@ def build_plan_data(
         try:
             contract_record = contracts_by_id[node.contract_id]
         except KeyError as exc:
-            raise KeyError("catalog has no atomic record for {}".format(node.contract_id)) from exc
+            raise KeyError("catalog has no contract record for {}".format(node.contract_id)) from exc
         decisions.append(_validate_grounding(index, node, contract_record, subtask))
         uses_all_object_policy |= (
             contract_record["contract_type"] in ("pick", "place")
@@ -154,7 +154,7 @@ def main() -> None:
     parser.add_argument("--source-plan-index", type=int, default=0)
     args = parser.parse_args()
 
-    catalog = SkillCatalog.from_dict(json.loads(args.catalog.read_text()))
+    catalog = LibraryCatalog.from_dict(json.loads(args.catalog.read_text()))
     source = json.loads(args.source.read_text())
     output = build_plan_data(
         catalog,

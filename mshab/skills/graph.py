@@ -1,4 +1,4 @@
-"""Task-conditioned sub-goal and skill-composition graphs.
+"""Task-conditioned sub-goal and skill graphs.
 
 Vocabulary: the *goal* is the task text.  Layer 1 decomposes it into
 *sub-goals*.  Layer 2 gives every sub-goal a subgraph of *skill nodes*; a
@@ -11,7 +11,7 @@ requirements, and enabling order are relations between skill nodes.
 
 Relations carry the *semantic/logical* ordering of a task (heating food comes
 before serving it).  Whether a node can physically start in the current
-world state is decided later by its contract terms, not by the graph.
+world state is decided later by its contract, not by the graph.
 """
 
 from __future__ import annotations
@@ -36,10 +36,10 @@ from mshab.skills import schema
 
 
 class SkillRelation(str, Enum):
-    """Closed vocabulary for edges in a candidate skill-composition graph.
+    """Closed vocabulary for edges in a candidate skill graph.
 
     Edges express semantic or logical ordering between skill nodes.  They do
-    not restate physical preconditions; those live in contract terms.
+    not restate physical preconditions; those live on the contract.
     """
 
     IS_A = "is_a"
@@ -291,7 +291,7 @@ class SkillEdge:
     """One typed relation between two skill nodes.
 
     Edges carry semantic/logical ordering only.  Physical readiness of a node
-    in the current world state is the job of its contract terms.
+    in the current world state is the job of its contract.
 
     Direction semantics:
 
@@ -349,7 +349,7 @@ class SkillSubgraph:
         self._sealed = False
 
     def __setattr__(self, name: str, value: Any) -> None:
-        """Freeze the whole object once a composition graph has registered it.
+        """Freeze the whole object once a skill graph has registered it.
 
         ``_seal`` used to guard only ``add_node``/``relate``, which left the
         aggregate handing out a live object whose ``subgoal_id`` could be
@@ -445,7 +445,7 @@ class SkillSubgraph:
         self.execution_order()
 
     def _seal(self) -> None:
-        """Transfer structural ownership to a SkillCompositionGraph."""
+        """Transfer structural ownership to a SkillGraph."""
 
         self.validate()
         object.__setattr__(self, "_sealed", True)
@@ -518,8 +518,8 @@ class SkillSubgraph:
 
 
 @dataclass(frozen=True)
-class SkillSubgraphRelation:
-    """A typed skill relation crossing two sub-goal subgraphs.
+class CrossSubgraphEdge:
+    """A typed edge crossing two sub-goal subgraphs.
 
     An endpoint is either a specific node id or ``None``, which means *any
     achiever of that sub-goal*.  Sub-goal-level endpoints are what make alternative
@@ -537,19 +537,19 @@ class SkillSubgraphRelation:
     def __post_init__(self) -> None:
         object.__setattr__(self, "relation", _require_relation(self.relation))
         if not self.source_subgoal or not self.target_subgoal:
-            raise ValueError("subgraph relation subgoals must be non-empty")
+            raise ValueError("cross-subgraph edge subgoals must be non-empty")
         if self.source_subgoal == self.target_subgoal:
-            raise ValueError("subgraph relation must connect two distinct subgoals")
+            raise ValueError("cross-subgraph edge must connect two distinct subgoals")
         for name in ("source_node", "target_node"):
             value = getattr(self, name)
             if value is not None and not value:
-                raise ValueError("subgraph relation {} must be non-empty".format(name))
+                raise ValueError("cross-subgraph edge {} must be non-empty".format(name))
         if (
             self.source_node is not None
             and self.target_node is not None
             and self.source_node == self.target_node
         ):
-            raise ValueError("subgraph relation needs two distinct node ids")
+            raise ValueError("cross-subgraph edge needs two distinct node ids")
         if self.is_subgoal_level and self.relation not in _CAUSAL_RELATIONS:
             raise ValueError(
                 "a sub-goal-level endpoint is only meaningful for {}; got {}".format(
@@ -610,8 +610,8 @@ class SkillSubgraphRelation:
         return achievers
 
     @classmethod
-    def from_dict(cls, payload: Mapping[str, Any]) -> "SkillSubgraphRelation":
-        where = "subgraph_relation"
+    def from_dict(cls, payload: Mapping[str, Any]) -> "CrossSubgraphEdge":
+        where = "cross_subgraph_edge"
         payload = schema.require_mapping(payload, where=where)
         schema.require_keys(
             payload,
@@ -639,12 +639,12 @@ class SkillSubgraphRelation:
         }
 
 
-class SkillCompositionGraph:
+class SkillGraph:
     """Layer 2: one sub-goal-owned subgraph per Layer-1 sub-goal.
 
-    The composition graph is an aggregate root.  Each
+    The skill graph is an aggregate root.  Each
     :class:`SkillSubgraph` owns its nodes and internal relations, while this
-    object owns relations crossing sub-goal boundaries.  ``nodes`` and ``edges``
+    object owns the edges crossing sub-goal boundaries.  ``nodes`` and ``edges``
     expose read-only flattened views for planners and legacy query code.
     """
 
@@ -654,19 +654,19 @@ class SkillCompositionGraph:
         subgoal_graph: Optional[SubGoalGraph] = None,
     ) -> None:
         if not task:
-            raise ValueError("composition graph task must be non-empty")
+            raise ValueError("skill graph task must be non-empty")
         self.task = task
         self.subgoal_graph = subgoal_graph
         self._subgraphs: Dict[str, SkillSubgraph] = {}
-        self._subgraph_relations: List[SkillSubgraphRelation] = []
+        self._cross_edges: List[CrossSubgraphEdge] = []
 
     @property
     def subgraphs(self) -> Mapping[str, SkillSubgraph]:
         return dict(self._subgraphs)
 
     @property
-    def subgraph_relations(self) -> Tuple[SkillSubgraphRelation, ...]:
-        return tuple(self._subgraph_relations)
+    def cross_edges(self) -> Tuple[CrossSubgraphEdge, ...]:
+        return tuple(self._cross_edges)
 
     @property
     def nodes(self) -> Mapping[str, SkillNode]:
@@ -691,14 +691,14 @@ class SkillCompositionGraph:
         )
         cross = tuple(
             edge
-            for item in self._subgraph_relations
+            for item in self._cross_edges
             for edge in item.edges(self._subgraphs)
         )
         return internal + cross
 
     def add_subgraph(self, subgraph: SkillSubgraph) -> None:
         if subgraph.task != self.task:
-            raise ValueError("subgraph task must match composition graph task")
+            raise ValueError("subgraph task must match skill graph task")
         if subgraph.subgoal_id in self._subgraphs:
             raise ValueError(
                 "duplicate sub-goal skill subgraph {!r}".format(subgraph.subgoal_id)
@@ -733,7 +733,7 @@ class SkillCompositionGraph:
         if subgraph is current:
             raise ValueError("replacement must be a distinct subgraph object")
         if subgraph.task != self.task:
-            raise ValueError("subgraph task must match composition graph task")
+            raise ValueError("subgraph task must match skill graph task")
         foreign = {
             node_id
             for other_id, other in self._subgraphs.items()
@@ -798,24 +798,24 @@ class SkillCompositionGraph:
 
         self._require_subgraph(source_subgoal)
         self._require_subgraph(target_subgoal)
-        item = SkillSubgraphRelation(
+        item = CrossSubgraphEdge(
             source_subgoal, target_subgoal, source_node, target_node, relation
         )
         # Resolving here verifies both endpoint owners before anything is stored.
         new_edges = item.edges(self._subgraphs)
         existing = [
             edge
-            for previous in self._subgraph_relations
+            for previous in self._cross_edges
             for edge in previous.edges(self._subgraphs)
         ]
         for edge in new_edges:
             _check_duplicate_edge(existing, edge)
             existing.append(edge)
-        self._subgraph_relations.append(item)
+        self._cross_edges.append(item)
         try:
             self.execution_order()  # reject causal cycles at insertion time
         except ValueError:
-            self._subgraph_relations.pop()
+            self._cross_edges.pop()
             raise
 
     def owner_of(self, node_id: str) -> str:
@@ -868,7 +868,7 @@ class SkillCompositionGraph:
         """Candidate skill nodes that achieve one sub-goal."""
 
         if self.subgoal_graph is None:
-            raise RuntimeError("composition graph has no sub-goal graph")
+            raise RuntimeError("skill graph has no sub-goal graph")
         if subgoal_id not in self.subgoal_graph.subgoals:
             raise KeyError("unknown sub-goal {!r}".format(subgoal_id))
         subgraph = self._subgraphs.get(subgoal_id)
@@ -901,7 +901,7 @@ class SkillCompositionGraph:
                 group = _causal_requirement(edge.source, edge.target, edge.relation, node_id)
                 if group is not None:
                     groups.append(frozenset(group))
-        for item in self._subgraph_relations:
+        for item in self._cross_edges:
             if item.relation not in _CAUSAL_RELATIONS:
                 continue
             sources, targets = self._relation_sides(item)
@@ -947,7 +947,7 @@ class SkillCompositionGraph:
         return tuple(sorted(ready, key=lambda item: item.id))
 
     def _relation_sides(
-        self, item: SkillSubgraphRelation
+        self, item: CrossSubgraphEdge
     ) -> Tuple[FrozenSet[str], FrozenSet[str]]:
         pairs = item.endpoints(self._subgraphs)
         return (
@@ -957,7 +957,7 @@ class SkillCompositionGraph:
 
     def execution_order(self) -> Tuple[str, ...]:
         return _topological_order(
-            self.nodes, _causal_pairs(self.edges), "skill composition"
+            self.nodes, _causal_pairs(self.edges), "skill graph"
         )
 
     def validate(self) -> None:
@@ -974,7 +974,7 @@ class SkillCompositionGraph:
             raise ValueError("sub-goals without an achiever {}".format(uncovered))
         connected = {
             (item.source_subgoal, item.target_subgoal)
-            for item in self._subgraph_relations
+            for item in self._cross_edges
             if item.relation == SkillRelation.ENABLES
         }
         missing = sorted(
@@ -991,7 +991,7 @@ class SkillCompositionGraph:
         """Every cross-sub-goal relation still resolves to owned, existing nodes."""
 
         seen: List[SkillEdge] = []
-        for item in self._subgraph_relations:
+        for item in self._cross_edges:
             for edge in item.edges(self._subgraphs):
                 _check_duplicate_edge(seen, edge)
                 seen.append(edge)
@@ -1004,8 +1004,8 @@ class SkillCompositionGraph:
                 self._subgraphs[subgoal_id].as_dict()
                 for subgoal_id in self._ordered_subgoal_ids()
             ],
-            "subgraph_relations": [
-                item.as_dict() for item in self._subgraph_relations
+            "cross_edges": [
+                item.as_dict() for item in self._cross_edges
             ],
             # Derived flattened views, retained for generic planners.  The
             # subgraphs above remain the single source of truth: these are
@@ -1024,8 +1024,8 @@ class SkillCompositionGraph:
         payload: Mapping[str, Any],
         *,
         subgoal_graph: Optional[SubGoalGraph] = None,
-    ) -> "SkillCompositionGraph":
-        where = "skill_composition_graph"
+    ) -> "SkillGraph":
+        where = "skill_graph"
         payload = schema.require_mapping(payload, where=where)
         schema.require_schema_version(payload, where=where)
         schema.require_keys(
@@ -1035,7 +1035,7 @@ class SkillCompositionGraph:
             optional=(
                 "subgoal_graph",
                 "subgraphs",
-                "subgraph_relations",
+                "cross_edges",
                 "nodes",
                 "edges",
                 "execution_order",
@@ -1050,8 +1050,8 @@ class SkillCompositionGraph:
         graph = cls(task, subgoal_graph=subgoal_graph)
         for item in schema.require_sequence(payload, "subgraphs", where=where):
             graph.add_subgraph(SkillSubgraph.from_dict(item, task=task))
-        for item in schema.require_sequence(payload, "subgraph_relations", where=where):
-            relation = SkillSubgraphRelation.from_dict(item)
+        for item in schema.require_sequence(payload, "cross_edges", where=where):
+            relation = CrossSubgraphEdge.from_dict(item)
             graph.relate_subgraphs(
                 relation.source_subgoal,
                 relation.target_subgoal,
@@ -1061,11 +1061,11 @@ class SkillCompositionGraph:
             )
         return graph
 
-    def _adopt(self, other: "SkillCompositionGraph") -> None:
+    def _adopt(self, other: "SkillGraph") -> None:
         """Replace this aggregate's contents with a validated staging copy."""
 
         self._subgraphs = dict(other._subgraphs)
-        self._subgraph_relations = list(other._subgraph_relations)
+        self._cross_edges = list(other._cross_edges)
 
     def _require_node(self, node_id: str) -> SkillNode:
         try:

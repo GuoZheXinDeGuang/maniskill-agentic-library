@@ -1,5 +1,5 @@
 {
-  "schema_version": "mshab.skill-catalog.v1",
+  "schema_version": "mshab.library-catalog.v1",
   "task": "set_table",
   "construction": {
     "method": "manual",
@@ -93,11 +93,11 @@
   "summary": {
     "subgoals": 8,
     "skill_subgraphs": 8,
-    "subgraph_relations": 7,
+    "cross_edges": 7,
     "skill_nodes": 20,
     "skill_edges": 35,
     "planned_steps": 16,
-    "bound_terms": 20,
+    "grounded_skills": 20,
     "registered_contracts": 11
   },
   "layers": {
@@ -186,7 +186,7 @@
         "apple_source_closed"
       ]
     },
-    "2_skill_composition_graph": {
+    "2_skill_graph": {
       "task": "set_table",
       "subgraphs": [
         {
@@ -604,7 +604,7 @@
           ]
         }
       ],
-      "subgraph_relations": [
+      "cross_edges": [
         {
           "source_subgoal": "bowl_source_open",
           "target_subgoal": "bowl_retrieved",
@@ -1032,7 +1032,7 @@
         "close_apple_source"
       ]
     },
-    "3_bound_contract_terms": {
+    "3_grounded_skills": {
       "close_apple_source": {
         "contract_id": "mshab.set_table.close.fridge",
         "arguments": {},
@@ -1529,7 +1529,7 @@
         "max_episode_steps": 200,
         "policies": {
           "rl": {
-            "executor_type": "checkpoint",
+            "kind": "checkpoint",
             "family": "rl",
             "policy_type": "rl_per_obj",
             "checkpoint": "rl/set_table/close/fridge/policy.pt",
@@ -1545,7 +1545,7 @@
         "max_episode_steps": 200,
         "policies": {
           "rl": {
-            "executor_type": "checkpoint",
+            "kind": "checkpoint",
             "family": "rl",
             "policy_type": "rl_per_obj",
             "checkpoint": "rl/set_table/close/kitchen_counter/policy.pt",
@@ -1561,7 +1561,7 @@
         "max_episode_steps": 1000,
         "policies": {
           "rl": {
-            "executor_type": "checkpoint",
+            "kind": "checkpoint",
             "family": "rl",
             "policy_type": "rl_all_obj",
             "checkpoint": "rl/set_table/navigate/all/policy.pt",
@@ -1577,7 +1577,7 @@
         "max_episode_steps": 200,
         "policies": {
           "rl": {
-            "executor_type": "checkpoint",
+            "kind": "checkpoint",
             "family": "rl",
             "policy_type": "rl_per_obj",
             "checkpoint": "rl/set_table/open/fridge/policy.pt",
@@ -1593,7 +1593,7 @@
         "max_episode_steps": 200,
         "policies": {
           "rl": {
-            "executor_type": "checkpoint",
+            "kind": "checkpoint",
             "family": "rl",
             "policy_type": "rl_per_obj",
             "checkpoint": "rl/set_table/open/kitchen_counter/policy.pt",
@@ -1609,7 +1609,7 @@
         "max_episode_steps": 200,
         "policies": {
           "rl": {
-            "executor_type": "checkpoint",
+            "kind": "checkpoint",
             "family": "rl",
             "policy_type": "rl_per_obj",
             "checkpoint": "rl/set_table/pick/013_apple/policy.pt",
@@ -1625,7 +1625,7 @@
         "max_episode_steps": 200,
         "policies": {
           "rl": {
-            "executor_type": "checkpoint",
+            "kind": "checkpoint",
             "family": "rl",
             "policy_type": "rl_per_obj",
             "checkpoint": "rl/set_table/pick/024_bowl/policy.pt",
@@ -1641,7 +1641,7 @@
         "max_episode_steps": 200,
         "policies": {
           "rl": {
-            "executor_type": "checkpoint",
+            "kind": "checkpoint",
             "family": "rl",
             "policy_type": "rl_all_obj",
             "checkpoint": "rl/set_table/pick/all/policy.pt",
@@ -1657,7 +1657,7 @@
         "max_episode_steps": 200,
         "policies": {
           "rl": {
-            "executor_type": "checkpoint",
+            "kind": "checkpoint",
             "family": "rl",
             "policy_type": "rl_per_obj",
             "checkpoint": "rl/set_table/place/013_apple/policy.pt",
@@ -1673,7 +1673,7 @@
         "max_episode_steps": 200,
         "policies": {
           "rl": {
-            "executor_type": "checkpoint",
+            "kind": "checkpoint",
             "family": "rl",
             "policy_type": "rl_per_obj",
             "checkpoint": "rl/set_table/place/024_bowl/policy.pt",
@@ -1689,7 +1689,7 @@
         "max_episode_steps": 200,
         "policies": {
           "rl": {
-            "executor_type": "checkpoint",
+            "kind": "checkpoint",
             "family": "rl",
             "policy_type": "rl_all_obj",
             "checkpoint": "rl/set_table/place/all/policy.pt",
