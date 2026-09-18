@@ -1,23 +1,41 @@
-# Graph-granularity experiment: Layers 3 and 4
+# Graph-granularity experiment
 
-This package currently implements only the two lower layers shared by the
-future coarse- and fine-grained graph experiments. Goal, Sub-goal, SkillNode,
-and SkillSubgraph are intentionally not created yet.
+This package now contains the controlled lower layers and the first coarse
+Layer-1/2 condition. The future fine-grained condition will reuse exactly the
+same Contracts and Policies.
+
+![Complete coarse four-layer graph](artifacts/coarse_four_layers.svg)
 
 ![Contract and policy layers](artifacts/contract_policy_layers.svg)
 
+![Coarse higher layers](higher_layers/artifacts/coarse_higher_layers.svg)
+
 ## Code structure
 
-The responsibilities are separated into three files:
+The domain builders remain separated; the four-layer entry point only composes
+their existing objects and documents:
 
 ```text
+coarse_four_layers.py  orchestration only; writes the unified JSON and SVG
+
 lower_layers/
 ├── layer3.py       five symbolic Contract objects
 ├── layer4.py       53 stored Policy objects
 └── connections.py  Policy --EXECUTES--> Contract
 
-higher_layers/      empty placeholder; no implementation yet
+higher_layers/
+├── coarse.py       task-agnostic three-SubGoal semantic OOP builder
+├── render.py       deterministic JSON/SVG generator
+└── artifacts/      canonical coarse catalog and overview diagram
+
+artifacts/
+├── coarse_four_layers.json
+└── coarse_four_layers.svg
 ```
+
+`coarse_four_layers.py` does not redeclare any SubGoal, SkillNode, Contract,
+Policy, or relation inventory. It builds the existing lower stack once and
+passes that same Layer-3 object to the existing higher-layer builder.
 
 Layer 4 is storage only. It contains no fallback, alternative, routing,
 selection, or Policy-to-Policy relationships. The only relationship involving
@@ -74,12 +92,29 @@ There are 53 Policies and therefore 53 `EXECUTES` connections. Every Policy
 executes exactly one of the five Contracts. A Contract may be executed by many
 Policies.
 
-Fallback and alternative relations belong in a future SkillSubgraph in Layer
-2. They are not represented in Layer 4 or in these cross-layer connections.
+Fallback and alternative relations exist only in the coarse Layer-2
+SkillSubgraphs. They are not represented in Layer 4 or in these cross-layer
+connections.
 
 ## Build and inspect
 
 From the repository root:
+
+```bash
+MS_ASSET_DIR=../mshab-assets \
+PYTHONPATH=. \
+python -m mshab.experiments.granularity.coarse_four_layers
+```
+
+This produces the complete graph:
+
+- `artifacts/coarse_four_layers.json`: all four layers, 44
+  SkillNode-to-Contract references, and 53 Policy-to-Contract `EXECUTES`
+  connections.
+- `artifacts/coarse_four_layers.svg`: one four-layer view with 3 SubGoals, 44
+  SkillNodes, 5 Contracts, and 53 Policies.
+
+To regenerate only the controlled lower layers:
 
 ```bash
 MS_ASSET_DIR=../mshab-assets \
@@ -118,5 +153,23 @@ connected = connect_layers(layer3, layer4)
 assert len(connected.connections) == 53
 ```
 
-The next phase can build coarse and fine upper-layer graphs over the same
-connected lower layers without changing either the Contracts or Policies.
+Build the coarse higher layers:
+
+```python
+from mshab.experiments.granularity.higher_layers import (
+    build_coarse_higher_layers,
+)
+
+higher = build_coarse_higher_layers(layer3)
+assert len(higher.subgoals.subgoals) == 3
+assert len(higher.subgoals.dependencies) == 0
+assert higher.skill_node_count == 44
+
+# A VLM/oracle selects one semantic alternative before linear planning.
+view = higher.execution_view("retrieve_from_fridge")
+assert view.strategy.subgoal_id == "retrieve"
+```
+
+See [`higher_layers/README.md`](higher_layers/README.md) for the Layer-1/2
+semantics, alternatives, fallbacks, n:1 Contract references, and VLM-ready
+JSON artifact.

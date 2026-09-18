@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from types import MappingProxyType
-from typing import Mapping, Union
+from typing import FrozenSet, Mapping, Union
 
 from mshab.skills.model import (
     CloseContract,
@@ -55,6 +55,20 @@ class Layer3Contracts:
 
     def contract(self, contract_type: Union[ContractType, str]) -> Contract:
         return self.contracts[ContractType(contract_type)]
+
+    @property
+    def ids(self) -> FrozenSet[str]:
+        """Stable ids accepted by Layer-2 ``SkillNode.contract_id`` fields."""
+
+        return frozenset(contract.id for contract in self.contracts.values())
+
+    def by_id(self, contract_id: str) -> Contract:
+        """Resolve the single Contract referenced by one SkillNode."""
+
+        for contract in self.contracts.values():
+            if contract.id == contract_id:
+                return contract
+        raise KeyError("unknown Layer-3 contract {!r}".format(contract_id))
 
 
 def build_layer3() -> Layer3Contracts:
