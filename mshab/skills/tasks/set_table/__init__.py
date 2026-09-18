@@ -1,11 +1,11 @@
-"""Backward-compatible imports for the packaged SetTable example.
+"""Packaged SetTable reference implementation.
 
-New task-specific code should import from :mod:`mshab.skills.tasks.set_table`.
-This module remains so existing user code and older catalog-generation scripts
-do not break after the SetTable implementation was packaged.
+The graph, contracts, and checkpoint manifest are task-specific, while the
+OOP primitives they use remain in :mod:`mshab.skills.graph`,
+:mod:`mshab.skills.model`, and :mod:`mshab.skills.library`.
 """
 
-from mshab.skills.tasks.set_table import (
+from mshab.skills.tasks.set_table.stack import (
     SetTableAppleGraphBuilder,
     SetTableGraphBuilder,
     StarterSkillStack,
@@ -26,3 +26,4 @@ __all__ = [
     "build_set_table_starter",
     "build_set_table_stack",
 ]
+

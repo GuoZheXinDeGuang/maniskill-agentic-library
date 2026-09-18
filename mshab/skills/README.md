@@ -103,7 +103,9 @@ determines whether they are stored inside a subgraph or between subgraphs.
 | `extension.py` | Validated `SkillGraphPatch` / `SkillGraphBuilder` interface |
 | `plan.py` | `SkillPlanner`/`SkillPlan`: choose one achiever per sub-goal |
 | `schema.py` | Strict `from_dict` primitives for untrusted documents |
-| `starter.py` | Complete SetTable graph and smaller apple starter graph |
+| `tasks/set_table/` | Packaged SetTable graph, contract manifest, and stack builders |
+| `tasks/tidy_house/` | Design target for the coarse/fine granularity experiment |
+| `starter.py` | Backward-compatible SetTable imports |
 | `model.py` | Layer 3 contract and Layer 4 policy definitions |
 | `environment.py` | Environment description, entity mapping, snapshots, and adapter |
 | `runtime.py` | Node grounding, contract monitoring, and policy dispatch |
@@ -117,6 +119,12 @@ determines whether they are stored inside a subgraph or between subgraphs.
 | `tests/test_contract_state_transitions.py` | Symbolic state transitions |
 | `tests/test_set_table_graph_decisions.py` | Manual graph -> repeated one-node decision test |
 | `tests/test_skill_library_checkpoints.py` | CPU-only downloaded-checkpoint integration tests |
+
+Task-specific implementations live under `tasks/`; they reuse the OOP model
+in this directory instead of adding task logic to `ContractLibrary`. SetTable
+is the packaged reference example. TidyHouse is the next experiment target;
+see [`tasks/tidy_house/README.md`](./tasks/tidy_house/README.md) for the
+controlled coarse/fine design.
 
 ## Complete generated SetTable graph
 

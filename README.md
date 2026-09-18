@@ -26,8 +26,9 @@ whether it can physically start in the current scene. Contracts are bound
 many-to-many to low-level *policies* (Layer 4: RL/BC/DP/VLA checkpoints or
 controllers): one contract may be executed by several policies, and one policy
 may execute several contracts. Policies communicate with MS-HAB through an
-explicit environment entity/fact/snapshot adapter. A complete manual SetTable graph and interfaces for custom contracts
-and future skill-node insertion patches are included. The initial graph is
+explicit environment entity/fact/snapshot adapter. A complete manual SetTable
+graph is packaged under `mshab/skills/tasks/set_table`, and interfaces for
+custom contracts and future skill-node insertion patches are included. The initial graph is
 manual; a future insertion VLM will place new skill nodes, while a separately
 trained graph-conditioned VLM will select one next skill node per decision.
 

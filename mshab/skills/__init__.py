@@ -60,7 +60,7 @@ from mshab.skills.runtime import (
     SkillGrounder,
     SkillRuntime,
 )
-from mshab.skills.starter import (
+from mshab.skills.tasks.set_table import (
     SetTableAppleGraphBuilder,
     SetTableGraphBuilder,
     StarterSkillStack,
