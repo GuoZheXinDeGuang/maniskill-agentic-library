@@ -1,0 +1,87 @@
+# Installation, checkpoints, and tests
+
+Where the Docker setup lives, how to download the policy checkpoints, and how
+to run the CPU-only test suite.
+
+Part of the [MS-HAB skill library guide](../README.md).
+
+## Installation
+
+Docker setup lives in the
+[repository README](../../../README.md#setup-and-installation). Inside the
+container `MS_ASSET_DIR` is `/root/.maniskill`, and `mshab.evaluate` reads
+policies from `$MS_ASSET_DIR/data/mshab_checkpoints`.
+
+## Download checkpoints
+
+The policies are neither in the image nor in the assets volume. They go to a
+host directory that `docker-compose.yml` bind-mounts read-only at
+`$MS_ASSET_DIR/data/mshab_checkpoints`. Its default is
+`/data/mshab/mshab_checkpoints`; override it with `MSHAB_CKPT_DIR`.
+
+```bash
+mkdir -p /data/mshab/mshab_checkpoints
+```
+
+Download everything -- 16GiB total (`rl` 2.9GB, `bc` 2.3GB, `dp` 12GB). The
+HuggingFace repository is public, so no login is needed. `--user` keeps the
+files owned by you rather than root:
+
+```bash
+docker run --rm --user "$(id -u):$(id -g)" \
+  -e HOME=/tmp -e HF_HOME=/tmp/hf \
+  -v /data/mshab/mshab_checkpoints:/out \
+  --entrypoint hf mshab:latest \
+  download arth-shukla/mshab_checkpoints --local-dir /out
+```
+
+Add `--include "rl/set_table/**"` to that command for only the 11 SetTable RL
+policies used by the graph runner (~630MB).
+
+`mshab.evaluate` loads *every* policy registered for the task and policy family
+before the rollout starts, so a partial download within a family is not enough.
+`task=set_table` with `policy_type=rl_*` needs all 11 policies listed under
+[Layer 4](layers-3-4.md#layer-4-policies). Expected layout:
+
+```text
+$MSHAB_CKPT_DIR/
+└── <family>/<task>/<contract-type>/<target>/
+    ├── config.yml
+    └── policy.pt
+```
+
+If the checkpoints live elsewhere, export the override before any
+`docker compose` command:
+
+```bash
+export MSHAB_CKPT_DIR=/my/path/mshab_checkpoints
+```
+
+## Tests
+
+All tests live under `tests/`. Run the complete CPU-only suite:
+
+```bash
+docker compose run --rm mshab python -m unittest discover -s tests -p 'test_*.py' -v
+```
+
+Run only the manual-graph -> repeated skill-node-decision test:
+
+```bash
+docker compose run --rm mshab python -m unittest tests.test_set_table_graph_decisions -v
+```
+
+`test_skill_library_checkpoints.py` validates the 11 downloaded SetTable
+policies when the checkpoint directory exists and skips cleanly otherwise.
+Tests inspect checkpoint files but do not load policy tensors or create a GPU
+simulator. Use the [SetTable evaluation runner](set-table.md#execute-a-graph-selected-settable-sequence-and-record-video)
+for full policy rollouts.
+
+The suite has no third-party dependencies, so dropping the `docker compose
+run --rm mshab` prefix also works with any local Python 3.9+.
+
+Two tests in `test_set_table_graph_decisions.py` reach the official SetTable
+task plan through a hard-coded `<repo>/../mshab-assets/...` path instead of
+`MS_ASSET_DIR`, so they skip inside the container even though the plan is
+present in the assets volume.
+

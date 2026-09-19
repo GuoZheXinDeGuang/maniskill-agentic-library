@@ -9,8 +9,10 @@ Environment fixed for the first milestone:
 - runtime: the `mshab:latest` Docker image (Python 3.10, PyTorch 2.5.1+cu121)
 
 Everything runs in the container. See the
-[skill-library guide](./mshab/skills/README.md#installation) for building the
-image, downloading assets, and mounting checkpoints. `docker compose run`
+[repository README](./README.md#setup-and-installation) for building the image
+and downloading assets, and the
+[checkpoint guide](./mshab/skills/docs/running.md#download-checkpoints) for
+mounting checkpoints. `docker compose run`
 starts in `/work/mshab` with `MS_ASSET_DIR`, `MSHAB_EXPS_DIR` and the
 checkpoint mount already set, so no activation step or `export` is needed.
 

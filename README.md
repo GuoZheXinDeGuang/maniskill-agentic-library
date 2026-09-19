@@ -81,7 +81,7 @@ without a rebuild, and `MS_ASSET_DIR`, `MSHAB_EXPS_DIR` and `SAPIEN_NO_DISPLAY`
 are preset. Evaluation outputs land on the host under `./mshab_exps`.
 Policy checkpoints are mounted from a host directory (`MSHAB_CKPT_DIR`,
 default `/data/mshab/mshab_checkpoints`); see the
-[skill-library guide](./mshab/skills/README.md#download-checkpoints) for the
+[checkpoint guide](./mshab/skills/docs/running.md#download-checkpoints) for the
 download command and which policies each task needs.
 
 `docker compose` warns that the `mshab-assets` volume "was not created by
