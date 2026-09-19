@@ -120,6 +120,26 @@ class SubGoalGraph:
         self._subgoals: Dict[str, SubGoal] = {}
         self._dependencies: List[SubGoalDependency] = []
 
+    @classmethod
+    def from_sequence(cls, goal: str, subgoals: Iterable[SubGoal]) -> "SubGoalGraph":
+        """Build Layer 1 from an already ordered sub-goal sequence.
+
+        The goal -> sub-goal decomposition emits its sub-goals in execution
+        order.  That order is stored as a chain of dependencies, so
+        ``execution_order()`` returns the same sequence and doubles as the
+        consistency check.  ``add_subgoal``/``add_dependency`` remain for
+        hand-authored graphs and patches, which may express a partial order.
+        """
+
+        graph = cls(goal)
+        previous: Optional[str] = None
+        for subgoal in subgoals:
+            graph.add_subgoal(subgoal)
+            if previous is not None:
+                graph.add_dependency(previous, subgoal.id)
+            previous = subgoal.id
+        return graph
+
     @property
     def subgoals(self) -> Mapping[str, SubGoal]:
         return dict(self._subgoals)
@@ -228,7 +248,7 @@ class SubGoalGraph:
 
 @dataclass(frozen=True)
 class SkillNode:
-    """One skill node: a scene-independent request to run one contract.
+    """One skill node: a simulator-independent request to run one contract.
 
     Layer 2 stores only a stable contract id plus symbolic arguments.  It does
     not own a bound contract, checkpoint, simulator object, or policy choice;
@@ -421,6 +441,7 @@ class SkillSubgraph:
         edge = SkillEdge(source, target, _require_relation(relation))
         _append_checked_edge(self._edges, edge)
         try:
+            self._check_fallback_shape()
             self.execution_order()
         except ValueError:
             self._edges.pop()
@@ -428,7 +449,69 @@ class SkillSubgraph:
 
     def execution_order(self) -> Tuple[str, ...]:
         return _topological_order(
-            self._nodes, _causal_pairs(self._edges), "sub-goal skill subgraph"
+            self._nodes,
+            _causal_pairs(self._edges, self._chain_lookup()),
+            "sub-goal skill subgraph",
+        )
+
+    def fallback_chains(self) -> Tuple[Tuple[str, ...], ...]:
+        """Maximal ``FALLBACK_TO`` chains, primary first.
+
+        Nodes without a fallback relation are not listed.  Chains are disjoint
+        simple paths: a node has at most one fallback and is the fallback of at
+        most one node, and no chain cycles.
+        """
+
+        return _fallback_chains(self._edges, self.subgoal_id)
+
+    def fallback_chain_of(self, node_id: str) -> Tuple[str, ...]:
+        """The chain ``node_id`` belongs to, or ``(node_id,)`` when it has none."""
+
+        self._require_node(node_id)
+        return self._chain_lookup().get(node_id, (node_id,))
+
+    def stands_for(self, node_id: str) -> Tuple[str, ...]:
+        """``node_id`` and the chain members it can replace (its primaries)."""
+
+        chain = self.fallback_chain_of(node_id)
+        return chain[: chain.index(node_id) + 1]
+
+    def stand_ins(self, node_id: str) -> Tuple[str, ...]:
+        """``node_id`` and the chain members that can replace it (its fallbacks)."""
+
+        chain = self.fallback_chain_of(node_id)
+        return chain[chain.index(node_id):]
+
+    def prerequisite_groups(self, node_id: str) -> Tuple[FrozenSet[str], ...]:
+        """Internal causal prerequisites of one node as disjunctive groups.
+
+        Two fallback rules shape the groups.  A node inherits the prerequisites
+        of every node it stands in for, so a fallback waits for whatever its
+        primary waited for.  A prerequisite is satisfied by any member of the
+        prerequisite's own chain, so a node wired to a primary is enabled by
+        that primary's fallback as well.  Cross-subgraph prerequisites are added
+        by :meth:`SkillGraph.prerequisite_groups`.
+        """
+
+        stands_for = set(self.stands_for(node_id))
+        groups = set()
+        for edge in self._edges:
+            if edge.relation == SkillRelation.ENABLES and edge.target in stands_for:
+                groups.add(frozenset(self.fallback_chain_of(edge.source)))
+            elif edge.relation == SkillRelation.REQUIRES and edge.source in stands_for:
+                groups.add(frozenset(self.fallback_chain_of(edge.target)))
+        return tuple(sorted(groups, key=lambda group: sorted(group)))
+
+    def _chain_lookup(self) -> Dict[str, Tuple[str, ...]]:
+        return {
+            node_id: chain
+            for chain in _fallback_chains(self._edges, self.subgoal_id)
+            for node_id in chain
+        }
+
+    def _check_fallback_shape(self) -> None:
+        _check_fallback_shape(
+            {node.id for node in self.achievers}, self._edges, self.subgoal_id
         )
 
     def validate(self) -> None:
@@ -442,6 +525,7 @@ class SkillSubgraph:
             raise ValueError(
                 "sub-goal skill subgraph {!r} has no achiever node".format(self.subgoal_id)
             )
+        self._check_fallback_shape()
         self.execution_order()
 
     def _seal(self) -> None:
@@ -550,6 +634,12 @@ class CrossSubgraphEdge:
             and self.source_node == self.target_node
         ):
             raise ValueError("cross-subgraph edge needs two distinct node ids")
+        if self.relation == SkillRelation.FALLBACK_TO:
+            raise ValueError(
+                "FALLBACK_TO must stay inside one sub-goal subgraph: a skill node "
+                "falls back to another node of the same sub-goal, and a sub-goal "
+                "that runs out of candidates is replanned, not replaced"
+            )
         if self.is_subgoal_level and self.relation not in _CAUSAL_RELATIONS:
             raise ValueError(
                 "a sub-goal-level endpoint is only meaningful for {}; got {}".format(
@@ -889,26 +979,32 @@ class SkillGraph:
         """Causal prerequisites as disjunctive groups.
 
         Each group must be satisfied by *at least one* completed member.  A
-        node-level relation yields a singleton group; a sub-goal-level relation
-        yields one group holding every achiever of that sub-goal, so recovering
-        through a fallback still satisfies the downstream dependency.
+        sub-goal-level relation yields one group holding every achiever of that
+        sub-goal; a node-level relation yields the prerequisite's whole
+        ``FALLBACK_TO`` chain; and a node inherits the groups of the nodes it
+        stands in for.  Recovering through any fallback therefore still
+        satisfies downstream dependencies.
         """
 
         self._require_node(node_id)
-        groups: List[FrozenSet[str]] = []
-        for subgraph in self._subgraphs.values():
-            for edge in subgraph.edges:
-                group = _causal_requirement(edge.source, edge.target, edge.relation, node_id)
-                if group is not None:
-                    groups.append(frozenset(group))
+        owner = self._subgraphs[self.owner_of(node_id)]
+        groups = set(owner.prerequisite_groups(node_id))
+        stands_for = set(owner.stands_for(node_id))
+        lookup = self._chain_lookup()
+
+        def satisfiers(node_ids: FrozenSet[str]) -> FrozenSet[str]:
+            return frozenset(
+                member for item in node_ids for member in lookup.get(item, (item,))
+            )
+
         for item in self._cross_edges:
             if item.relation not in _CAUSAL_RELATIONS:
                 continue
             sources, targets = self._relation_sides(item)
-            if item.relation == SkillRelation.ENABLES and node_id in targets:
-                groups.append(frozenset(sources))
-            elif item.relation == SkillRelation.REQUIRES and node_id in sources:
-                groups.append(frozenset(targets))
+            if item.relation == SkillRelation.ENABLES and targets & stands_for:
+                groups.add(satisfiers(sources))
+            elif item.relation == SkillRelation.REQUIRES and sources & stands_for:
+                groups.add(satisfiers(targets))
         return tuple(sorted(groups, key=lambda group: sorted(group)))
 
     def prerequisites(self, node_id: str) -> Tuple[SkillNode, ...]:
@@ -927,7 +1023,7 @@ class SkillGraph:
         """Dependency-ready nodes, without consulting an environment.
 
         Contract admission belongs to :class:`SkillRuntime`, because facts and
-        policy readiness are Layer-3/4 environment-specific concerns.
+        policy readiness are Layer-3/4 simulator-specific concerns.
         """
 
         completed_set = set(completed)
@@ -957,8 +1053,14 @@ class SkillGraph:
 
     def execution_order(self) -> Tuple[str, ...]:
         return _topological_order(
-            self.nodes, _causal_pairs(self.edges), "skill graph"
+            self.nodes, _causal_pairs(self.edges, self._chain_lookup()), "skill graph"
         )
+
+    def _chain_lookup(self) -> Dict[str, Tuple[str, ...]]:
+        lookup: Dict[str, Tuple[str, ...]] = {}
+        for subgraph in self._subgraphs.values():
+            lookup.update(subgraph._chain_lookup())
+        return lookup
 
     def validate(self) -> None:
         """Whole-aggregate invariants that no single subgraph can check alone."""
@@ -1145,25 +1247,111 @@ def _append_checked_edge(edges: List[SkillEdge], edge: SkillEdge) -> None:
     edges.append(edge)
 
 
-def _causal_requirement(
-    source: str, target: str, relation: SkillRelation, node_id: str
-) -> Optional[Tuple[str, ...]]:
-    """The prerequisite one node-level causal edge imposes on ``node_id``."""
+def _fallback_chains(
+    edges: Sequence[SkillEdge], subgoal_id: str
+) -> Tuple[Tuple[str, ...], ...]:
+    """Maximal ``FALLBACK_TO`` chains, primary first; forks, merges and cycles are rejected.
 
-    if relation == SkillRelation.ENABLES and target == node_id:
-        return (source,)
-    if relation == SkillRelation.REQUIRES and source == node_id:
-        return (target,)
-    return None
+    A skill node that fails is replaced by its fallback inside the same
+    subgraph, so both directions must be unambiguous.  A sub-goal whose chain
+    is exhausted is not replaced by another sub-goal; it is replanned at
+    Layer 1.
+    """
+
+    successor: Dict[str, str] = {}
+    predecessor: Dict[str, str] = {}
+    for edge in edges:
+        if edge.relation != SkillRelation.FALLBACK_TO:
+            continue
+        if edge.source in successor:
+            raise ValueError(
+                "node {!r} in sub-goal subgraph {!r} declares more than one "
+                "fallback: {!r} and {!r}".format(
+                    edge.source, subgoal_id, successor[edge.source], edge.target
+                )
+            )
+        if edge.target in predecessor:
+            raise ValueError(
+                "node {!r} in sub-goal subgraph {!r} is the fallback of both "
+                "{!r} and {!r}".format(
+                    edge.target, subgoal_id, predecessor[edge.target], edge.source
+                )
+            )
+        successor[edge.source] = edge.target
+        predecessor[edge.target] = edge.source
+    chains = []
+    reached: Set[str] = set()
+    for head in sorted(node_id for node_id in successor if node_id not in predecessor):
+        chain = [head]
+        current: Optional[str] = successor.get(head)
+        while current is not None:
+            chain.append(current)
+            current = successor.get(current)
+        chains.append(tuple(chain))
+        reached.update(chain)
+    cyclic = sorted(set(successor) - reached)
+    if cyclic:
+        raise ValueError(
+            "FALLBACK_TO cycle in sub-goal subgraph {!r}: {}".format(subgoal_id, cyclic)
+        )
+    return tuple(chains)
 
 
-def _causal_pairs(edges: Iterable[SkillEdge]) -> List[Tuple[str, str]]:
+def _check_fallback_shape(
+    achiever_ids: Set[str], edges: Sequence[SkillEdge], subgoal_id: str
+) -> None:
+    """Chains are well formed, role-preserving, and free of internal causal edges."""
+
+    chain_of: Dict[str, Tuple[str, ...]] = {}
+    for chain in _fallback_chains(edges, subgoal_id):
+        roles = {node_id in achiever_ids for node_id in chain}
+        if len(roles) > 1:
+            raise ValueError(
+                "FALLBACK_TO chain {} in sub-goal subgraph {!r} mixes achievers and "
+                "instrumental nodes; a fallback plays the same role as its "
+                "primary".format(list(chain), subgoal_id)
+            )
+        for node_id in chain:
+            chain_of[node_id] = chain
+    for edge in edges:
+        if edge.relation not in _CAUSAL_RELATIONS:
+            continue
+        chain = chain_of.get(edge.source)
+        if chain is not None and edge.target in chain:
+            raise ValueError(
+                "causal edge {} -{}-> {} joins two members of one FALLBACK_TO chain "
+                "in sub-goal subgraph {!r}; a fallback replaces its primary and "
+                "cannot depend on it".format(
+                    edge.source, edge.relation.value, edge.target, subgoal_id
+                )
+            )
+
+
+def _causal_pairs(
+    edges: Iterable[SkillEdge], chains: Mapping[str, Tuple[str, ...]]
+) -> List[Tuple[str, str]]:
+    """``(before, after)`` pairs implied by causal edges under the fallback rules.
+
+    Every member of the prerequisite's chain precedes the consumer, and the
+    consumer's fallbacks wait alongside it, mirroring
+    :meth:`SkillGraph.prerequisite_groups`.
+    """
+
     pairs = []
     for edge in edges:
         if edge.relation == SkillRelation.ENABLES:
-            pairs.append((edge.source, edge.target))
+            before, after = edge.source, edge.target
         elif edge.relation == SkillRelation.REQUIRES:
-            pairs.append((edge.target, edge.source))
+            before, after = edge.target, edge.source
+        else:
+            continue
+        after_chain = chains.get(after)
+        stand_ins = (
+            (after,) if after_chain is None else after_chain[after_chain.index(after):]
+        )
+        for earlier in chains.get(before, (before,)):
+            for later in stand_ins:
+                pairs.append((earlier, later))
     return pairs
 
 

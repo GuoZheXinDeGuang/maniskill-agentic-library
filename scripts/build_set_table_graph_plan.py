@@ -3,7 +3,7 @@
 
 Layer 1/2 decide the semantic node sequence.  The official MS-HAB PlanData
 supplies scene-specific object instances, articulation ids, and goal poses that
-do not belong in the scene-independent graph.
+do not belong in the simulator-independent graph.
 """
 
 from __future__ import annotations
@@ -39,7 +39,7 @@ def _semantic_target(
         "place": "object",
         "open": "articulation",
         "close": "articulation",
-        "navigate": "goal",
+        "navigate": "target",
     }[contract_type]
     return str(node.arguments.get(argument_name, contract_record["target"]))
 

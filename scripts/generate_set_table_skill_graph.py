@@ -119,8 +119,8 @@ def graph_document(stack, checkpoint_root):
         construction={
             "method": "manual",
             "builder": "SetTableGraphBuilder",
-            "scene_independent_layers": [1, 2],
-            "environment_specific_layers": [3, 4],
+            "simulator_independent_layers": [1, 2],
+            "simulator_specific_layers": [3, 4],
             "official_primary_sequence_per_object": [
                 "navigate",
                 "open",
@@ -211,7 +211,7 @@ def set_table_svg(document):
         'fill="#eaf4ff" stroke="#3b82f6"/>'
     )
     parts.append(text(950, 58, "1. Sub-goal Graph", "title"))
-    parts.append(text(1815, 56, "SCENE-INDEPENDENT", "subtitle", "end"))
+    parts.append(text(1815, 56, "SIMULATOR-INDEPENDENT", "subtitle", "end"))
     subgoal_labels = [
         ("Open counter", "open(kitchen_counter)"),
         ("Retrieve bowl", "holding(024_bowl)"),
@@ -237,7 +237,7 @@ def set_table_svg(document):
         text(950, 325, "2. Sub-goal-owned Candidate Skill Subgraphs", "title")
     )
     parts.append(
-        text(1815, 323, "SCENE-INDEPENDENT · MANUAL V1", "subtitle", "end")
+        text(1815, 323, "SIMULATOR-INDEPENDENT · MANUAL V1", "subtitle", "end")
     )
 
     lanes = [
@@ -338,9 +338,9 @@ def set_table_svg(document):
         'fill="#fffbeb" stroke="#eab308"/>'
     )
     parts.append(text(950, 1020, "3. Grounded Skills", "title"))
-    parts.append(text(1815, 1018, "ENVIRONMENT-SPECIFIC", "subtitle", "end"))
+    parts.append(text(1815, 1018, "SIMULATOR-SPECIFIC · MANISKILL-HAB", "subtitle", "end"))
     contract_specs = [
-        ("Navigate", "pre: present(goal)", "effect: reachable(goal)"),
+        ("Navigate", "pre: present(target)", "effect: reachable(target)"),
         ("Open", "pre: reachable + closed", "effect: open(articulation)"),
         ("Pick", "pre: reachable + empty", "effect: holding(object)"),
         ("Place", "pre: holding + reachable", "effect: at(object,destination)"),
@@ -370,7 +370,7 @@ def set_table_svg(document):
     parts.append(
         text(950, 1300, "4. Contracts and the Policies Bound to Them", "title")
     )
-    parts.append(text(1815, 1298, "ENVIRONMENT-SPECIFIC", "subtitle", "end"))
+    parts.append(text(1815, 1298, "SIMULATOR-SPECIFIC · MANISKILL-HAB", "subtitle", "end"))
     layer_4 = document["layers"]["4_contracts_and_policies"]
     for index, contract in enumerate(layer_4["contracts"]):
         row, column = divmod(index, 6)

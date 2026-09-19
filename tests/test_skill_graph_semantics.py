@@ -440,3 +440,241 @@ class PatchSchemaTests(TestCase):
         node = _pick("n", "all", "g", object="013_apple")
 
         self.assertEqual(len({node, _pick("n", "all", "g", object="013_apple")}), 1)
+
+
+class FallbackShapeTests(TestCase):
+    """A skill node falls back inside its own subgraph; a sub-goal is replanned."""
+
+    def test_a_node_declares_at_most_one_fallback(self):
+        subgoals, graph = _tiny_graph()
+        SkillGraphPatch().with_extension(
+            "retrieved",
+            nodes=(_pick("pick_backup", "all", "retrieved", object="024_bowl"),),
+            edges=(
+                SkillEdge("pick_primary", "pick_backup", SkillRelation.FALLBACK_TO),
+            ),
+        ).apply(subgoals, graph)
+        fork = SkillGraphPatch().with_extension(
+            "retrieved",
+            nodes=(_pick("pick_third", "024_bowl", "retrieved"),),
+            edges=(
+                SkillEdge("pick_primary", "pick_third", SkillRelation.FALLBACK_TO),
+            ),
+        )
+
+        with self.assertRaisesRegex(ValueError, "more than one fallback"):
+            fork.apply(subgoals, graph)
+        self.assertEqual(
+            [node.id for node in graph.subgraphs["retrieved"].achievers],
+            ["pick_backup", "pick_primary"],
+        )
+
+    def test_fallback_chains_cannot_cycle(self):
+        subgraph = SkillSubgraph("retrieved", "set_table")
+        subgraph.add_node(_pick("pick_primary", "024_bowl", "retrieved"))
+        subgraph.add_node(_pick("pick_backup", "all", "retrieved", object="024_bowl"))
+        subgraph.relate("pick_primary", "pick_backup", SkillRelation.FALLBACK_TO)
+
+        with self.assertRaisesRegex(ValueError, "FALLBACK_TO cycle"):
+            subgraph.relate("pick_backup", "pick_primary", SkillRelation.FALLBACK_TO)
+        self.assertEqual(len(subgraph.edges), 1)
+
+    def test_fallback_never_crosses_subgraphs(self):
+        subgoals, graph = _tiny_graph()
+
+        with self.assertRaisesRegex(ValueError, "inside one sub-goal subgraph"):
+            graph.relate_subgraphs(
+                "retrieved", "placed", "pick_primary", "place_it",
+                SkillRelation.FALLBACK_TO,
+            )
+        with self.assertRaisesRegex(ValueError, "inside one sub-goal subgraph"):
+            CrossSubgraphEdge(
+                "retrieved", "placed", "pick_primary", "place_it",
+                SkillRelation.FALLBACK_TO,
+            )
+
+    def test_a_new_candidate_joins_the_end_of_the_chain(self):
+        """The README ``with_extension`` example: chain, then sub-goal failure."""
+
+        subgoals, graph = build_set_table_graph()
+        SkillGraphPatch().with_extension(
+            "bowl_retrieved",
+            nodes=(
+                SkillNode(
+                    "pick_bowl_bc",
+                    "mshab.set_table.pick.024_bowl",
+                    {},
+                    achieves=("bowl_retrieved",),
+                ),
+            ),
+            edges=(
+                SkillEdge("pick_bowl_generic", "pick_bowl_bc", SkillRelation.FALLBACK_TO),
+            ),
+        ).apply(subgoals, graph)
+        planner = SkillPlanner(subgoals, graph)
+
+        self.assertEqual(
+            [
+                node.id
+                for node in planner.fallback_chain(graph.subgraphs["bowl_retrieved"])
+            ],
+            ["pick_bowl_specialized", "pick_bowl_generic", "pick_bowl_bc"],
+        )
+        self.assertEqual(
+            planner.plan(
+                failed=("pick_bowl_specialized", "pick_bowl_generic")
+            ).selections["bowl_retrieved"],
+            "pick_bowl_bc",
+        )
+        with self.assertRaises(NoViableCandidate):
+            planner.plan(
+                failed=("pick_bowl_specialized", "pick_bowl_generic", "pick_bowl_bc")
+            )
+
+
+class SubGoalSequenceTests(TestCase):
+    """Layer 1 arrives as an ordered sequence; the graph stores it as a chain."""
+
+    def test_from_sequence_keeps_the_generating_order(self):
+        subgoals = SubGoalGraph.from_sequence(
+            "Retrieve the apple",
+            (
+                SubGoal("source_open", "open(fridge)"),
+                SubGoal("retrieved", "holding(013_apple)"),
+                SubGoal("source_closed", "closed(fridge)"),
+            ),
+        )
+
+        self.assertEqual(
+            subgoals.execution_order(), ("source_open", "retrieved", "source_closed")
+        )
+        self.assertEqual(
+            [(item.source, item.target) for item in subgoals.dependencies],
+            [("source_open", "retrieved"), ("retrieved", "source_closed")],
+        )
+        self.assertEqual(
+            [item.id for item in subgoals.ready_subgoals(())], ["source_open"]
+        )
+
+    def test_from_sequence_rejects_a_repeated_sub_goal(self):
+        with self.assertRaisesRegex(ValueError, "duplicate sub-goal"):
+            SubGoalGraph.from_sequence(
+                "goal", (SubGoal("a", "p()"), SubGoal("a", "q()"))
+            )
+
+    def test_set_table_layer_one_is_a_sequence(self):
+        subgoals, _ = build_set_table_graph()
+        rebuilt = SubGoalGraph.from_sequence(
+            subgoals.goal,
+            tuple(subgoals.subgoals[item] for item in subgoals.execution_order()),
+        )
+
+        self.assertEqual(set(rebuilt.dependencies), set(subgoals.dependencies))
+        self.assertEqual(rebuilt.execution_order(), subgoals.execution_order())
+
+
+def _instrumental_fallback_graph():
+    """Two sub-goals; the second has an instrumental node with its own fallback."""
+
+    subgoals = SubGoalGraph.from_sequence(
+        "fallback",
+        (SubGoal("opened", "open(fridge)"), SubGoal("retrieved", "holding(013_apple)")),
+    )
+    graph = SkillGraph("set_table", subgoal_graph=subgoals)
+    opened = SkillSubgraph("opened", "set_table")
+    opened.add_node(
+        SkillNode("open_fridge", "mshab.set_table.open.fridge", {}, achieves=("opened",))
+    )
+    graph.add_subgraph(opened)
+    retrieved = SkillSubgraph("retrieved", "set_table")
+    retrieved.add_node(
+        SkillNode("navigate", "mshab.set_table.navigate.all", {"target": "013_apple"})
+    )
+    retrieved.add_node(
+        SkillNode(
+            "navigate_slow",
+            "mshab.set_table.navigate.all",
+            {"target": "013_apple", "speed": "slow"},
+        )
+    )
+    retrieved.add_node(_pick("pick", "013_apple", "retrieved"))
+    retrieved.relate("navigate", "pick", SkillRelation.ENABLES)
+    retrieved.relate("navigate", "navigate_slow", SkillRelation.FALLBACK_TO)
+    graph.add_subgraph(retrieved)
+    graph.relate_subgraphs("opened", "retrieved", None, "navigate", SkillRelation.ENABLES)
+    return subgoals, graph
+
+
+class InstrumentalFallbackTests(TestCase):
+    """Any node falls back inside its subgraph, not only achievers."""
+
+    def test_nominal_plan_runs_the_primary(self):
+        subgoals, graph = _instrumental_fallback_graph()
+
+        self.assertEqual(
+            SkillPlanner(subgoals, graph).plan().order,
+            ("open_fridge", "navigate", "pick"),
+        )
+
+    def test_failed_instrumental_node_is_replaced_by_its_fallback(self):
+        subgoals, graph = _instrumental_fallback_graph()
+
+        plan = SkillPlanner(subgoals, graph).plan(failed=("navigate",))
+
+        self.assertEqual(plan.order, ("open_fridge", "navigate_slow", "pick"))
+
+    def test_fallback_inherits_prerequisites_and_satisfies_downstream_edges(self):
+        subgoals, graph = _instrumental_fallback_graph()
+
+        # navigate_slow waits for the fridge like its primary does.
+        self.assertEqual([node.id for node in graph.ready_nodes(())], ["open_fridge"])
+        self.assertEqual(
+            [sorted(group) for group in graph.prerequisite_groups("navigate_slow")],
+            [["open_fridge"]],
+        )
+        # pick is enabled by either navigation node.
+        self.assertEqual(
+            [sorted(group) for group in graph.prerequisite_groups("pick")],
+            [["navigate", "navigate_slow"]],
+        )
+        self.assertIn(
+            "pick",
+            [node.id for node in graph.ready_nodes(("open_fridge", "navigate_slow"))],
+        )
+
+    def test_exhausted_instrumental_chain_fails_the_sub_goal(self):
+        subgoals, graph = _instrumental_fallback_graph()
+
+        with self.assertRaisesRegex(NoViableCandidate, "all failed"):
+            SkillPlanner(subgoals, graph).plan(failed=("navigate", "navigate_slow"))
+
+    def test_a_fallback_plays_the_same_role_as_its_primary(self):
+        subgraph = SkillSubgraph("retrieved", "set_table")
+        subgraph.add_node(
+            SkillNode("navigate", "mshab.set_table.navigate.all", {"target": "013_apple"})
+        )
+        subgraph.add_node(_pick("pick", "013_apple", "retrieved"))
+
+        with self.assertRaisesRegex(ValueError, "same role"):
+            subgraph.relate("pick", "navigate", SkillRelation.FALLBACK_TO)
+
+    def test_a_fallback_cannot_depend_on_its_primary(self):
+        subgraph = SkillSubgraph("retrieved", "set_table")
+        subgraph.add_node(_pick("pick", "013_apple", "retrieved"))
+        subgraph.add_node(_pick("pick_again", "all", "retrieved", object="013_apple"))
+        subgraph.relate("pick", "pick_again", SkillRelation.FALLBACK_TO)
+
+        with self.assertRaisesRegex(ValueError, "one FALLBACK_TO chain"):
+            subgraph.relate("pick", "pick_again", SkillRelation.ENABLES)
+        self.assertEqual(len(subgraph.edges), 1)
+
+    def test_two_primaries_cannot_share_one_fallback(self):
+        subgraph = SkillSubgraph("retrieved", "set_table")
+        for node_id in ("nav_a", "nav_b", "nav_c"):
+            subgraph.add_node(
+                SkillNode(node_id, "mshab.set_table.navigate.all", {"target": node_id})
+            )
+        subgraph.relate("nav_a", "nav_c", SkillRelation.FALLBACK_TO)
+
+        with self.assertRaisesRegex(ValueError, "fallback of both"):
+            subgraph.relate("nav_b", "nav_c", SkillRelation.FALLBACK_TO)

@@ -271,9 +271,9 @@
     {
       "contract_type": "navigate",
       "deletes": [],
-      "description": "Move to a pose from which the grounded goal is reachable.",
+      "description": "Move to a pose from which the grounded target is reachable.",
       "effects": [
-        "reachable({goal})"
+        "reachable({target})"
       ],
       "execution": {
         "env_id": "NavigateSubtaskTrain-v0",
@@ -289,20 +289,20 @@
       "parameters": [
         {
           "description": "",
-          "name": "goal",
+          "name": "target",
           "required": true,
           "type": "entity"
         }
       ],
       "policy_count": 3,
       "preconditions": [
-        "present({goal})"
+        "present({target})"
       ],
       "target": "all",
-      "target_parameter": "goal",
+      "target_parameter": "target",
       "task": "granularity",
       "verification": [
-        "reachable({goal})"
+        "reachable({target})"
       ]
     },
     {

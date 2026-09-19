@@ -317,7 +317,7 @@ def _checkpoint_policy_type(family: str, target: str) -> str:
 
 
 _TARGET_PARAMETER = {
-    ContractType.NAVIGATE: "goal",
+    ContractType.NAVIGATE: "target",
     ContractType.PICK: "object",
     ContractType.PLACE: "object",
     ContractType.OPEN: "articulation",
@@ -527,14 +527,14 @@ class NavigateContract(Contract):
             ContractType.NAVIGATE,
             task,
             target,
-            parameters=(ContractParameter("goal", ParameterType.ENTITY),),
-            preconditions=("present({goal})",),
-            effects=("reachable({goal})",),
-            verification=("reachable({goal})",),
+            parameters=(ContractParameter("target", ParameterType.ENTITY),),
+            preconditions=("present({target})",),
+            effects=("reachable({target})",),
+            verification=("reachable({target})",),
             failure_modes=("navigation_timeout", "collision_limit"),
             env_id="NavigateSubtaskTrain-v0",
             max_episode_steps=1000,
-            description="Move to a pose from which the grounded goal is reachable.",
+            description="Move to a pose from which the grounded target is reachable.",
         )
 
 

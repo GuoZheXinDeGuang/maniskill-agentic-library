@@ -69,7 +69,7 @@ class SetTableGraphDecisionTests(TestCase):
         "navigate_back_to_apple_source",
         "close_apple_source",
     )
-    EXPECTED_SKILL_TYPES = (
+    EXPECTED_CONTRACT_TYPES = (
         "navigate",
         "open",
         "navigate",
@@ -98,7 +98,7 @@ class SetTableGraphDecisionTests(TestCase):
                 self.graph.nodes[node_id].contract_id.split(".")[2]
                 for node_id in decisions
             ),
-            self.EXPECTED_SKILL_TYPES,
+            self.EXPECTED_CONTRACT_TYPES,
         )
         for subgoal_id in self.subgoals.subgoals:
             chosen = [
@@ -159,7 +159,7 @@ class SetTableGraphDecisionTests(TestCase):
         self.assertEqual(official[9]["articulation_type"], "fridge")
         self.assertTrue(official[11]["obj_id"].startswith("013_apple-"))
 
-    def test_recovery_rollout_still_matches_the_official_skill_type_order(self):
+    def test_recovery_rollout_still_matches_the_official_contract_type_order(self):
         if not OFFICIAL_TASK_PLAN.exists():
             self.skipTest("official downloaded SetTable task plan is unavailable")
         decisions = _rollout(
@@ -177,7 +177,7 @@ class SetTableGraphDecisionTests(TestCase):
     def test_catalog_plan_is_grounded_into_executable_mshab_plan_data(self):
         catalog = LibraryCatalog.from_dict(json.loads(CATALOG.read_text()))
         subtasks = []
-        for index, contract_type in enumerate(self.EXPECTED_SKILL_TYPES):
+        for index, contract_type in enumerate(self.EXPECTED_CONTRACT_TYPES):
             item = {"type": contract_type}
             bowl = index < 8
             if contract_type in ("pick", "place"):

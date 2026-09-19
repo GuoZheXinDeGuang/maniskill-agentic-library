@@ -20,11 +20,11 @@
 <path d="M 45 98 Q 45 82 61 82 H 429 Q 445 82 445 98 V 135 H 45 Z" fill="#c6531a"/>
 <text x="245.0" y="119" font-size="20" font-weight="700" fill="#ffffff" text-anchor="middle">NavigateContract</text>
 <text x="61" y="168" font-size="14" font-weight="700" fill="#c6531a" text-anchor="start">Inputs</text>
-<text x="61" y="190" font-size="13" font-weight="400" fill="#39465a" text-anchor="start">goal</text>
+<text x="61" y="190" font-size="13" font-weight="400" fill="#39465a" text-anchor="start">target</text>
 <text x="61" y="225" font-size="14" font-weight="700" fill="#c6531a" text-anchor="start">Preconditions</text>
-<text x="61" y="247" font-size="13" font-weight="400" fill="#39465a" text-anchor="start">present({goal})</text>
+<text x="61" y="247" font-size="13" font-weight="400" fill="#39465a" text-anchor="start">present({target})</text>
 <text x="61" y="282" font-size="14" font-weight="700" fill="#c6531a" text-anchor="start">Effects</text>
-<text x="61" y="304" font-size="13" font-weight="400" fill="#39465a" text-anchor="start">reachable({goal})</text>
+<text x="61" y="304" font-size="13" font-weight="400" fill="#39465a" text-anchor="start">reachable({target})</text>
 <text x="61" y="339" font-size="14" font-weight="700" fill="#c6531a" text-anchor="start">Deletes</text>
 <text x="61" y="361" font-size="13" font-weight="400" fill="#39465a" text-anchor="start">—</text>
 <text x="245.0" y="382" font-size="13" font-weight="700" fill="#8b5b46" text-anchor="middle">3 policies</text>

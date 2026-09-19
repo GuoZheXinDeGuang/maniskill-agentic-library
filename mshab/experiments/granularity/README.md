@@ -31,7 +31,7 @@ a Policy is the cross-layer `EXECUTES` connection defined in
 
 | Contract | Inputs | Preconditions | Effects | Deletes |
 | --- | --- | --- | --- | --- |
-| `NavigateContract` | `goal` | `present(goal)` | `reachable(goal)` | — |
+| `NavigateContract` | `target` | `present(target)` | `reachable(target)` | — |
 | `PickContract` | `object` | `reachable(object)`, `gripper_empty()` | `holding(object)` | `gripper_empty()` |
 | `PlaceContract` | `object`, `destination` | `holding(object)`, `reachable(destination)` | `at(object,destination)`, `gripper_empty()` | `holding(object)` |
 | `OpenContract` | `articulation` | `reachable(articulation)`, `closed(articulation)` | `open(articulation)` | `closed(articulation)` |

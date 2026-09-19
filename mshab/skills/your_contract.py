@@ -1,4 +1,4 @@
-"""Copyable extension point for adding a new environment-specific contract."""
+"""Copyable extension point for adding a new simulator-specific contract."""
 
 from __future__ import annotations
 
@@ -59,5 +59,5 @@ class YourContract(Contract):
             deletes=deletes,
             env_id=env_id,
             max_episode_steps=max_episode_steps,
-            description="Template for a user-defined environment-specific contract.",
+            description="Template for a user-defined simulator-specific contract.",
         )

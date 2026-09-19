@@ -47,7 +47,7 @@ CATALOG_PATH = (
 
 
 class SkillModelTests(TestCase):
-    def test_specialized_atomic_skill_binds_target_and_contract(self):
+    def test_specialized_contract_binds_its_target(self):
         contract = PickContract(task="set_table", target="013_apple")
         grounded = contract.bind({})
 
@@ -150,7 +150,7 @@ class SkillModelTests(TestCase):
                 SkillNode(
                     "navigate",
                     navigate.id,
-                    {"goal": "013_apple"},
+                    {"target": "013_apple"},
                     achieves=("reachable",),
                 )
             )
@@ -246,7 +246,7 @@ class SkillModelTests(TestCase):
         self.assertEqual(graph.uncovered_subgoals(), ())
         self.assertEqual(
             dict(graph.nodes["navigate_to_object"].arguments),
-            {"goal": "013_apple"},
+            {"target": "013_apple"},
         )
         self.assertNotIn("policy_id", graph.as_dict()["nodes"][0])
         self.assertEqual(
@@ -454,7 +454,7 @@ class SkillModelTests(TestCase):
                 )
             )
 
-    def test_custom_atomic_skill_type_is_extendable(self):
+    def test_custom_contract_type_is_extendable(self):
         contract = YourContract("set_table", "013_apple")
         call = contract.bind({})
 

@@ -1,4 +1,4 @@
-"""First hand-authored, scene-independent MS-HAB skill graph."""
+"""First hand-authored, simulator-independent MS-HAB skill graph."""
 
 from __future__ import annotations
 
@@ -171,7 +171,7 @@ def _build_segment_subgraphs(
 
     open_subgraph = SkillSubgraph(open_subgoal, task)
     open_subgraph.add_node(
-        SkillNode(navigate_source, prefix + "navigate.all", {"goal": source})
+        SkillNode(navigate_source, prefix + "navigate.all", {"target": source})
     )
     open_subgraph.add_node(
         SkillNode(open_source, prefix + "open." + source, {}, (open_subgoal,))
@@ -180,7 +180,7 @@ def _build_segment_subgraphs(
 
     retrieve_subgraph = SkillSubgraph(retrieved_subgoal, task)
     retrieve_subgraph.add_node(
-        SkillNode(navigate_object, prefix + "navigate.all", {"goal": object_name})
+        SkillNode(navigate_object, prefix + "navigate.all", {"target": object_name})
     )
     retrieve_subgraph.add_node(
         SkillNode(
@@ -215,7 +215,7 @@ def _build_segment_subgraphs(
         SkillNode(
             navigate_destination,
             prefix + "navigate.all",
-            {"goal": destination},
+            {"target": destination},
         )
     )
     place_subgraph.add_node(
@@ -250,7 +250,7 @@ def _build_segment_subgraphs(
 
     close_subgraph = SkillSubgraph(close_subgoal, task)
     close_subgraph.add_node(
-        SkillNode(navigate_back, prefix + "navigate.all", {"goal": source})
+        SkillNode(navigate_back, prefix + "navigate.all", {"target": source})
     )
     close_subgraph.add_node(
         SkillNode(close_source, prefix + "close." + source, {}, (close_subgoal,))
@@ -377,7 +377,7 @@ def build_set_table_apple_graph(
     goal: str = _APPLE_GOAL,
     **context: Any
 ):
-    """Build scene-independent Layer 1 and Layer 2 only."""
+    """Build simulator-independent Layer 1 and Layer 2 only."""
 
     return SetTableAppleGraphBuilder().build(
         goal=goal,
@@ -406,7 +406,7 @@ def build_set_table_graph(
     goal: str = _SET_TABLE_GOAL,
     **context: Any
 ):
-    """Build complete scene-independent SetTable Layer 1 and Layer 2 graphs."""
+    """Build complete simulator-independent SetTable Layer 1 and Layer 2 graphs."""
 
     return SetTableGraphBuilder().build(
         goal=goal,
