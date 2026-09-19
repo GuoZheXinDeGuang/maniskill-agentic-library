@@ -1,17 +1,21 @@
-"""Layer 4: read-only storage for the 53 concrete MS-HAB policies.
+"""The canonical inventory of the 53 downloaded MS-HAB RL checkpoint policies.
 
-There are intentionally no policy-policy edges, fallback rules, alternative
-rules, or selection logic in this module.
+This manifest is the one thing the granularity experiment holds that
+``mshab.skills`` does not: which ``<family>/<task>/<type>/<target>`` leaves
+exist in the official download across the three long-horizon tasks.  A row
+carries identity and checkpoint metadata only.  How a policy is bound to a
+contract, and which bound policy executes a grounding, is decided by the
+ordinary :class:`~mshab.skills.library.ContractLibrary` built in
+:mod:`mshab.experiments.granularity.lower_layers.library`.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from types import MappingProxyType
-from typing import Any, Dict, Mapping, Tuple
+from typing import Any, Dict, Tuple
 
-from mshab.skills.model import CheckpointPolicy, ContractType, Policy
+from mshab.skills.model import CheckpointPolicy, ContractType
 
 
 TASK_ABBREVIATIONS = {
@@ -41,7 +45,7 @@ TASK_OBJECT_CATEGORIES = {
 
 @dataclass(frozen=True)
 class PolicySpec:
-    """Portable storage metadata for one checkpoint policy."""
+    """One row of the manifest: a checkpoint that exists in the download."""
 
     task_family: str
     contract_type: ContractType
@@ -95,6 +99,21 @@ class PolicySpec:
             (self.family, self.task_family, self.contract_type.value, self.target)
         )
 
+    def policy(self, checkpoint_root: Path) -> CheckpointPolicy:
+        """The stored policy for this row under ``checkpoint_root``.
+
+        Readiness is computed from the filesystem at run time; the manifest
+        itself never records it.
+        """
+
+        return CheckpointPolicy.from_leaf(
+            Path(checkpoint_root),
+            self.family,
+            self.task_family,
+            self.contract_type,
+            self.target,
+        )
+
     def as_dict(self) -> Dict[str, Any]:
         return {
             "id": self.id,
@@ -125,51 +144,20 @@ def _policy_specs() -> Tuple[PolicySpec, ...]:
                 )
     result = tuple(sorted(specs, key=lambda item: item.id))
     if len(result) != 53 or len({item.id for item in result}) != 53:
-        raise AssertionError("the canonical RL policy store must contain 53 items")
+        raise AssertionError("the canonical RL policy manifest must contain 53 rows")
     return result
 
 
 POLICY_SPECS = _policy_specs()
+_SPECS_BY_ID = {spec.id: spec for spec in POLICY_SPECS}
 
 
-@dataclass(frozen=True)
-class Layer4PolicyStore:
-    """Read-only policy inventory with no relations or routing behavior."""
+def spec_for(policy_id: str) -> PolicySpec:
+    """The manifest row behind one policy id."""
 
-    policies: Mapping[str, Policy]
-    specs: Mapping[str, PolicySpec]
-
-    def __post_init__(self) -> None:
-        policies = dict(self.policies)
-        specs = dict(self.specs)
-        if len(policies) != 53 or len(specs) != 53:
-            raise ValueError("Layer 4 must contain exactly 53 policies")
-        if set(policies) != set(specs):
-            raise ValueError("Layer-4 policies and specifications must match")
-        object.__setattr__(self, "policies", MappingProxyType(policies))
-        object.__setattr__(self, "specs", MappingProxyType(specs))
-
-    def policy(self, policy_id: str) -> Policy:
-        return self.policies[policy_id]
-
-    def spec(self, policy_id: str) -> PolicySpec:
-        return self.specs[policy_id]
-
-def build_layer4(checkpoint_root: Path) -> Layer4PolicyStore:
-    """Construct the 53 stored CheckpointPolicy objects."""
-
-    root = Path(checkpoint_root)
-    policies = {
-        spec.id: CheckpointPolicy.from_leaf(
-            root,
-            spec.family,
-            spec.task_family,
-            spec.contract_type,
-            spec.target,
-        )
-        for spec in POLICY_SPECS
-    }
-    return Layer4PolicyStore(
-        policies=policies,
-        specs={spec.id: spec for spec in POLICY_SPECS},
-    )
+    try:
+        return _SPECS_BY_ID[policy_id]
+    except KeyError as exc:
+        raise KeyError(
+            "policy {!r} is not in the granularity manifest".format(policy_id)
+        ) from exc

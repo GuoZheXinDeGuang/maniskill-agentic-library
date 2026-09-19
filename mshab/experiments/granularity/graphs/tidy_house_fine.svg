@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="2276" viewBox="0 0 1000 2276" role="img" aria-labelledby="title description">
+<title id="title">tidy_house_fine</title>
+<desc id="description">Tidy the house: move every object to its target receptacle.</desc>
+<defs>
+<marker id="edge" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#7552d6"/></marker>
+<marker id="cross" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#c6531a"/></marker>
+</defs>
+<rect width="1000" height="2276" fill="#ffffff"/>
+<text x="30" y="40" font-size="26" font-weight="700" fill="#6842cb" text-anchor="start">tidy_house_fine</text>
+<text x="30" y="66" font-size="14" font-weight="400" fill="#71809b" text-anchor="start">Tidy the house: move every object to its target receptacle.</text>
+<text x="30" y="88" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">20 sub-goals · 20 skill nodes · 0 internal edges · 19 cross-subgraph edges · 1.0 nodes per subgraph · task granularity · granularity fine</text>
+<rect x="30" y="110" width="940" height="94" rx="14" fill="#f6f3fc" stroke="#d6cdf3" stroke-width="1.5"/>
+<text x="48" y="153.0" font-size="15" font-weight="700" fill="#2f3a4d" text-anchor="start">object_1_reachable</text>
+<text x="48" y="174.0" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">reachable(002_master_chef_can)</text>
+<rect x="360" y="128.0" width="230" height="58" rx="10" fill="#fffaf2" stroke="#c6531a" stroke-width="2.5"/>
+<text x="475.0" y="151.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">navigate_to_object_1</text>
+<text x="475.0" y="171.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">navigate(002_master_chef_can)</text>
+<rect x="30" y="216" width="940" height="94" rx="14" fill="#f6f3fc" stroke="#d6cdf3" stroke-width="1.5"/>
+<text x="48" y="259.0" font-size="15" font-weight="700" fill="#2f3a4d" text-anchor="start">object_1_holding</text>
+<text x="48" y="280.0" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">holding(002_master_chef_can)</text>
+<rect x="360" y="234.0" width="230" height="58" rx="10" fill="#fffaf2" stroke="#c6531a" stroke-width="2.5"/>
+<text x="475.0" y="257.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">pick_object_1</text>
+<text x="475.0" y="277.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">pick(002_master_chef_can)</text>
+<rect x="30" y="322" width="940" height="94" rx="14" fill="#f6f3fc" stroke="#d6cdf3" stroke-width="1.5"/>
+<text x="48" y="365.0" font-size="15" font-weight="700" fill="#2f3a4d" text-anchor="start">destination_1_reachable</text>
+<text x="48" y="386.0" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">reachable(kitchen_counter)</text>
+<rect x="360" y="340.0" width="230" height="58" rx="10" fill="#fffaf2" stroke="#c6531a" stroke-width="2.5"/>
+<text x="475.0" y="363.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">navigate_to_destination_1</text>
+<text x="475.0" y="383.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">navigate(kitchen_counter)</text>
+<rect x="30" y="428" width="940" height="94" rx="14" fill="#f6f3fc" stroke="#d6cdf3" stroke-width="1.5"/>
+<text x="48" y="471.0" font-size="15" font-weight="700" fill="#2f3a4d" text-anchor="start">object_1_placed</text>
+<text x="48" y="492.0" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">at(002_master_chef_can,kitchen_counter)</text>
+<rect x="360" y="446.0" width="230" height="58" rx="10" fill="#fffaf2" stroke="#c6531a" stroke-width="2.5"/>
+<text x="475.0" y="469.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">place_object_1</text>
+<text x="475.0" y="489.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">place(002_master_chef_can, kitchen_counter)</text>
+<rect x="30" y="534" width="940" height="94" rx="14" fill="#f6f3fc" stroke="#d6cdf3" stroke-width="1.5"/>
+<text x="48" y="577.0" font-size="15" font-weight="700" fill="#2f3a4d" text-anchor="start">object_2_reachable</text>
+<text x="48" y="598.0" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">reachable(003_cracker_box)</text>
+<rect x="360" y="552.0" width="230" height="58" rx="10" fill="#fffaf2" stroke="#c6531a" stroke-width="2.5"/>
+<text x="475.0" y="575.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">navigate_to_object_2</text>
+<text x="475.0" y="595.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">navigate(003_cracker_box)</text>
+<rect x="30" y="640" width="940" height="94" rx="14" fill="#f6f3fc" stroke="#d6cdf3" stroke-width="1.5"/>
+<text x="48" y="683.0" font-size="15" font-weight="700" fill="#2f3a4d" text-anchor="start">object_2_holding</text>
+<text x="48" y="704.0" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">holding(003_cracker_box)</text>
+<rect x="360" y="658.0" width="230" height="58" rx="10" fill="#fffaf2" stroke="#c6531a" stroke-width="2.5"/>
+<text x="475.0" y="681.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">pick_object_2</text>
+<text x="475.0" y="701.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">pick(003_cracker_box)</text>
+<rect x="30" y="746" width="940" height="94" rx="14" fill="#f6f3fc" stroke="#d6cdf3" stroke-width="1.5"/>
+<text x="48" y="789.0" font-size="15" font-weight="700" fill="#2f3a4d" text-anchor="start">destination_2_reachable</text>
+<text x="48" y="810.0" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">reachable(dining_table)</text>
+<rect x="360" y="764.0" width="230" height="58" rx="10" fill="#fffaf2" stroke="#c6531a" stroke-width="2.5"/>
+<text x="475.0" y="787.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">navigate_to_destination_2</text>
+<text x="475.0" y="807.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">navigate(dining_table)</text>
+<rect x="30" y="852" width="940" height="94" rx="14" fill="#f6f3fc" stroke="#d6cdf3" stroke-width="1.5"/>
+<text x="48" y="895.0" font-size="15" font-weight="700" fill="#2f3a4d" text-anchor="start">object_2_placed</text>
+<text x="48" y="916.0" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">at(003_cracker_box,dining_table)</text>
+<rect x="360" y="870.0" width="230" height="58" rx="10" fill="#fffaf2" stroke="#c6531a" stroke-width="2.5"/>
+<text x="475.0" y="893.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">place_object_2</text>
+<text x="475.0" y="913.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">place(003_cracker_box, dining_table)</text>
+<rect x="30" y="958" width="940" height="94" rx="14" fill="#f6f3fc" stroke="#d6cdf3" stroke-width="1.5"/>
+<text x="48" y="1001.0" font-size="15" font-weight="700" fill="#2f3a4d" text-anchor="start">object_3_reachable</text>
+<text x="48" y="1022.0" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">reachable(004_sugar_box)</text>
+<rect x="360" y="976.0" width="230" height="58" rx="10" fill="#fffaf2" stroke="#c6531a" stroke-width="2.5"/>
+<text x="475.0" y="999.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">navigate_to_object_3</text>
+<text x="475.0" y="1019.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">navigate(004_sugar_box)</text>
+<rect x="30" y="1064" width="940" height="94" rx="14" fill="#f6f3fc" stroke="#d6cdf3" stroke-width="1.5"/>
+<text x="48" y="1107.0" font-size="15" font-weight="700" fill="#2f3a4d" text-anchor="start">object_3_holding</text>
+<text x="48" y="1128.0" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">holding(004_sugar_box)</text>
+<rect x="360" y="1082.0" width="230" height="58" rx="10" fill="#fffaf2" stroke="#c6531a" stroke-width="2.5"/>
+<text x="475.0" y="1105.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">pick_object_3</text>
+<text x="475.0" y="1125.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">pick(004_sugar_box)</text>
+<rect x="30" y="1170" width="940" height="94" rx="14" fill="#f6f3fc" stroke="#d6cdf3" stroke-width="1.5"/>
+<text x="48" y="1213.0" font-size="15" font-weight="700" fill="#2f3a4d" text-anchor="start">destination_3_reachable</text>
+<text x="48" y="1234.0" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">reachable(coffee_table)</text>
+<rect x="360" y="1188.0" width="230" height="58" rx="10" fill="#fffaf2" stroke="#c6531a" stroke-width="2.5"/>
+<text x="475.0" y="1211.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">navigate_to_destination_3</text>
+<text x="475.0" y="1231.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">navigate(coffee_table)</text>
+<rect x="30" y="1276" width="940" height="94" rx="14" fill="#f6f3fc" stroke="#d6cdf3" stroke-width="1.5"/>
+<text x="48" y="1319.0" font-size="15" font-weight="700" fill="#2f3a4d" text-anchor="start">object_3_placed</text>
+<text x="48" y="1340.0" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">at(004_sugar_box,coffee_table)</text>
+<rect x="360" y="1294.0" width="230" height="58" rx="10" fill="#fffaf2" stroke="#c6531a" stroke-width="2.5"/>
+<text x="475.0" y="1317.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">place_object_3</text>
+<text x="475.0" y="1337.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">place(004_sugar_box, coffee_table)</text>
+<rect x="30" y="1382" width="940" height="94" rx="14" fill="#f6f3fc" stroke="#d6cdf3" stroke-width="1.5"/>
+<text x="48" y="1425.0" font-size="15" font-weight="700" fill="#2f3a4d" text-anchor="start">object_4_reachable</text>
+<text x="48" y="1446.0" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">reachable(005_tomato_soup_can)</text>
+<rect x="360" y="1400.0" width="230" height="58" rx="10" fill="#fffaf2" stroke="#c6531a" stroke-width="2.5"/>
+<text x="475.0" y="1423.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">navigate_to_object_4</text>
+<text x="475.0" y="1443.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">navigate(005_tomato_soup_can)</text>
+<rect x="30" y="1488" width="940" height="94" rx="14" fill="#f6f3fc" stroke="#d6cdf3" stroke-width="1.5"/>
+<text x="48" y="1531.0" font-size="15" font-weight="700" fill="#2f3a4d" text-anchor="start">object_4_holding</text>
+<text x="48" y="1552.0" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">holding(005_tomato_soup_can)</text>
+<rect x="360" y="1506.0" width="230" height="58" rx="10" fill="#fffaf2" stroke="#c6531a" stroke-width="2.5"/>
+<text x="475.0" y="1529.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">pick_object_4</text>
+<text x="475.0" y="1549.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">pick(005_tomato_soup_can)</text>
+<rect x="30" y="1594" width="940" height="94" rx="14" fill="#f6f3fc" stroke="#d6cdf3" stroke-width="1.5"/>
+<text x="48" y="1637.0" font-size="15" font-weight="700" fill="#2f3a4d" text-anchor="start">destination_4_reachable</text>
+<text x="48" y="1658.0" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">reachable(tv_stand)</text>
+<rect x="360" y="1612.0" width="230" height="58" rx="10" fill="#fffaf2" stroke="#c6531a" stroke-width="2.5"/>
+<text x="475.0" y="1635.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">navigate_to_destination_4</text>
+<text x="475.0" y="1655.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">navigate(tv_stand)</text>
+<rect x="30" y="1700" width="940" height="94" rx="14" fill="#f6f3fc" stroke="#d6cdf3" stroke-width="1.5"/>
+<text x="48" y="1743.0" font-size="15" font-weight="700" fill="#2f3a4d" text-anchor="start">object_4_placed</text>
+<text x="48" y="1764.0" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">at(005_tomato_soup_can,tv_stand)</text>
+<rect x="360" y="1718.0" width="230" height="58" rx="10" fill="#fffaf2" stroke="#c6531a" stroke-width="2.5"/>
+<text x="475.0" y="1741.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">place_object_4</text>
+<text x="475.0" y="1761.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">place(005_tomato_soup_can, tv_stand)</text>
+<rect x="30" y="1806" width="940" height="94" rx="14" fill="#f6f3fc" stroke="#d6cdf3" stroke-width="1.5"/>
+<text x="48" y="1849.0" font-size="15" font-weight="700" fill="#2f3a4d" text-anchor="start">object_5_reachable</text>
+<text x="48" y="1870.0" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">reachable(007_tuna_fish_can)</text>
+<rect x="360" y="1824.0" width="230" height="58" rx="10" fill="#fffaf2" stroke="#c6531a" stroke-width="2.5"/>
+<text x="475.0" y="1847.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">navigate_to_object_5</text>
+<text x="475.0" y="1867.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">navigate(007_tuna_fish_can)</text>
+<rect x="30" y="1912" width="940" height="94" rx="14" fill="#f6f3fc" stroke="#d6cdf3" stroke-width="1.5"/>
+<text x="48" y="1955.0" font-size="15" font-weight="700" fill="#2f3a4d" text-anchor="start">object_5_holding</text>
+<text x="48" y="1976.0" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">holding(007_tuna_fish_can)</text>
+<rect x="360" y="1930.0" width="230" height="58" rx="10" fill="#fffaf2" stroke="#c6531a" stroke-width="2.5"/>
+<text x="475.0" y="1953.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">pick_object_5</text>
+<text x="475.0" y="1973.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">pick(007_tuna_fish_can)</text>
+<rect x="30" y="2018" width="940" height="94" rx="14" fill="#f6f3fc" stroke="#d6cdf3" stroke-width="1.5"/>
+<text x="48" y="2061.0" font-size="15" font-weight="700" fill="#2f3a4d" text-anchor="start">destination_5_reachable</text>
+<text x="48" y="2082.0" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">reachable(bedside_table)</text>
+<rect x="360" y="2036.0" width="230" height="58" rx="10" fill="#fffaf2" stroke="#c6531a" stroke-width="2.5"/>
+<text x="475.0" y="2059.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">navigate_to_destination_5</text>
+<text x="475.0" y="2079.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">navigate(bedside_table)</text>
+<rect x="30" y="2124" width="940" height="94" rx="14" fill="#f6f3fc" stroke="#d6cdf3" stroke-width="1.5"/>
+<text x="48" y="2167.0" font-size="15" font-weight="700" fill="#2f3a4d" text-anchor="start">object_5_placed</text>
+<text x="48" y="2188.0" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">at(007_tuna_fish_can,bedside_table)</text>
+<rect x="360" y="2142.0" width="230" height="58" rx="10" fill="#fffaf2" stroke="#c6531a" stroke-width="2.5"/>
+<text x="475.0" y="2165.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">place_object_5</text>
+<text x="475.0" y="2185.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">place(007_tuna_fish_can, bedside_table)</text>
+<path d="M 475.0 186.0 V 210.0 H 475.0 V 234.0" fill="none" stroke="#c6531a" stroke-width="1.8" marker-end="url(#cross)"/>
+<path d="M 475.0 292.0 V 316.0 H 475.0 V 340.0" fill="none" stroke="#c6531a" stroke-width="1.8" marker-end="url(#cross)"/>
+<path d="M 475.0 398.0 V 422.0 H 475.0 V 446.0" fill="none" stroke="#c6531a" stroke-width="1.8" marker-end="url(#cross)"/>
+<path d="M 475.0 504.0 V 528.0 H 475.0 V 552.0" fill="none" stroke="#c6531a" stroke-width="1.8" marker-end="url(#cross)"/>
+<path d="M 475.0 610.0 V 634.0 H 475.0 V 658.0" fill="none" stroke="#c6531a" stroke-width="1.8" marker-end="url(#cross)"/>
+<path d="M 475.0 716.0 V 740.0 H 475.0 V 764.0" fill="none" stroke="#c6531a" stroke-width="1.8" marker-end="url(#cross)"/>
+<path d="M 475.0 822.0 V 846.0 H 475.0 V 870.0" fill="none" stroke="#c6531a" stroke-width="1.8" marker-end="url(#cross)"/>
+<path d="M 475.0 928.0 V 952.0 H 475.0 V 976.0" fill="none" stroke="#c6531a" stroke-width="1.8" marker-end="url(#cross)"/>
+<path d="M 475.0 1034.0 V 1058.0 H 475.0 V 1082.0" fill="none" stroke="#c6531a" stroke-width="1.8" marker-end="url(#cross)"/>
+<path d="M 475.0 1140.0 V 1164.0 H 475.0 V 1188.0" fill="none" stroke="#c6531a" stroke-width="1.8" marker-end="url(#cross)"/>
+<path d="M 475.0 1246.0 V 1270.0 H 475.0 V 1294.0" fill="none" stroke="#c6531a" stroke-width="1.8" marker-end="url(#cross)"/>
+<path d="M 475.0 1352.0 V 1376.0 H 475.0 V 1400.0" fill="none" stroke="#c6531a" stroke-width="1.8" marker-end="url(#cross)"/>
+<path d="M 475.0 1458.0 V 1482.0 H 475.0 V 1506.0" fill="none" stroke="#c6531a" stroke-width="1.8" marker-end="url(#cross)"/>
+<path d="M 475.0 1564.0 V 1588.0 H 475.0 V 1612.0" fill="none" stroke="#c6531a" stroke-width="1.8" marker-end="url(#cross)"/>
+<path d="M 475.0 1670.0 V 1694.0 H 475.0 V 1718.0" fill="none" stroke="#c6531a" stroke-width="1.8" marker-end="url(#cross)"/>
+<path d="M 475.0 1776.0 V 1800.0 H 475.0 V 1824.0" fill="none" stroke="#c6531a" stroke-width="1.8" marker-end="url(#cross)"/>
+<path d="M 475.0 1882.0 V 1906.0 H 475.0 V 1930.0" fill="none" stroke="#c6531a" stroke-width="1.8" marker-end="url(#cross)"/>
+<path d="M 475.0 1988.0 V 2012.0 H 475.0 V 2036.0" fill="none" stroke="#c6531a" stroke-width="1.8" marker-end="url(#cross)"/>
+<path d="M 475.0 2094.0 V 2118.0 H 475.0 V 2142.0" fill="none" stroke="#c6531a" stroke-width="1.8" marker-end="url(#cross)"/>
+<text x="30" y="2256" font-size="12" font-weight="400" fill="#71809b" text-anchor="start">row = one sub-goal and its skill subgraph · box = one skill node, one contract call · orange border = achiever · purple arrow = relation inside a subgraph · orange arrow = cross-subgraph ENABLES (from any achiever)</text>
+</svg>

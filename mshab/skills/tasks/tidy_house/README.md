@@ -52,8 +52,9 @@ at(object_i, destination_i)
 ```
 
 For a five-object episode this produces 20 sub-goals and 20 skill subgraphs.
-Pick and Place subgraphs retain specialized and generic achievers; therefore
-the number of candidate nodes is unchanged between variants.
+The gold graphs in `mshab/experiments/granularity/graphs/` implement both
+variants over the five generic contracts, so every role has exactly one node
+and both variants hold the same 20 nodes; only sub-goal ownership differs.
 
 ## Required measurements
 

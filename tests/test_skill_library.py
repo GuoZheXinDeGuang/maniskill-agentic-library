@@ -710,6 +710,80 @@ class LibraryBindingTests(TestCase):
                 [other_task.id],
             )
 
+    def test_grounded_arguments_restrict_policies_to_their_target(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            generic = PickContract("set_table", "all")
+            bowl = PickContract("set_table", "024_bowl")
+            checkpoints = {}
+            for target, ready in (("013_apple", True), ("024_bowl", False), ("all", True)):
+                leaf = root / "rl" / "set_table" / "pick" / target
+                leaf.mkdir(parents=True)
+                if ready:
+                    (leaf / "config.yml").write_text("name: ppo\n")
+                    (leaf / "policy.pt").write_bytes(b"weights")
+                checkpoints[target] = CheckpointPolicy.from_leaf(
+                    root, "rl", "set_table", "pick", target
+                )
+            # A policy without target metadata applies to every grounding.
+            vla = self._checkpoint(root, "vla.manipulation")
+            library = ContractLibrary(
+                (generic, bowl),
+                tuple(checkpoints.values()) + (vla,),
+                (
+                    (generic.id, checkpoints["013_apple"].id),
+                    (generic.id, checkpoints["024_bowl"].id),
+                    (generic.id, checkpoints["all"].id),
+                    (generic.id, vla.id),
+                    (bowl.id, checkpoints["024_bowl"].id),
+                    (bowl.id, checkpoints["all"].id),
+                ),
+            )
+            self.assertEqual(checkpoints["013_apple"].target, "013_apple")
+            self.assertEqual(checkpoints["all"].as_dict()["target"], "all")
+            self.assertIsNone(vla.target)
+
+            # Without arguments: binding order, first ready.
+            self.assertIs(library.select_policy(generic.id), checkpoints["013_apple"])
+            # Grounded on the bowl: exact target first, then generic policies;
+            # the apple checkpoint is never a candidate.
+            self.assertEqual(
+                [
+                    policy.id
+                    for policy in library.applicable_policies(
+                        generic.id, {"object": "024_bowl"}
+                    )
+                ],
+                [checkpoints["024_bowl"].id, checkpoints["all"].id, vla.id],
+            )
+            self.assertIs(
+                library.select_policy(generic.id, arguments={"object": "024_bowl"}),
+                checkpoints["all"],
+            )
+            with self.assertRaisesRegex(ValueError, "trained for target"):
+                library.select_policy(
+                    generic.id,
+                    checkpoints["013_apple"].id,
+                    arguments={"object": "024_bowl"},
+                )
+            self.assertIs(
+                library.select_policy(
+                    generic.id, checkpoints["all"].id, arguments={"object": "024_bowl"}
+                ),
+                checkpoints["all"],
+            )
+            # A specialized contract grounds its own target and is unaffected.
+            grounded = bowl.bind({})
+            self.assertIs(
+                library.select_policy(bowl.id, arguments=grounded.arguments),
+                checkpoints["all"],
+            )
+            # A grounding that names no specific target restricts nothing.
+            self.assertEqual(
+                library.applicable_policies(generic.id, {}),
+                library.policies_for(generic.id),
+            )
+
     def test_catalog_layer_four_lists_bindings_from_both_sides(self):
         document = json.loads(CATALOG_PATH.read_text())
         layer_4 = document["layers"]["4_contracts_and_policies"]

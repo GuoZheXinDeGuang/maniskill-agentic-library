@@ -113,7 +113,8 @@ set.
 Layer-2 SkillNode
     -> SkillGrounder binds the node to its contract (GroundedSkill)
     -> adapter snapshot supplies precondition/invariant facts
-    -> ContractLibrary.select_policy picks a bound policy (explicit id, else first ready)
+    -> ContractLibrary.select_policy picks a bound policy that applies to the
+       grounded target (explicit id, else first ready)
     -> PolicyExecutor loads the policy/controller and calls adapter.step(action)
     -> invariant monitor checks every step
     -> adapter supplies final effect/verification facts
@@ -217,6 +218,21 @@ library.select_policy("mshab.set_table.pick.024_bowl", "rl.set_table.pick.all")
 library.register_policy(my_vla)                          # any Policy subclass
 library.bind("mshab.set_table.pick.013_apple", my_vla.id)
 library.bind("mshab.set_table.place.013_apple", my_vla.id)
+```
+
+A generic contract such as `pick.all` may be bound to checkpoints trained for
+different objects. Every `Policy` therefore records its `target`: the object
+or articulation it was trained for, `all`, or `None` when unknown. Passing
+the grounded arguments to `select_policy` drops every policy trained for a
+different target and prefers an exact match over a generic checkpoint;
+`applicable_policies` returns that filtered, reordered list. `SkillRuntime`
+always passes the grounded arguments, so admission and execution agree.
+
+```python
+grounded = library.get("mshab.set_table.pick.024_bowl").bind({})
+library.applicable_policies(grounded.contract.id, grounded.arguments)
+# policies with target 024_bowl, then target all or None; never 013_apple
+library.select_policy(grounded.contract.id, arguments=grounded.arguments)
 ```
 
 ## Add your own contract (`YourContract`)

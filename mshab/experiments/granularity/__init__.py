@@ -1,37 +1,37 @@
-"""Independent Layer-3/4 stores and their explicit EXECUTES connections."""
+"""Graph-granularity experiment: generic lower layers for coarse and fine graphs."""
 
-from mshab.experiments.granularity.lower_layers.connections import (
-    ConnectedLayers,
-    ExecutesConnection,
-    build_connected_layers,
-    connect_layers,
-    connected_layers_document,
+from mshab.experiments.granularity.higher_layers.gold import (
+    GOLD_GRAPHS,
+    build_gold_graph,
+    load_gold_graph,
 )
-from mshab.experiments.granularity.lower_layers.layer3 import (
+from mshab.experiments.granularity.lower_layers.library import (
     EXPERIMENT_TASK,
-    Layer3Contracts,
-    build_layer3,
+    SCHEMA_VERSION,
+    build_granularity_library,
+    contract_id,
+    library_document,
 )
-from mshab.experiments.granularity.lower_layers.layer4 import (
+from mshab.experiments.granularity.lower_layers.manifest import (
+    HOUSEHOLD_OBJECTS,
     POLICY_SPECS,
     TASK_OBJECT_CATEGORIES,
-    Layer4PolicyStore,
     PolicySpec,
-    build_layer4,
+    spec_for,
 )
 
 __all__ = [
-    "ConnectedLayers",
     "EXPERIMENT_TASK",
-    "ExecutesConnection",
-    "Layer3Contracts",
-    "Layer4PolicyStore",
+    "GOLD_GRAPHS",
+    "HOUSEHOLD_OBJECTS",
     "POLICY_SPECS",
     "PolicySpec",
+    "SCHEMA_VERSION",
     "TASK_OBJECT_CATEGORIES",
-    "build_connected_layers",
-    "build_layer3",
-    "build_layer4",
-    "connect_layers",
-    "connected_layers_document",
+    "build_gold_graph",
+    "build_granularity_library",
+    "contract_id",
+    "library_document",
+    "load_gold_graph",
+    "spec_for",
 ]

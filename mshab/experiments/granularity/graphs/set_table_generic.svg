@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1004" viewBox="0 0 1000 1004" role="img" aria-labelledby="title description">
+<title id="title">set_table_generic</title>
+<desc id="description">Set the table with the bowl and apple, then close their storage.</desc>
+<defs>
+<marker id="edge" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#7552d6"/></marker>
+<marker id="cross" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#c6531a"/></marker>
+</defs>
+<rect width="1000" height="1004" fill="#ffffff"/>
+<text x="30" y="40" font-size="26" font-weight="700" fill="#6842cb" text-anchor="start">set_table_generic</text>
+<text x="30" y="66" font-size="14" font-weight="400" fill="#71809b" text-anchor="start">Set the table with the bowl and apple, then close their storage.</text>
+<text x="30" y="88" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">8 sub-goals · 16 skill nodes · 8 internal edges · 7 cross-subgraph edges · 2.0 nodes per subgraph · task granularity · granularity n/a</text>
+<rect x="30" y="110" width="940" height="94" rx="14" fill="#f6f3fc" stroke="#d6cdf3" stroke-width="1.5"/>
+<text x="48" y="153.0" font-size="15" font-weight="700" fill="#2f3a4d" text-anchor="start">bowl_source_open</text>
+<text x="48" y="174.0" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">open(kitchen_counter)</text>
+<rect x="360" y="128.0" width="230" height="58" rx="10" fill="#ffffff" stroke="#7552d6" stroke-width="1.6"/>
+<text x="475.0" y="151.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">navigate_to_bowl_source</text>
+<text x="475.0" y="171.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">navigate(kitchen_counter)</text>
+<rect x="630" y="128.0" width="230" height="58" rx="10" fill="#fffaf2" stroke="#c6531a" stroke-width="2.5"/>
+<text x="745.0" y="151.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">open_bowl_source</text>
+<text x="745.0" y="171.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">open(kitchen_counter)</text>
+<path d="M 590 157.0 L 630 157.0" fill="none" stroke="#7552d6" stroke-width="1.8" marker-end="url(#edge)"/>
+<text x="610.0" y="150.0" font-size="10" font-weight="400" fill="#7552d6" text-anchor="middle">enables</text>
+<rect x="30" y="216" width="940" height="94" rx="14" fill="#f6f3fc" stroke="#d6cdf3" stroke-width="1.5"/>
+<text x="48" y="259.0" font-size="15" font-weight="700" fill="#2f3a4d" text-anchor="start">bowl_retrieved</text>
+<text x="48" y="280.0" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">holding(024_bowl)</text>
+<rect x="360" y="234.0" width="230" height="58" rx="10" fill="#ffffff" stroke="#7552d6" stroke-width="1.6"/>
+<text x="475.0" y="257.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">navigate_to_bowl</text>
+<text x="475.0" y="277.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">navigate(024_bowl)</text>
+<rect x="630" y="234.0" width="230" height="58" rx="10" fill="#fffaf2" stroke="#c6531a" stroke-width="2.5"/>
+<text x="745.0" y="257.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">pick_bowl</text>
+<text x="745.0" y="277.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">pick(024_bowl)</text>
+<path d="M 590 263.0 L 630 263.0" fill="none" stroke="#7552d6" stroke-width="1.8" marker-end="url(#edge)"/>
+<text x="610.0" y="256.0" font-size="10" font-weight="400" fill="#7552d6" text-anchor="middle">enables</text>
+<rect x="30" y="322" width="940" height="94" rx="14" fill="#f6f3fc" stroke="#d6cdf3" stroke-width="1.5"/>
+<text x="48" y="365.0" font-size="15" font-weight="700" fill="#2f3a4d" text-anchor="start">bowl_placed</text>
+<text x="48" y="386.0" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">at(024_bowl,dining_table)</text>
+<rect x="360" y="340.0" width="230" height="58" rx="10" fill="#ffffff" stroke="#7552d6" stroke-width="1.6"/>
+<text x="475.0" y="363.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">navigate_bowl_to_destination</text>
+<text x="475.0" y="383.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">navigate(dining_table)</text>
+<rect x="630" y="340.0" width="230" height="58" rx="10" fill="#fffaf2" stroke="#c6531a" stroke-width="2.5"/>
+<text x="745.0" y="363.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">place_bowl</text>
+<text x="745.0" y="383.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">place(024_bowl, dining_table)</text>
+<path d="M 590 369.0 L 630 369.0" fill="none" stroke="#7552d6" stroke-width="1.8" marker-end="url(#edge)"/>
+<text x="610.0" y="362.0" font-size="10" font-weight="400" fill="#7552d6" text-anchor="middle">enables</text>
+<rect x="30" y="428" width="940" height="94" rx="14" fill="#f6f3fc" stroke="#d6cdf3" stroke-width="1.5"/>
+<text x="48" y="471.0" font-size="15" font-weight="700" fill="#2f3a4d" text-anchor="start">bowl_source_closed</text>
+<text x="48" y="492.0" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">closed(kitchen_counter)</text>
+<rect x="360" y="446.0" width="230" height="58" rx="10" fill="#ffffff" stroke="#7552d6" stroke-width="1.6"/>
+<text x="475.0" y="469.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">navigate_back_to_bowl_source</text>
+<text x="475.0" y="489.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">navigate(kitchen_counter)</text>
+<rect x="630" y="446.0" width="230" height="58" rx="10" fill="#fffaf2" stroke="#c6531a" stroke-width="2.5"/>
+<text x="745.0" y="469.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">close_bowl_source</text>
+<text x="745.0" y="489.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">close(kitchen_counter)</text>
+<path d="M 590 475.0 L 630 475.0" fill="none" stroke="#7552d6" stroke-width="1.8" marker-end="url(#edge)"/>
+<text x="610.0" y="468.0" font-size="10" font-weight="400" fill="#7552d6" text-anchor="middle">enables</text>
+<rect x="30" y="534" width="940" height="94" rx="14" fill="#f6f3fc" stroke="#d6cdf3" stroke-width="1.5"/>
+<text x="48" y="577.0" font-size="15" font-weight="700" fill="#2f3a4d" text-anchor="start">apple_source_open</text>
+<text x="48" y="598.0" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">open(fridge)</text>
+<rect x="360" y="552.0" width="230" height="58" rx="10" fill="#ffffff" stroke="#7552d6" stroke-width="1.6"/>
+<text x="475.0" y="575.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">navigate_to_apple_source</text>
+<text x="475.0" y="595.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">navigate(fridge)</text>
+<rect x="630" y="552.0" width="230" height="58" rx="10" fill="#fffaf2" stroke="#c6531a" stroke-width="2.5"/>
+<text x="745.0" y="575.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">open_apple_source</text>
+<text x="745.0" y="595.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">open(fridge)</text>
+<path d="M 590 581.0 L 630 581.0" fill="none" stroke="#7552d6" stroke-width="1.8" marker-end="url(#edge)"/>
+<text x="610.0" y="574.0" font-size="10" font-weight="400" fill="#7552d6" text-anchor="middle">enables</text>
+<rect x="30" y="640" width="940" height="94" rx="14" fill="#f6f3fc" stroke="#d6cdf3" stroke-width="1.5"/>
+<text x="48" y="683.0" font-size="15" font-weight="700" fill="#2f3a4d" text-anchor="start">apple_retrieved</text>
+<text x="48" y="704.0" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">holding(013_apple)</text>
+<rect x="360" y="658.0" width="230" height="58" rx="10" fill="#ffffff" stroke="#7552d6" stroke-width="1.6"/>
+<text x="475.0" y="681.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">navigate_to_apple</text>
+<text x="475.0" y="701.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">navigate(013_apple)</text>
+<rect x="630" y="658.0" width="230" height="58" rx="10" fill="#fffaf2" stroke="#c6531a" stroke-width="2.5"/>
+<text x="745.0" y="681.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">pick_apple</text>
+<text x="745.0" y="701.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">pick(013_apple)</text>
+<path d="M 590 687.0 L 630 687.0" fill="none" stroke="#7552d6" stroke-width="1.8" marker-end="url(#edge)"/>
+<text x="610.0" y="680.0" font-size="10" font-weight="400" fill="#7552d6" text-anchor="middle">enables</text>
+<rect x="30" y="746" width="940" height="94" rx="14" fill="#f6f3fc" stroke="#d6cdf3" stroke-width="1.5"/>
+<text x="48" y="789.0" font-size="15" font-weight="700" fill="#2f3a4d" text-anchor="start">apple_placed</text>
+<text x="48" y="810.0" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">at(013_apple,dining_table)</text>
+<rect x="360" y="764.0" width="230" height="58" rx="10" fill="#ffffff" stroke="#7552d6" stroke-width="1.6"/>
+<text x="475.0" y="787.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">navigate_apple_to_destination</text>
+<text x="475.0" y="807.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">navigate(dining_table)</text>
+<rect x="630" y="764.0" width="230" height="58" rx="10" fill="#fffaf2" stroke="#c6531a" stroke-width="2.5"/>
+<text x="745.0" y="787.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">place_apple</text>
+<text x="745.0" y="807.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">place(013_apple, dining_table)</text>
+<path d="M 590 793.0 L 630 793.0" fill="none" stroke="#7552d6" stroke-width="1.8" marker-end="url(#edge)"/>
+<text x="610.0" y="786.0" font-size="10" font-weight="400" fill="#7552d6" text-anchor="middle">enables</text>
+<rect x="30" y="852" width="940" height="94" rx="14" fill="#f6f3fc" stroke="#d6cdf3" stroke-width="1.5"/>
+<text x="48" y="895.0" font-size="15" font-weight="700" fill="#2f3a4d" text-anchor="start">apple_source_closed</text>
+<text x="48" y="916.0" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">closed(fridge)</text>
+<rect x="360" y="870.0" width="230" height="58" rx="10" fill="#ffffff" stroke="#7552d6" stroke-width="1.6"/>
+<text x="475.0" y="893.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">navigate_back_to_apple_source</text>
+<text x="475.0" y="913.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">navigate(fridge)</text>
+<rect x="630" y="870.0" width="230" height="58" rx="10" fill="#fffaf2" stroke="#c6531a" stroke-width="2.5"/>
+<text x="745.0" y="893.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">close_apple_source</text>
+<text x="745.0" y="913.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">close(fridge)</text>
+<path d="M 590 899.0 L 630 899.0" fill="none" stroke="#7552d6" stroke-width="1.8" marker-end="url(#edge)"/>
+<text x="610.0" y="892.0" font-size="10" font-weight="400" fill="#7552d6" text-anchor="middle">enables</text>
+<path d="M 745.0 186.0 V 210.0 H 475.0 V 234.0" fill="none" stroke="#c6531a" stroke-width="1.8" marker-end="url(#cross)"/>
+<path d="M 745.0 292.0 V 316.0 H 475.0 V 340.0" fill="none" stroke="#c6531a" stroke-width="1.8" marker-end="url(#cross)"/>
+<path d="M 745.0 398.0 V 422.0 H 475.0 V 446.0" fill="none" stroke="#c6531a" stroke-width="1.8" marker-end="url(#cross)"/>
+<path d="M 745.0 504.0 V 528.0 H 475.0 V 552.0" fill="none" stroke="#c6531a" stroke-width="1.8" marker-end="url(#cross)"/>
+<path d="M 745.0 610.0 V 634.0 H 475.0 V 658.0" fill="none" stroke="#c6531a" stroke-width="1.8" marker-end="url(#cross)"/>
+<path d="M 745.0 716.0 V 740.0 H 475.0 V 764.0" fill="none" stroke="#c6531a" stroke-width="1.8" marker-end="url(#cross)"/>
+<path d="M 745.0 822.0 V 846.0 H 475.0 V 870.0" fill="none" stroke="#c6531a" stroke-width="1.8" marker-end="url(#cross)"/>
+<text x="30" y="984" font-size="12" font-weight="400" fill="#71809b" text-anchor="start">row = one sub-goal and its skill subgraph · box = one skill node, one contract call · orange border = achiever · purple arrow = relation inside a subgraph · orange arrow = cross-subgraph ENABLES (from any achiever)</text>
+</svg>

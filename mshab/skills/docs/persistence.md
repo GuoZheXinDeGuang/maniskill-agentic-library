@@ -47,8 +47,10 @@ Two consequences worth knowing:
 | --- | --- | --- |
 | `mshab/skills/catalogs/set_table.json` (49 KB) | `scripts/generate_set_table_skill_graph.py` | Complete Layer 1 and Layer 2, grounded-skill predicates, contract and policy records with bindings, both execution plans, a summary |
 | `docs/static/images/set_table_skill_graph.svg` | same script | Four-layer rendering of the same graph |
-| `mshab/experiments/granularity/artifacts/layer3_layer4.json` | `python -m mshab.experiments.granularity.render` | Full `Contract.as_dict()` records, 53 policies, 53 `EXECUTES` connections |
+| `mshab/experiments/granularity/artifacts/library.json` | `python -m mshab.experiments.granularity.render` | Full `Contract.as_dict()` records for the five generic contracts, the 53-row policy manifest, and their 53 bindings listed from both sides |
 | `mshab/experiments/granularity/artifacts/contract_policy_layers.svg` | same command | Rendering of those two layers |
+| `mshab/experiments/granularity/graphs/<name>.json` | same command | One gold graph each: the `SkillGraphPatch` that builds it, metadata, a structural summary, and the nominal plan; `load_gold_graph()` rebuilds and revalidates Layers 1 and 2 from the patch |
+| `mshab/experiments/granularity/graphs/<name>.svg` | same command | Rendering of that gold graph, one row per sub-goal |
 
 Both generators are deterministic and exclude machine-local state: checkpoint
 `ready/missing/partial` status and absolute paths never enter an artifact, so

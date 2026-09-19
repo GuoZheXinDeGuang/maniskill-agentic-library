@@ -145,8 +145,9 @@ class SkillRuntime:
         """Dependency-, artifact-, environment-, and contract-ready nodes.
 
         ``policy_ids`` optionally pins one policy per node id; such a node is
-        ready only if that policy is bound to its contract and its artifacts
-        are available.  Otherwise any ready bound policy suffices.
+        ready only if that policy is bound to its contract, applies to the
+        node's grounded target, and its artifacts are available.  Otherwise
+        any ready bound policy that applies to the target suffices.
         """
 
         facts = self.environment.snapshot().facts
@@ -161,16 +162,25 @@ class SkillRuntime:
                 continue
             contract = grounded.contract
             requested = policy_ids.get(node.id)
-            if requested is None:
-                if not self.library.ready(contract.id):
-                    continue
-            else:
-                try:
-                    policy = self.library.select_policy(contract.id, requested)
-                except KeyError:
-                    continue
-                if policy.status != ArtifactStatus.READY:
-                    continue
+            try:
+                if requested is None:
+                    applicable = self.library.applicable_policies(
+                        contract.id, grounded.arguments
+                    )
+                    if not any(
+                        policy.status == ArtifactStatus.READY
+                        for policy in applicable
+                    ):
+                        continue
+                else:
+                    policy = self.library.select_policy(
+                        contract.id, requested, arguments=grounded.arguments
+                    )
+                    if policy.status != ArtifactStatus.READY:
+                        continue
+            except (KeyError, ValueError):
+                # Not bound to the contract, or trained for another target.
+                continue
             if not self.environment.supports_contract_env(contract.env_id):
                 continue
             if not grounded.can_start(facts):
@@ -190,7 +200,8 @@ class SkillRuntime:
         """Ground one node, admit it, and run it with a policy bound to its contract.
 
         ``policy_id`` selects one of the contract's bound policies explicitly;
-        by default the first ready one in binding order is used.
+        by default the first ready one in binding order that applies to the
+        node's grounded target is used.
         """
 
         try:
@@ -205,7 +216,9 @@ class SkillRuntime:
                     self.environment.description.environment_id, contract.env_id
                 )
             )
-        policy = self.library.select_policy(contract.id, policy_id)
+        policy = self.library.select_policy(
+            contract.id, policy_id, arguments=grounded.arguments
+        )
         before = self.environment.snapshot()
         self._admit(grounded, before)
 

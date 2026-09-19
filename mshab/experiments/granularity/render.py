@@ -1,27 +1,24 @@
-"""Generate the portable Layer-3/4 manifest and its architecture diagram."""
+"""Generate every committed artifact: the Layer-3/4 library document and its
+diagram, and the gold graphs of the upper layers with theirs."""
 
 from __future__ import annotations
 
 import argparse
 import json
-import os
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Sequence
 from xml.sax.saxutils import escape
 
-from mshab.experiments.granularity.lower_layers.connections import (
-    build_connected_layers,
-    connected_layers_document,
+from mshab.experiments.granularity.higher_layers.render import write_gold_graphs
+from mshab.experiments.granularity.lower_layers.library import (
+    build_granularity_library,
+    library_document,
 )
-
-
-PACKAGE_DIR = Path(__file__).resolve().parent
-REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_ASSET_ROOT = Path(
-    os.environ.get("MS_ASSET_DIR", str(REPOSITORY_ROOT.parent / "mshab-assets"))
+from mshab.experiments.granularity.paths import (
+    DEFAULT_ARTIFACT_DIR,
+    DEFAULT_CHECKPOINT_ROOT,
+    DEFAULT_GRAPH_DIR,
 )
-DEFAULT_CHECKPOINT_ROOT = DEFAULT_ASSET_ROOT / "data" / "mshab_checkpoints"
-DEFAULT_ARTIFACT_DIR = PACKAGE_DIR / "artifacts"
 
 _DISPLAY_NAMES = {
     "navigate": "NavigateContract",
@@ -73,8 +70,8 @@ def _contract_lines(contract: Mapping[str, Any]) -> List[tuple]:
 def lower_layer_svg(document: Mapping[str, Any]) -> str:
     """Render only the controlled Contract and Policy layers as deterministic SVG."""
 
-    contracts = list(document["layer3_contracts"])
-    policies = list(document["layer4_policies"])
+    contracts = list(document["contracts"])
+    policies = list(document["policies"])
     if len(contracts) != 5 or len(policies) != 53:
         raise ValueError(
             "the lower-layer diagram requires five contracts and 53 policies"
@@ -96,7 +93,7 @@ def lower_layer_svg(document: Mapping[str, Any]) -> str:
             "Contract and Policy layers</title>"
         ),
         (
-            '<desc id="description">Five parameterized contracts bound to '
+            '<desc id="description">Five generic contracts bound to '
             "53 concrete RL checkpoint policies.</desc>"
         ),
         "<defs>",
@@ -126,8 +123,8 @@ def lower_layer_svg(document: Mapping[str, Any]) -> str:
             225,
             499,
             (
-                "53 stored RL checkpoint policies · each has exactly one "
-                "EXECUTES connection"
+                "53 stored RL checkpoint policies · each bound to the "
+                "contract of its type"
             ),
             size=16,
             fill="#71809b",
@@ -180,7 +177,7 @@ def lower_layer_svg(document: Mapping[str, Any]) -> str:
             _text(
                 x + card_width / 2,
                 382,
-                "{} policies".format(contract["policy_count"]),
+                "{} policies".format(len(contract["policies"])),
                 size=13,
                 weight=700,
                 fill="#8b5b46",
@@ -259,8 +256,8 @@ def lower_layer_svg(document: Mapping[str, Any]) -> str:
                 2145,
                 972,
                 (
-                    "Only relation: Policy —EXECUTES→ Contract · "
-                    "no Policy-to-Policy edges"
+                    "Bindings: contract → policies in preference order · "
+                    "no policy-to-policy edges"
                 ),
                 size=14,
                 fill="#6842cb",
@@ -277,10 +274,9 @@ def write_artifacts(
     json_path: Path,
     svg_path: Path,
 ) -> Dict[str, Any]:
-    """Build the stack once and write deterministic, machine-independent artifacts."""
+    """Build the library once and write deterministic, machine-independent artifacts."""
 
-    stack = build_connected_layers(Path(checkpoint_root))
-    document = connected_layers_document(stack)
+    document = library_document(build_granularity_library(Path(checkpoint_root)))
     json_path = Path(json_path)
     svg_path = Path(svg_path)
     json_path.parent.mkdir(parents=True, exist_ok=True)
@@ -306,13 +302,14 @@ def main() -> None:
     parser.add_argument(
         "--json",
         type=Path,
-        default=DEFAULT_ARTIFACT_DIR / "layer3_layer4.json",
+        default=DEFAULT_ARTIFACT_DIR / "library.json",
     )
     parser.add_argument(
         "--svg",
         type=Path,
         default=DEFAULT_ARTIFACT_DIR / "contract_policy_layers.svg",
     )
+    parser.add_argument("--graphs", type=Path, default=DEFAULT_GRAPH_DIR)
     args = parser.parse_args()
     document = write_artifacts(args.checkpoint_root, args.json, args.svg)
     print(
@@ -323,6 +320,8 @@ def main() -> None:
             args.svg,
         )
     )
+    names = write_gold_graphs(args.checkpoint_root, args.graphs)
+    print("wrote gold graphs {} to {}".format(", ".join(names), args.graphs))
 
 
 if __name__ == "__main__":

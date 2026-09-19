@@ -1,1 +1,1 @@
-"""Package containing the existing Layer-3 and Layer-4 implementation."""
+"""Layers 3 and 4 of the granularity experiment as one ``ContractLibrary``."""

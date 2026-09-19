@@ -74,7 +74,8 @@ The detail lives in [`docs/`](./docs); this page is the entry point.
 | `tests/test_contract_state_transitions.py` | Symbolic state transitions |
 | `tests/test_set_table_graph_decisions.py` | Manual graph -> repeated one-node decision test |
 | `tests/test_skill_library_checkpoints.py` | CPU-only downloaded-checkpoint integration tests |
-| `tests/test_granularity_layer3_layer4.py` | Layer-3/4 stores of the granularity experiment under `mshab/experiments/` |
+| `tests/test_granularity_library.py` | The granularity experiment's `ContractLibrary` under `mshab/experiments/`, including target-aware policy selection |
+| `tests/test_higher_layer_graphs.py` | The experiment's gold graphs: validity, grounding, coarse/fine equivalence, SetTable regression, committed artifacts |
 | `tests/test_task_packages.py` | Public and compatibility imports of the packaged SetTable graph |
 
 Task-specific implementations live under `tasks/`; they reuse the OOP model

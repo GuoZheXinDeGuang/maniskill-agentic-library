@@ -1,0 +1,459 @@
+{
+  "context": {},
+  "goal": "Tidy the house: move every object to its target receptacle.",
+  "granularity": "coarse",
+  "name": "tidy_house_coarse",
+  "nominal_plan": {
+    "order": [
+      "navigate_to_object_1",
+      "pick_object_1",
+      "navigate_to_destination_1",
+      "place_object_1",
+      "navigate_to_object_2",
+      "pick_object_2",
+      "navigate_to_destination_2",
+      "place_object_2",
+      "navigate_to_object_3",
+      "pick_object_3",
+      "navigate_to_destination_3",
+      "place_object_3",
+      "navigate_to_object_4",
+      "pick_object_4",
+      "navigate_to_destination_4",
+      "place_object_4",
+      "navigate_to_object_5",
+      "pick_object_5",
+      "navigate_to_destination_5",
+      "place_object_5"
+    ],
+    "selections": {
+      "object_1_delivered": "place_object_1",
+      "object_2_delivered": "place_object_2",
+      "object_3_delivered": "place_object_3",
+      "object_4_delivered": "place_object_4",
+      "object_5_delivered": "place_object_5"
+    }
+  },
+  "patch": {
+    "cross_edges": [
+      {
+        "relation": "enables",
+        "source_node": null,
+        "source_subgoal": "object_1_delivered",
+        "target_node": "navigate_to_object_2",
+        "target_subgoal": "object_2_delivered"
+      },
+      {
+        "relation": "enables",
+        "source_node": null,
+        "source_subgoal": "object_2_delivered",
+        "target_node": "navigate_to_object_3",
+        "target_subgoal": "object_3_delivered"
+      },
+      {
+        "relation": "enables",
+        "source_node": null,
+        "source_subgoal": "object_3_delivered",
+        "target_node": "navigate_to_object_4",
+        "target_subgoal": "object_4_delivered"
+      },
+      {
+        "relation": "enables",
+        "source_node": null,
+        "source_subgoal": "object_4_delivered",
+        "target_node": "navigate_to_object_5",
+        "target_subgoal": "object_5_delivered"
+      }
+    ],
+    "schema_version": "mshab.skill-graph.v1",
+    "skill_subgraphs": [
+      {
+        "achiever_nodes": [
+          "place_object_1"
+        ],
+        "edges": [
+          {
+            "relation": "enables",
+            "source": "navigate_to_object_1",
+            "target": "pick_object_1"
+          },
+          {
+            "relation": "enables",
+            "source": "pick_object_1",
+            "target": "navigate_to_destination_1"
+          },
+          {
+            "relation": "enables",
+            "source": "navigate_to_destination_1",
+            "target": "place_object_1"
+          }
+        ],
+        "execution_order": [
+          "navigate_to_object_1",
+          "pick_object_1",
+          "navigate_to_destination_1",
+          "place_object_1"
+        ],
+        "nodes": [
+          {
+            "achieves": [],
+            "arguments": {
+              "target": "kitchen_counter"
+            },
+            "contract_id": "mshab.granularity.navigate.all",
+            "id": "navigate_to_destination_1"
+          },
+          {
+            "achieves": [],
+            "arguments": {
+              "target": "002_master_chef_can"
+            },
+            "contract_id": "mshab.granularity.navigate.all",
+            "id": "navigate_to_object_1"
+          },
+          {
+            "achieves": [],
+            "arguments": {
+              "object": "002_master_chef_can"
+            },
+            "contract_id": "mshab.granularity.pick.all",
+            "id": "pick_object_1"
+          },
+          {
+            "achieves": [
+              "object_1_delivered"
+            ],
+            "arguments": {
+              "destination": "kitchen_counter",
+              "object": "002_master_chef_can"
+            },
+            "contract_id": "mshab.granularity.place.all",
+            "id": "place_object_1"
+          }
+        ],
+        "subgoal_id": "object_1_delivered"
+      },
+      {
+        "achiever_nodes": [
+          "place_object_2"
+        ],
+        "edges": [
+          {
+            "relation": "enables",
+            "source": "navigate_to_object_2",
+            "target": "pick_object_2"
+          },
+          {
+            "relation": "enables",
+            "source": "pick_object_2",
+            "target": "navigate_to_destination_2"
+          },
+          {
+            "relation": "enables",
+            "source": "navigate_to_destination_2",
+            "target": "place_object_2"
+          }
+        ],
+        "execution_order": [
+          "navigate_to_object_2",
+          "pick_object_2",
+          "navigate_to_destination_2",
+          "place_object_2"
+        ],
+        "nodes": [
+          {
+            "achieves": [],
+            "arguments": {
+              "target": "dining_table"
+            },
+            "contract_id": "mshab.granularity.navigate.all",
+            "id": "navigate_to_destination_2"
+          },
+          {
+            "achieves": [],
+            "arguments": {
+              "target": "003_cracker_box"
+            },
+            "contract_id": "mshab.granularity.navigate.all",
+            "id": "navigate_to_object_2"
+          },
+          {
+            "achieves": [],
+            "arguments": {
+              "object": "003_cracker_box"
+            },
+            "contract_id": "mshab.granularity.pick.all",
+            "id": "pick_object_2"
+          },
+          {
+            "achieves": [
+              "object_2_delivered"
+            ],
+            "arguments": {
+              "destination": "dining_table",
+              "object": "003_cracker_box"
+            },
+            "contract_id": "mshab.granularity.place.all",
+            "id": "place_object_2"
+          }
+        ],
+        "subgoal_id": "object_2_delivered"
+      },
+      {
+        "achiever_nodes": [
+          "place_object_3"
+        ],
+        "edges": [
+          {
+            "relation": "enables",
+            "source": "navigate_to_object_3",
+            "target": "pick_object_3"
+          },
+          {
+            "relation": "enables",
+            "source": "pick_object_3",
+            "target": "navigate_to_destination_3"
+          },
+          {
+            "relation": "enables",
+            "source": "navigate_to_destination_3",
+            "target": "place_object_3"
+          }
+        ],
+        "execution_order": [
+          "navigate_to_object_3",
+          "pick_object_3",
+          "navigate_to_destination_3",
+          "place_object_3"
+        ],
+        "nodes": [
+          {
+            "achieves": [],
+            "arguments": {
+              "target": "coffee_table"
+            },
+            "contract_id": "mshab.granularity.navigate.all",
+            "id": "navigate_to_destination_3"
+          },
+          {
+            "achieves": [],
+            "arguments": {
+              "target": "004_sugar_box"
+            },
+            "contract_id": "mshab.granularity.navigate.all",
+            "id": "navigate_to_object_3"
+          },
+          {
+            "achieves": [],
+            "arguments": {
+              "object": "004_sugar_box"
+            },
+            "contract_id": "mshab.granularity.pick.all",
+            "id": "pick_object_3"
+          },
+          {
+            "achieves": [
+              "object_3_delivered"
+            ],
+            "arguments": {
+              "destination": "coffee_table",
+              "object": "004_sugar_box"
+            },
+            "contract_id": "mshab.granularity.place.all",
+            "id": "place_object_3"
+          }
+        ],
+        "subgoal_id": "object_3_delivered"
+      },
+      {
+        "achiever_nodes": [
+          "place_object_4"
+        ],
+        "edges": [
+          {
+            "relation": "enables",
+            "source": "navigate_to_object_4",
+            "target": "pick_object_4"
+          },
+          {
+            "relation": "enables",
+            "source": "pick_object_4",
+            "target": "navigate_to_destination_4"
+          },
+          {
+            "relation": "enables",
+            "source": "navigate_to_destination_4",
+            "target": "place_object_4"
+          }
+        ],
+        "execution_order": [
+          "navigate_to_object_4",
+          "pick_object_4",
+          "navigate_to_destination_4",
+          "place_object_4"
+        ],
+        "nodes": [
+          {
+            "achieves": [],
+            "arguments": {
+              "target": "tv_stand"
+            },
+            "contract_id": "mshab.granularity.navigate.all",
+            "id": "navigate_to_destination_4"
+          },
+          {
+            "achieves": [],
+            "arguments": {
+              "target": "005_tomato_soup_can"
+            },
+            "contract_id": "mshab.granularity.navigate.all",
+            "id": "navigate_to_object_4"
+          },
+          {
+            "achieves": [],
+            "arguments": {
+              "object": "005_tomato_soup_can"
+            },
+            "contract_id": "mshab.granularity.pick.all",
+            "id": "pick_object_4"
+          },
+          {
+            "achieves": [
+              "object_4_delivered"
+            ],
+            "arguments": {
+              "destination": "tv_stand",
+              "object": "005_tomato_soup_can"
+            },
+            "contract_id": "mshab.granularity.place.all",
+            "id": "place_object_4"
+          }
+        ],
+        "subgoal_id": "object_4_delivered"
+      },
+      {
+        "achiever_nodes": [
+          "place_object_5"
+        ],
+        "edges": [
+          {
+            "relation": "enables",
+            "source": "navigate_to_object_5",
+            "target": "pick_object_5"
+          },
+          {
+            "relation": "enables",
+            "source": "pick_object_5",
+            "target": "navigate_to_destination_5"
+          },
+          {
+            "relation": "enables",
+            "source": "navigate_to_destination_5",
+            "target": "place_object_5"
+          }
+        ],
+        "execution_order": [
+          "navigate_to_object_5",
+          "pick_object_5",
+          "navigate_to_destination_5",
+          "place_object_5"
+        ],
+        "nodes": [
+          {
+            "achieves": [],
+            "arguments": {
+              "target": "bedside_table"
+            },
+            "contract_id": "mshab.granularity.navigate.all",
+            "id": "navigate_to_destination_5"
+          },
+          {
+            "achieves": [],
+            "arguments": {
+              "target": "007_tuna_fish_can"
+            },
+            "contract_id": "mshab.granularity.navigate.all",
+            "id": "navigate_to_object_5"
+          },
+          {
+            "achieves": [],
+            "arguments": {
+              "object": "007_tuna_fish_can"
+            },
+            "contract_id": "mshab.granularity.pick.all",
+            "id": "pick_object_5"
+          },
+          {
+            "achieves": [
+              "object_5_delivered"
+            ],
+            "arguments": {
+              "destination": "bedside_table",
+              "object": "007_tuna_fish_can"
+            },
+            "contract_id": "mshab.granularity.place.all",
+            "id": "place_object_5"
+          }
+        ],
+        "subgoal_id": "object_5_delivered"
+      }
+    ],
+    "subgoal_dependencies": [
+      {
+        "source": "object_1_delivered",
+        "target": "object_2_delivered"
+      },
+      {
+        "source": "object_2_delivered",
+        "target": "object_3_delivered"
+      },
+      {
+        "source": "object_3_delivered",
+        "target": "object_4_delivered"
+      },
+      {
+        "source": "object_4_delivered",
+        "target": "object_5_delivered"
+      }
+    ],
+    "subgoals": [
+      {
+        "description": "",
+        "id": "object_1_delivered",
+        "predicate": "at(002_master_chef_can,kitchen_counter)"
+      },
+      {
+        "description": "",
+        "id": "object_2_delivered",
+        "predicate": "at(003_cracker_box,dining_table)"
+      },
+      {
+        "description": "",
+        "id": "object_3_delivered",
+        "predicate": "at(004_sugar_box,coffee_table)"
+      },
+      {
+        "description": "",
+        "id": "object_4_delivered",
+        "predicate": "at(005_tomato_soup_can,tv_stand)"
+      },
+      {
+        "description": "",
+        "id": "object_5_delivered",
+        "predicate": "at(007_tuna_fish_can,bedside_table)"
+      }
+    ],
+    "subgraph_extensions": []
+  },
+  "schema_version": "mshab.granularity-gold-graph.v1",
+  "source_task": "tidy_house",
+  "summary": {
+    "cross_edges": 4,
+    "internal_edges": 15,
+    "mean_nodes_per_subgraph": 4.0,
+    "nodes": 20,
+    "subgoals": 5,
+    "subgraphs": 5
+  },
+  "task": "granularity"
+}

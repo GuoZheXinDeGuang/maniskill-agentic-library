@@ -220,13 +220,26 @@ class Policy(ABC):
     A policy is identified by a library-wide ``id`` and carries no reference
     to the contracts it executes; those bindings belong to
     :class:`~mshab.skills.library.ContractLibrary`.
+
+    ``target`` records what the policy was trained or built for: one object
+    or articulation name such as ``013_apple``, ``"all"`` for every target of
+    its contract type, or ``None`` when that is unknown.  The library uses it
+    to keep a policy trained for one object away from a contract grounded on
+    another; see ``ContractLibrary.applicable_policies``.
     """
 
-    def __init__(self, id: str, kind: PolicyKind) -> None:
+    def __init__(
+        self, id: str, kind: PolicyKind, target: Optional[str] = None
+    ) -> None:
         if not isinstance(id, str) or not id.strip():
             raise ValueError("policy id must be a non-empty string")
+        if target is not None and (
+            not isinstance(target, str) or not target.strip()
+        ):
+            raise ValueError("policy target must be a non-empty string or None")
         self.id = id
         self.kind = PolicyKind(kind)
+        self.target = target
 
     @property
     @abstractmethod
@@ -249,8 +262,9 @@ class CheckpointPolicy(Policy):
         config_path: Path,
         policy_type: Optional[str] = None,
         checkpoint_sha256: Optional[str] = None,
+        target: Optional[str] = None,
     ) -> None:
-        super().__init__(id=id, kind=PolicyKind.CHECKPOINT)
+        super().__init__(id=id, kind=PolicyKind.CHECKPOINT, target=target)
         self.family = family
         self.checkpoint_path = Path(checkpoint_path)
         self.config_path = Path(config_path)
@@ -269,7 +283,8 @@ class CheckpointPolicy(Policy):
         """The policy stored at ``<root>/<family>/<task>/<type>/<target>/``.
 
         Its id is ``<family>.<task>.<type>.<target>``, so one checkpoint keeps
-        one id however many contracts it is later bound to.
+        one id however many contracts it is later bound to.  The directory's
+        ``target`` segment becomes the policy's ``target``.
         """
 
         type_name = (
@@ -284,6 +299,7 @@ class CheckpointPolicy(Policy):
             checkpoint_path=leaf / "policy.pt",
             config_path=leaf / "config.yml",
             policy_type=_checkpoint_policy_type(family, target),
+            target=target,
         )
 
     @property
@@ -299,6 +315,7 @@ class CheckpointPolicy(Policy):
         return {
             "id": self.id,
             "kind": self.kind.value,
+            "target": self.target,
             "family": self.family,
             "policy_type": self.policy_type,
             "checkpoint": str(self.checkpoint_path),

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple, Union
+from typing import Dict, Iterable, List, Mapping, Optional, Tuple, Union
 
 from mshab.skills.model import (
     CONTRACT_CLASSES,
@@ -30,7 +30,10 @@ class ContractLibrary:
 
     A contract's bindings are ordered.  :meth:`select_policy` returns the
     first ready one unless a policy id is requested explicitly, so binding
-    order is the default preference order.
+    order is the default preference order.  When the grounded arguments are
+    supplied, :meth:`applicable_policies` first drops every policy trained
+    for a different target, so a generic ``pick.all`` contract grounded on
+    a bowl is never executed by the apple checkpoint.
     """
 
     def __init__(
@@ -163,32 +166,82 @@ class ContractLibrary:
             for policy in self.policies_for(contract_id)
         )
 
-    def select_policy(
-        self, contract_id: str, policy_id: Optional[str] = None
-    ) -> Policy:
-        """Choose the policy that will execute one contract.
+    def applicable_policies(
+        self,
+        contract_id: str,
+        arguments: Optional[Mapping[str, object]] = None,
+    ) -> Tuple[Policy, ...]:
+        """The bound policies that can execute one grounding of a contract.
 
-        An explicit ``policy_id`` must be bound to the contract.  Otherwise
-        the first ready policy in binding order is returned.
+        Without ``arguments`` this is :meth:`policies_for`.  With the grounded
+        arguments, the value of the contract's target parameter selects: a
+        policy whose ``target`` names exactly that object or articulation
+        applies, a policy whose ``target`` is ``"all"`` or unknown applies,
+        and a policy trained for a different target is dropped.  Exact
+        matches come first, generic policies after, each group in binding
+        order.  A grounding whose target is itself ``"all"`` restricts
+        nothing.
         """
 
         contract = self.get(contract_id)
         bound = self.policies_for(contract.id)
+        if arguments is None:
+            return bound
+        requested = arguments.get(contract.target_parameter, contract.target)
+        if requested == "all":
+            return bound
+        exact = tuple(policy for policy in bound if policy.target == requested)
+        generic = tuple(
+            policy for policy in bound if policy.target in (None, "all")
+        )
+        return exact + generic
+
+    def select_policy(
+        self,
+        contract_id: str,
+        policy_id: Optional[str] = None,
+        arguments: Optional[Mapping[str, object]] = None,
+    ) -> Policy:
+        """Choose the policy that will execute one contract.
+
+        An explicit ``policy_id`` must be bound to the contract.  Otherwise
+        the first ready policy in binding order is returned.  Passing the
+        grounded ``arguments`` restricts both paths to
+        :meth:`applicable_policies`: an explicit policy trained for another
+        target is rejected, and the default choice prefers a policy trained
+        for exactly this target over a generic one.
+        """
+
+        contract = self.get(contract_id)
+        bound = self.policies_for(contract.id)
+        candidates = self.applicable_policies(contract.id, arguments)
         if policy_id is not None:
-            for policy in bound:
+            for policy in candidates:
                 if policy.id == policy_id:
                     return policy
+            if any(policy.id == policy_id for policy in bound):
+                raise ValueError(
+                    "policy {!r} is bound to contract {!r} but is trained for "
+                    "target {!r}, not {!r}".format(
+                        policy_id,
+                        contract.id,
+                        self.policy(policy_id).target,
+                        arguments.get(contract.target_parameter),
+                    )
+                )
             raise KeyError(
                 "policy {!r} is not bound to contract {!r}; bound={}".format(
                     policy_id, contract.id, [policy.id for policy in bound]
                 )
             )
-        for policy in bound:
+        for policy in candidates:
             if policy.status == ArtifactStatus.READY:
                 return policy
         raise RuntimeError(
-            "contract {} has no ready policy; bound={}".format(
-                contract.id, [policy.id for policy in bound]
+            "contract {} has no ready policy; applicable={}, bound={}".format(
+                contract.id,
+                [policy.id for policy in candidates],
+                [policy.id for policy in bound],
             )
         )
 
