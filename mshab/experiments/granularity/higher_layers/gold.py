@@ -1,7 +1,7 @@
 """Registry, validation, and persistence of the gold graphs.
 
 A *gold graph* is a hand-authored, validated Layer-1/2 skill graph that
-exists only for this experiment: it is the answer the scripted planner
+exists only for this experiment: it is the answer the scripted proposer
 returns, and the reference a real model's output is compared against.
 """
 

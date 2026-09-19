@@ -1,4 +1,4 @@
-# Higher layers: from hand-authored graphs to a VLM planner
+# Higher layers: from hand-authored graphs to a VLM proposer
 
 Implementation plan for the next experiment: build a skill library that is
 richer than the packaged SetTable toy, then let a VLM do the planning in the
@@ -18,7 +18,7 @@ guide exactly: *goal*, *sub-goal*, *skill node*, *contract*, *policy*.
 > decomposition (few coarse sub-goals versus many fine ones) change
 > validity, execution success, recovery behaviour, and replanning cost?
 
-The two upper layers are therefore two separate planner calls:
+The two upper layers are therefore two separate proposer calls:
 
 ```text
 call 1  decompose:  goal + scene + contract inventory     ->  ordered sub-goals
@@ -28,19 +28,19 @@ assembler: subgraphs + Layer-1 order                      ->  SkillGraphPatch
 ```
 
 Granularity is the independent variable and is controlled at call 1. The
-subgraph planner in call 2 is the same for every granularity, so a
+subgraph proposer in call 2 is the same for every granularity, so a
 difference in outcome is attributable to the decomposition.
 
 ## Stages
 
 Every stage is testable on CPU with the standard-library test suite. The only
-object that changes between the scripted planner and the real model is the
+object that changes between the scripted proposer and the real model is the
 one that answers the two calls.
 
 ```text
 stage 1  align lower layers   granularity contracts/policies  ->  ContractLibrary
 stage 2  gold graphs          hand-authored L1/L2 over those contracts, coarse and fine, saved as JSON
-stage 3  planner boundary     Decomposition/Subgraph request and response documents + ScriptedPlanner
+stage 3  proposer boundary     Decomposition/Subgraph request and response documents + ScriptedProposer
 stage 4  online loop          execute -> observe -> re-decide, symbolic environment, replan hook
 stage 5  real model           DeepSeek API behind the same boundary, granularity sweep
 stage 6  MS-HAB               GPU rollout of a VLM-planned graph (existing follow-up items)
@@ -53,10 +53,10 @@ composition rather than new abstractions:
 
 | Need | Existing object | File |
 | --- | --- | --- |
-| Ordered sub-goal sequence from a planner | `SubGoalGraph.from_sequence(goal, subgoals)` | `mshab/skills/graph.py` |
+| Ordered sub-goal sequence from a proposer | `SubGoalGraph.from_sequence(goal, subgoals)` | `mshab/skills/graph.py` |
 | Declarative, validated Layer-1/2 proposal | `SkillGraphPatch`, `SkillGraphPatch.from_dict(payload, task=...)` | `mshab/skills/extension.py` |
 | One subgraph per sub-goal, sealed on registration | `SkillSubgraph`, `SkillSubgraph.from_dict` | `mshab/skills/graph.py` |
-| Planner interface | `SkillGraphBuilder.propose(goal, task, context) -> SkillGraphPatch` | `mshab/skills/extension.py` |
+| GraphProposer interface | `SkillGraphBuilder.propose(goal, task, context) -> SkillGraphPatch` | `mshab/skills/extension.py` |
 | One-node decision, fallback inside a subgraph | `SkillPlanner.decide()`, `NoViableCandidate` | `mshab/skills/plan.py` |
 | Admission, monitoring, execution evidence | `SkillRuntime`, `SkillExecutionResult` | `mshab/skills/runtime.py` |
 | Environment boundary | `EnvironmentAdapter`, `EnvironmentSnapshot` | `mshab/skills/environment.py` |
@@ -74,13 +74,13 @@ composition rather than new abstractions:
    selected for a bowl. Policy selection needs a target filter. This does
    not block stages 2 to 5 but blocks stage 6.
 3. **No online loop.** Nothing today executes a node, observes the result,
-   and asks the planner again. The SetTable runner replays a frozen plan.
-   Without this loop there is no feedback for a planner to react to.
+   and asks the proposer again. The SetTable runner replays a frozen plan.
+   Without this loop there is no feedback for a proposer to react to.
 4. **No Layer-1 replan hook.** `NoViableCandidate` ends the run. The guide
    says a failed sub-goal triggers a fresh goal -> sub-goal decomposition;
    nobody calls it.
-5. **No planner request/response schema.** `SkillGraphBuilder.propose()`
-   takes a free-form `context`. The scripted planner needs precise
+5. **No proposer request/response schema.** `SkillGraphBuilder.propose()`
+   takes a free-form `context`. The scripted proposer needs precise
    documents so that the real model can be prompted with the same content.
 6. **No simulator-free environment.** Testing the loop on CPU needs an
    `EnvironmentAdapter` whose facts are a symbolic set that contract effects
@@ -110,7 +110,7 @@ one library constructor.
   `ConnectedLayers`. The JSON and SVG artifacts are documentation only and
   are read by nothing; regenerate them from the library or drop them. No
   Layer-3/4 export is needed by any later stage: gold graphs persist Layers
-  1 and 2 only, planner requests carry `Contract.as_dict()`, which is
+  1 and 2 only, proposer requests carry `Contract.as_dict()`, which is
   already free of paths and machine state, and policies load from the
   checkpoint root.
 - Policy applicability: `PolicySpec.target` already records what each
@@ -136,7 +136,7 @@ placeholder).
 
 A *gold graph* is a hand-authored, validated Layer-1/2 skill graph that
 exists only for this experiment. It plays two roles: it is the answer
-the scripted planner returns in stages 3 and 4, and it is the reference
+the scripted proposer returns in stages 3 and 4, and it is the reference
 the real model's output is compared against in stage 5. Gold graphs are
 not a library for later work to build on.
 
@@ -170,10 +170,10 @@ node grounds against the stage-1 library. A generator script rebuilds the
 JSON files and an SVG per graph, mirroring the existing `render.py`.
 
 The coarse and fine TidyHouse graphs are the two ends of the granularity
-axis. They serve as the scripted planner's canned answers in stage 3 and as
+axis. They serve as the scripted proposer's canned answers in stage 3 and as
 the references the real model is compared against in stage 5.
 
-## Stage 3: the two-call planner boundary and the scripted planner
+## Stage 3: the two-call proposer boundary and the scripted proposer
 
 Package: `mshab/experiments/planning/` (new; simulator-independent).
 
@@ -183,7 +183,7 @@ Four JSON documents with strict `from_dict` parsing through
 ```text
 DecompositionRequest
   task, goal
-  contracts:   [{id, type, parameters, preconditions, effects, deletes}]  (from ContractLibrary)
+  contracts:   Contract.as_dict() records, verbatim                       (from ContractLibrary)
   entities:    [{name, kind}]                                               (from EnvironmentDescription)
   facts:       sorted current predicates                                    (from EnvironmentSnapshot)
   history:     achieved sub-goals, completed nodes, failed nodes
@@ -202,40 +202,46 @@ SubgraphRequest
   neighbours:  {previous: predicate | null, next: predicate | null}   (context only)
 
 SubgraphResponse
-  subgraph:    SkillSubgraph.as_dict()             -> SkillSubgraph.from_dict
+  subgraph:    {subgoal_id, nodes, edges}           -> SkillSubgraph.from_dict (derived views recomputed, never emitted)
   rationale:   free text
 ```
 
 Each sub-goal's `SubgraphRequest` is answered independently. The
-`GraphAssembler` then builds the `SkillGraphPatch`: the sub-goals and their
+`assemble_patch` then builds the `SkillGraphPatch`: the sub-goals and their
 consecutive dependencies from call 1, the subgraphs from call 2, and one
 sub-goal-level `ENABLES` cross edge from every sub-goal to each root node of
 the next one (source endpoint `None`, so a fallback achiever also enables
 the successor). This is the same shape `SetTableGraphBuilder` produces by
 hand, and it is what `SkillGraph.validate()` requires.
 
-`Planner` is a `SkillGraphBuilder` subclass with two extra methods,
+`GraphProposer` is a `SkillGraphBuilder` subclass with two extra methods,
 `decompose(request) -> DecompositionResponse` and
 `plan_subgraph(request) -> SubgraphResponse`; `propose()` is implemented on
 top of them through the assembler so existing callers keep working. Two
 implementations:
 
-- `ScriptedPlanner`: a lookup table from a request fingerprint to a canned
+- `ScriptedProposer`: a lookup table from a request fingerprint to a canned
   response. For call 1 the fingerprint is `(task, goal, granularity, attempt,
-  failure.subgoal_id)`; for call 2 it is `(task, subgoal.predicate)`. The
-  canned answers are cut out of the stage-2 gold graphs. Unknown fingerprints
-  raise, so a test cannot silently pass on a default answer. This is the
-  pseudo VLM.
-- `DeepSeekPlanner`: stage 5.
+  failure.subgoal_id)`; for call 2 it is `(task, subgoal.id, subgoal.predicate)`
+  (the predicate alone collides: `at(obj,dest)` is a four-node subgraph in
+  the coarse graph and a one-node subgraph in the fine one). The canned
+  answers are cut out of the stage-2 gold graphs, and the table round-trips
+  through JSON so stage-4 scenarios can add replan answers. Unknown
+  fingerprints raise, so a test cannot silently pass on a default answer.
+  This is the pseudo VLM.
+- `DeepSeekProposer`: stage 5.
 
-A `PlanValidator` sits between any planner and the graph: it parses the
-responses, assembles and applies the patch on staging copies with the
-library, runs `SkillPlanner.plan()`, and returns either the validated
-`(SubGoalGraph, SkillGraph)` pair or a structured list of rejections that
-names the failing sub-goal. The rejections are what the real model will see
-on a retry, so they are produced here already.
+A `ProposalValidator` sits between any proposer and the graph: it parses the
+responses, grounds every node against the library, assembles and applies the
+patch to fresh graphs, runs `SkillPlanner.plan()`, and returns either a
+`ValidatedProposal` (both layers, the patch, the plan, and every request and
+response verbatim as the trace record) or raises `ProposalRejected` with
+`Rejection(stage, subgoal_id, message)` entries. Subgraph rejections are
+collected across all sub-goals before the round stops. The rejections are
+what the real model will see on a retry, so they are produced here already.
+Implemented in `mshab/experiments/planning/`; see its README.
 
-Tests: round trip of all four documents; the scripted planner reproduces the
+Tests: round trip of all four documents; the scripted proposer reproduces the
 coarse and fine gold graphs from their goals; a malformed subgraph response
 is rejected with a message naming the sub-goal and leaves the graphs
 untouched.
@@ -249,11 +255,11 @@ Package: `mshab/experiments/planning/` continued.
   grounded contract's `effects` and removes its `deletes` on success, and
   does nothing on an injected failure. Failures are scripted per node id and
   attempt, so a scenario can say "the first pick of the bowl fails".
-- `TaskController.run(goal, planner, library, environment, granularity)`
+- `TaskController.run(goal, proposer, library, environment, granularity)`
   implements the loop the guide describes:
 
 ```text
-subgoals, graph = validator(planner, DecompositionRequest(initial))
+subgoals, graph = validator(proposer, DecompositionRequest(initial))
 loop:
     node = SkillPlanner.decide(completed, failed)      # one node
     if node is None: done
@@ -272,7 +278,7 @@ loop:
   pick fails once and the controller retries it within a per-node attempt
   budget (the gold graphs have one candidate per role, so there is no
   Layer-2 fallback to take; that level is covered by SetTable); a pick
-  exhausts its attempts (Layer-1 replan through the scripted planner, which
+  exhausts its attempts (Layer-1 replan through the scripted proposer, which
   returns a decomposition that skips or reorders that object); a partially
   satisfied initial state (an object already at its destination, so its
   sub-goal is achieved before any node runs).
@@ -286,7 +292,7 @@ that does a real model enter.
 
 ## Stage 5: the real model (DeepSeek API)
 
-`DeepSeekPlanner` fills `decompose()` and `plan_subgraph()` with one model
+`DeepSeekProposer` fills `decompose()` and `plan_subgraph()` with one model
 call each, through the DeepSeek chat-completions API (OpenAI-compatible;
 key from `DEEPSEEK_API_KEY`, model configurable, `deepseek-chat` by default).
 Decisions to keep the swap small:
@@ -298,11 +304,11 @@ Decisions to keep the swap small:
 - Text only. The DeepSeek chat API takes no image input, so the request
   carries the contract inventory and symbolic facts; an optional `images`
   field is reserved for a later vision-capable model.
-- On a `PlanValidator` rejection, retry that call at most twice, sending the
+- On a `ProposalValidator` rejection, retry that call at most twice, sending the
   rejection list back as a further user turn. Every request, response, and
   rejection is logged in the run trace.
 - The client dependency goes in a new `planning` extra in `pyproject.toml`;
-  tests never call the network and use `ScriptedPlanner`.
+  tests never call the network and use `ScriptedProposer`.
 
 Evaluation, per goal, per granularity setting (`free`, `coarse`, `fine`),
 over several samples:
@@ -332,9 +338,9 @@ adapter and executor change.
 | --- | --- | --- | --- |
 | 1 | 53-row manifest, `build_granularity_library`, target-aware `select_policy`; duplicate stores removed | — | `test_granularity_library.py` |
 | 2 | Coarse and fine TidyHouse gold graphs, SetTable regression graph, builders, renderer | 1 | `test_higher_layer_graphs.py` |
-| 3 | Four request/response documents, `Planner`, `ScriptedPlanner`, `GraphAssembler`, `PlanValidator` | 2 | `test_planning_boundary.py` |
+| 3 | Four request/response documents, `GraphProposer`, `ScriptedProposer`, `assemble_patch`, `ProposalValidator` | 2 | `test_planning_boundary.py` |
 | 4 | `SymbolicEnvironmentAdapter`, `SymbolicPolicyExecutor`, `TaskController`, scenarios, metrics | 3 | `test_task_controller.py` |
-| 5 | `DeepSeekPlanner`, prompts, evaluation script | 4 | offline tests only |
+| 5 | `DeepSeekProposer`, prompts, evaluation script | 4 | offline tests only |
 | 6 | MS-HAB adapter and executor | 1, 4 | GPU runner |
 
 ## Decisions taken
@@ -353,3 +359,10 @@ adapter and executor change.
   controller retry budget, sub-goal failure by a Layer-1 replan.
 - No portable Layer-3/4 export is built; nothing on the path of stages 1
   to 6 reads one.
+- Vocabulary: a *proposer* generates Layers 1 and 2 (the scripted pseudo
+  model, later the real model); *planner* stays reserved for
+  `SkillPlanner`, the one-node decision over an existing graph. The skills
+  docs already used "proposer" for the VLM's role.
+- Gold-graph documents and `LibraryCatalog` stay separate. Later work
+  builds on the experiment's documents; `LibraryCatalog` remains the
+  SetTable test artifact.

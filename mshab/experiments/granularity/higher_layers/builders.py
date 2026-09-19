@@ -6,6 +6,11 @@ execute and the only unit the environment verifies.  With one generic
 contract per type there is exactly one candidate node per role, so these
 graphs contain no ``FALLBACK_TO`` chains.  What changes between the coarse
 and fine TidyHouse variants is only which sub-goal owns each node.
+
+A builder decides two things, an ordered sub-goal sequence and one subgraph
+per sub-goal, and hands both to ``assemble_patch``: the same function every
+proposer's answers go through.  The gold graphs are therefore reproducible
+by a proposer by construction.
 """
 
 from __future__ import annotations
@@ -16,15 +21,9 @@ from mshab.experiments.granularity.lower_layers.library import (
     EXPERIMENT_TASK,
     contract_id,
 )
+from mshab.experiments.planning.proposer import assemble_patch
 from mshab.skills.extension import SkillGraphBuilder, SkillGraphPatch
-from mshab.skills.graph import (
-    CrossSubgraphEdge,
-    SkillNode,
-    SkillRelation,
-    SkillSubgraph,
-    SubGoal,
-    SubGoalDependency,
-)
+from mshab.skills.graph import SkillNode, SkillRelation, SkillSubgraph, SubGoal
 
 
 GRANULARITIES = ("coarse", "fine")
@@ -91,9 +90,17 @@ def _require_task(builder: str, task: str) -> None:
         )
 
 
-def _chain(subgraph: SkillSubgraph, node_ids: Sequence[str]) -> None:
-    for source, target in zip(node_ids, node_ids[1:]):
-        subgraph.relate(source, target, SkillRelation.ENABLES)
+def _chain_subgraph(
+    subgoal_id: str, task: str, nodes: Sequence[SkillNode]
+) -> SkillSubgraph:
+    """A subgraph whose nodes run in the given order, joined by ``ENABLES``."""
+
+    subgraph = SkillSubgraph(subgoal_id, task)
+    for node in nodes:
+        subgraph.add_node(node)
+    for source, target in zip(nodes, nodes[1:]):
+        subgraph.relate(source.id, target.id, SkillRelation.ENABLES)
+    return subgraph
 
 
 def _require_pairs(value: Any, name: str, width: int) -> Tuple[Tuple[str, ...], ...]:
@@ -110,49 +117,6 @@ def _require_pairs(value: Any, name: str, width: int) -> Tuple[Tuple[str, ...], 
                 )
             )
     return items
-
-
-class _Steps:
-    """Sub-goals in order, each with its subgraph and the node that enters it."""
-
-    def __init__(self) -> None:
-        self.subgoals: List[SubGoal] = []
-        self.dependencies: List[SubGoalDependency] = []
-        self.subgraphs: List[SkillSubgraph] = []
-        self.cross_edges: List[CrossSubgraphEdge] = []
-        self._previous = None
-
-    def add(
-        self,
-        subgoal_id: str,
-        predicate: str,
-        subgraph: SkillSubgraph,
-        entry_node: str,
-    ) -> None:
-        self.subgoals.append(SubGoal(subgoal_id, predicate))
-        self.subgraphs.append(subgraph)
-        if self._previous is not None:
-            self.dependencies.append(SubGoalDependency(self._previous, subgoal_id))
-            # Source endpoint None: any achiever of the previous sub-goal
-            # enables the entry node of this one.
-            self.cross_edges.append(
-                CrossSubgraphEdge(
-                    self._previous,
-                    subgoal_id,
-                    None,
-                    entry_node,
-                    SkillRelation.ENABLES,
-                )
-            )
-        self._previous = subgoal_id
-
-    def patch(self) -> SkillGraphPatch:
-        return SkillGraphPatch(
-            subgoals=tuple(self.subgoals),
-            subgoal_dependencies=tuple(self.dependencies),
-            skill_subgraphs=tuple(self.subgraphs),
-            cross_edges=tuple(self.cross_edges),
-        )
 
 
 class TidyHouseGraphBuilder(SkillGraphBuilder):
@@ -181,7 +145,8 @@ class TidyHouseGraphBuilder(SkillGraphBuilder):
         transfers = _require_pairs(
             context.get("transfers", DEFAULT_TIDY_HOUSE_TRANSFERS), "transfers", 2
         )
-        steps = _Steps()
+        subgoals: List[SubGoal] = []
+        subgraphs: List[SkillSubgraph] = []
         for index, (obj, destination) in enumerate(transfers, start=1):
             navigate_object = "navigate_to_object_{}".format(index)
             pick = "pick_object_{}".format(index)
@@ -191,13 +156,19 @@ class TidyHouseGraphBuilder(SkillGraphBuilder):
 
             if self.granularity == "coarse":
                 subgoal_id = "object_{}_delivered".format(index)
-                subgraph = SkillSubgraph(subgoal_id, task)
-                subgraph.add_node(navigate_node(navigate_object, obj))
-                subgraph.add_node(pick_node(pick, obj))
-                subgraph.add_node(navigate_node(navigate_destination, destination))
-                subgraph.add_node(place_node(place, obj, destination, (subgoal_id,)))
-                _chain(subgraph, (navigate_object, pick, navigate_destination, place))
-                steps.add(subgoal_id, delivered, subgraph, navigate_object)
+                subgoals.append(SubGoal(subgoal_id, delivered))
+                subgraphs.append(
+                    _chain_subgraph(
+                        subgoal_id,
+                        task,
+                        (
+                            navigate_node(navigate_object, obj),
+                            pick_node(pick, obj),
+                            navigate_node(navigate_destination, destination),
+                            place_node(place, obj, destination, (subgoal_id,)),
+                        ),
+                    )
+                )
                 continue
 
             reachable = "object_{}_reachable".format(index)
@@ -214,10 +185,9 @@ class TidyHouseGraphBuilder(SkillGraphBuilder):
                 ),
                 (placed, delivered, place_node(place, obj, destination, (placed,))),
             ):
-                subgraph = SkillSubgraph(subgoal_id, task)
-                subgraph.add_node(node)
-                steps.add(subgoal_id, predicate, subgraph, node.id)
-        return steps.patch()
+                subgoals.append(SubGoal(subgoal_id, predicate))
+                subgraphs.append(_chain_subgraph(subgoal_id, task, (node,)))
+        return assemble_patch(task, subgoals, subgraphs)
 
 
 class SetTableGenericGraphBuilder(SkillGraphBuilder):
@@ -237,47 +207,47 @@ class SetTableGenericGraphBuilder(SkillGraphBuilder):
         segments = _require_pairs(
             context.get("segments", DEFAULT_SET_TABLE_SEGMENTS), "segments", 3
         )
-        steps = _Steps()
+        subgoals: List[SubGoal] = []
+        subgraphs: List[SkillSubgraph] = []
         for label, obj, source in segments:
             open_subgoal = "{}_source_open".format(label)
             retrieved_subgoal = "{}_retrieved".format(label)
             placed_subgoal = "{}_placed".format(label)
             closed_subgoal = "{}_source_closed".format(label)
-            navigate_source = "navigate_to_{}_source".format(label)
-            open_source = "open_{}_source".format(label)
-            navigate_object = "navigate_to_{}".format(label)
-            pick = "pick_{}".format(label)
-            navigate_destination = "navigate_{}_to_destination".format(label)
-            place = "place_{}".format(label)
-            navigate_back = "navigate_back_to_{}_source".format(label)
-            close_source = "close_{}_source".format(label)
-
-            subgraph = SkillSubgraph(open_subgoal, task)
-            subgraph.add_node(navigate_node(navigate_source, source))
-            subgraph.add_node(open_node(open_source, source, (open_subgoal,)))
-            _chain(subgraph, (navigate_source, open_source))
-            steps.add(open_subgoal, "open({})".format(source), subgraph, navigate_source)
-
-            subgraph = SkillSubgraph(retrieved_subgoal, task)
-            subgraph.add_node(navigate_node(navigate_object, obj))
-            subgraph.add_node(pick_node(pick, obj, (retrieved_subgoal,)))
-            _chain(subgraph, (navigate_object, pick))
-            steps.add(retrieved_subgoal, "holding({})".format(obj), subgraph, navigate_object)
-
-            subgraph = SkillSubgraph(placed_subgoal, task)
-            subgraph.add_node(navigate_node(navigate_destination, destination))
-            subgraph.add_node(place_node(place, obj, destination, (placed_subgoal,)))
-            _chain(subgraph, (navigate_destination, place))
-            steps.add(
-                placed_subgoal,
-                "at({},{})".format(obj, destination),
-                subgraph,
-                navigate_destination,
-            )
-
-            subgraph = SkillSubgraph(closed_subgoal, task)
-            subgraph.add_node(navigate_node(navigate_back, source))
-            subgraph.add_node(close_node(close_source, source, (closed_subgoal,)))
-            _chain(subgraph, (navigate_back, close_source))
-            steps.add(closed_subgoal, "closed({})".format(source), subgraph, navigate_back)
-        return steps.patch()
+            for subgoal_id, predicate, nodes in (
+                (
+                    open_subgoal,
+                    "open({})".format(source),
+                    (
+                        navigate_node("navigate_to_{}_source".format(label), source),
+                        open_node("open_{}_source".format(label), source, (open_subgoal,)),
+                    ),
+                ),
+                (
+                    retrieved_subgoal,
+                    "holding({})".format(obj),
+                    (
+                        navigate_node("navigate_to_{}".format(label), obj),
+                        pick_node("pick_{}".format(label), obj, (retrieved_subgoal,)),
+                    ),
+                ),
+                (
+                    placed_subgoal,
+                    "at({},{})".format(obj, destination),
+                    (
+                        navigate_node("navigate_{}_to_destination".format(label), destination),
+                        place_node("place_{}".format(label), obj, destination, (placed_subgoal,)),
+                    ),
+                ),
+                (
+                    closed_subgoal,
+                    "closed({})".format(source),
+                    (
+                        navigate_node("navigate_back_to_{}_source".format(label), source),
+                        close_node("close_{}_source".format(label), source, (closed_subgoal,)),
+                    ),
+                ),
+            ):
+                subgoals.append(SubGoal(subgoal_id, predicate))
+                subgraphs.append(_chain_subgraph(subgoal_id, task, nodes))
+        return assemble_patch(task, subgoals, subgraphs)

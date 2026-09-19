@@ -91,7 +91,7 @@ the bindings.
 ## Gold graphs
 
 A gold graph is a hand-authored, validated Layer-1/2 skill graph that exists
-only for this experiment. It is the answer the scripted planner returns and
+only for this experiment. It is the answer the scripted proposer returns and
 the reference a real model's output is compared against; it is not a library
 for later work to build on.
 
@@ -168,5 +168,5 @@ library.applicable_policies(pick.id, grounded.arguments)   # bowl checkpoints, t
 library.select_policy(pick.id, arguments=grounded.arguments)  # first ready of those
 ```
 
-The next phase (stage 3 of the plan) defines the planner boundary whose
-scripted implementation answers with these gold graphs.
+The proposer boundary whose scripted implementation answers with these gold
+graphs lives in [`../planning/`](../planning/README.md).
