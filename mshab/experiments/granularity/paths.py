@@ -14,3 +14,8 @@ DEFAULT_ASSET_ROOT = Path(
 DEFAULT_CHECKPOINT_ROOT = DEFAULT_ASSET_ROOT / "data" / "mshab_checkpoints"
 DEFAULT_ARTIFACT_DIR = PACKAGE_DIR / "artifacts"
 DEFAULT_GRAPH_DIR = PACKAGE_DIR / "graphs"
+# Evaluation runs: under $MSHAB_EXPS_DIR (the Docker image sets it to the
+# bind-mounted ./mshab_exps, which is gitignored), never in the package.
+DEFAULT_EVALUATION_DIR = (
+    Path(os.environ.get("MSHAB_EXPS_DIR", str(REPOSITORY_ROOT / "mshab_exps"))) / "planning"
+)
