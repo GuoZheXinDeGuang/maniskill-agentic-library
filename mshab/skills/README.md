@@ -50,15 +50,18 @@ The detail lives in [`docs/`](./docs); this page is the entry point.
 
 ## Source layout
 
+Paths are relative to this directory, except the `scripts/` and `tests/` rows
+at the end of the table, which are relative to the repository root.
+
 | File | Responsibility |
 | --- | --- |
 | `graph.py` | Simulator-independent Layer 1 and Layer 2 graph objects |
-| `catalog.py` | Validated, machine-independent four-layer catalog format |
+| `catalog.py` | Validated, machine-independent four-layer catalog format. **SetTable only** -- see "Where a task's code lives" below |
 | `extension.py` | Validated `SkillGraphPatch` / `SkillGraphBuilder` interface |
 | `plan.py` | `SkillPlanner`/`SkillPlan`: choose one achiever per sub-goal |
 | `schema.py` | Strict `from_dict` primitives for untrusted documents |
 | `tasks/set_table/` | Packaged SetTable graph, contract manifest, and stack builders |
-| `tasks/tidy_house/` | Design target for the coarse/fine granularity experiment |
+| `tasks/tidy_house/` | Design note only, no code: the coarse/fine variants the granularity experiment implements elsewhere |
 | `starter.py` | Backward-compatible SetTable imports |
 | `model.py` | Layer 3 contract and Layer 4 policy definitions |
 | `environment.py` | Environment description, entity mapping, snapshots, and adapter |
@@ -82,11 +85,32 @@ The detail lives in [`docs/`](./docs); this page is the entry point.
 | `tests/test_granularity_evaluation.py` | The stage-5 evaluation: agreement metrics against the gold graphs, rejection tally, the scripted dry run of the sweep |
 | `tests/test_task_packages.py` | Public and compatibility imports of the packaged SetTable graph |
 
-Task-specific implementations live under `tasks/`; they reuse the OOP model
-in this directory instead of adding task logic to `ContractLibrary`. SetTable
-is the packaged reference example. TidyHouse is the next experiment target;
-see [`tasks/tidy_house/README.md`](./tasks/tidy_house/README.md) for the
-controlled coarse/fine design.
+### Where a task's code lives
+
+Task-specific code reuses the OOP model in this directory instead of adding
+task logic to `ContractLibrary`, but it lives in one of two places, and they
+do not share a format:
+
+| | `mshab/skills/tasks/` | `mshab/experiments/` |
+| --- | --- | --- |
+| Contains | Hand-authored reference implementations | Controlled experiments |
+| Contract ids | One per object, `mshab.set_table.pick.013_apple` | Five generic, `mshab.granularity.pick.all` |
+| Serialized as | `LibraryCatalog` (`catalog.py`) | Gold-graph documents (`SkillGraphPatch` JSON) |
+| Today | SetTable, the packaged reference example | TidyHouse coarse/fine, SetTable regression |
+
+The two serialization formats stay separate on purpose: `LibraryCatalog` is
+the SetTable test artifact, and later work builds on the experiment's
+documents instead. Nothing reads both. That decision, the contract-id
+namespace, and why a skill node is exactly one MS-HAB atomic subtask are
+recorded under "Decisions taken" in the
+[higher-layers plan](../experiments/docs/higher-layers-plan.md).
+
+So TidyHouse appears twice and neither copy is stale:
+[`tasks/tidy_house/README.md`](./tasks/tidy_house/README.md) states the
+controlled coarse/fine design, and
+[`mshab/experiments/granularity/`](../experiments/granularity/README.md)
+implements it. There is no `tasks/tidy_house/` Python module and none is
+planned.
 
 
 ## Current implementation boundary
