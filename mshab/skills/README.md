@@ -78,6 +78,8 @@ The detail lives in [`docs/`](./docs); this page is the entry point.
 | `tests/test_higher_layer_graphs.py` | The experiment's gold graphs: validity, grounding, coarse/fine equivalence, SetTable regression, committed artifacts |
 | `tests/test_planning_boundary.py` | The proposer boundary under `mshab/experiments/planning/`: documents, scripted proposer, assembler, validator rejections |
 | `tests/test_task_controller.py` | The symbolic environment and the `execute -> observe -> re-decide` controller on the experiment's scenarios at both granularities |
+| `tests/test_deepseek_proposer.py` | The real model behind the boundary with a fake transport: prompts, lenient-then-strict parsing, the validator's retry rounds and the further user turn |
+| `tests/test_granularity_evaluation.py` | The stage-5 evaluation: agreement metrics against the gold graphs, rejection tally, the scripted dry run of the sweep |
 | `tests/test_task_packages.py` | Public and compatibility imports of the packaged SetTable graph |
 
 Task-specific implementations live under `tasks/`; they reuse the OOP model
@@ -102,7 +104,13 @@ Implemented now:
 - the online `execute -> observe -> re-decide` loop on a symbolic environment
   (`TaskController` in `mshab/experiments/planning/`): per-node retries,
   Layer-2 fallback through `SkillPlanner.decide()`, and the Layer-1 replan
-  through a proposer.
+  through a proposer;
+- a real model behind the `GraphProposer` boundary (`DeepSeekProposer`, text
+  only): `decompose()` feeds `SubGoalGraph.from_sequence`, `plan_subgraph()`
+  returns one `SkillSubgraph`, the validator sends rejections back for a
+  bounded number of retries, and `mshab.experiments.granularity.evaluate`
+  measures validity, agreement with the gold graphs, and controller outcome
+  per granularity.
 
 Simulator-specific follow-up work:
 
@@ -111,5 +119,5 @@ Simulator-specific follow-up work:
 - measured policy performance and automatic policy routing;
 - production insertion-VLM proposal parsing and validation;
 - running the controller loop on MS-HAB instead of the symbolic environment (a TidyHouse entity/fact extractor and a checkpoint-loading `PolicyExecutor`); a trained decision model replacing the rule-based `SkillPlanner` is optional later work;
-- a real model behind the `GraphProposer` boundary (`decompose()` feeds `SubGoalGraph.from_sequence`, `plan_subgraph()` returns one `SkillSubgraph`); today the scripted proposer answers from hand-authored gold graphs, and the controller already runs the Layer-1 replan through that boundary;
+- a vision-capable proposer: the request documents reserve an `images` field that the text-only DeepSeek proposer refuses;
 - insertion and decision quality evaluation.

@@ -18,12 +18,13 @@ lower_layers/
 higher_layers/
 ├── builders.py    TidyHouseGraphBuilder(granularity), SetTableGenericGraphBuilder
 ├── gold.py        registry, validation, JSON document, loader
-├── scenarios.py   scenarios, gold_proposer()/scenario_proposer(), run_scenario()
+├── scenarios.py   scenarios (TidyHouse and SetTable), gold_proposer()/scenario_proposer(), run_scenario()
 └── render.py      SVG rendering of the gold graphs
 
-paths.py           default checkpoint, artifact, and graph locations
+paths.py           default checkpoint, artifact, graph, and evaluation locations
 svg.py             the text primitive both renderers share
 render.py          python -m mshab.experiments.granularity.render: writes artifacts/ and graphs/
+evaluate.py        python -m mshab.experiments.granularity.evaluate: the stage-5 sweep of a proposer
 artifacts/         library.json and contract_policy_layers.svg
 graphs/            committed gold graphs: <name>.json and <name>.svg
 ```
@@ -147,7 +148,11 @@ independent of the proposer and of the granularity; only the scripted
 proposer needs the replan answers it carries, a real model plans them itself.
 `run_scenario(SCENARIOS[name], granularity, library)` runs one on the
 symbolic environment through the controller in
-[`../planning/`](../planning/README.md) and returns the trace.
+[`../planning/`](../planning/README.md) and returns the trace. Without an
+explicit proposer it uses `scenario_proposer()`: the gold graphs authored for
+the scenario's goal (`gold_graphs_for(goal)`) plus the scenario's replan
+answers at that granularity, so a TidyHouse scenario answers at `coarse` and
+`fine` and the SetTable one at `free`.
 
 | Scenario | What happens | Coarse | Fine |
 | --- | --- | --- | --- |
@@ -156,11 +161,48 @@ symbolic environment through the controller in
 | `pick_exhausted` | one pick never succeeds; the sub-goal fails and the proposer gives the object up | 19 executions, 1 replan spanning 3 sub-goals | 19 executions, 1 replan spanning 12 sub-goals |
 | `object_dropped` | a place drops the object; the retry cannot be admitted, the proposer plans the transfer again | 25 executions, span 4 | 25 executions, span 15 |
 | `object_already_delivered` | the first object starts at its destination | its 4 nodes are skipped, 16 executions | nothing is skipped: 20 executions, the object is picked up and put back |
+| `set_table_nominal` | the packaged SetTable order on the generic contracts: open, retrieve, place, close, for the bowl and then the apple | 16 executions at `free` (the one gold graph of that goal) | |
 
-The last row is the granularity effect in miniature. A coarse sub-goal
-`at(object,destination)` is judged done as a whole; the fine sub-goals judge
-one predicate at a time, so `reachable(object)` is still pursued for an
-object that needs no work.
+The `object_already_delivered` row is the granularity effect in miniature. A
+coarse sub-goal `at(object,destination)` is judged done as a whole; the fine
+sub-goals judge one predicate at a time, so `reachable(object)` is still
+pursued for an object that needs no work.
+
+## Evaluation
+
+`evaluate.py` is the stage-5 sweep: a proposer, per goal, per granularity
+(`free`, `coarse`, `fine`), over several samples. Each sample first asks the
+proposer for a plan under the goal's nominal facts through a
+`ProposalValidator` with the model's retry budget, then runs every scenario
+of the goal through the controller with the same proposer.
+
+| Measurement | Where it comes from |
+| --- | --- |
+| validity: `accepted_first_try`, `accepted_after_retries`, `rejected`; rounds and proposer calls | the validator's rounds |
+| decomposition: sub-goal count, predicate vocabulary, agreement with the gold sequence (`exact`, order similarity, precision, recall over predicates) | the accepted decomposition against `tidy_house_coarse` / `tidy_house_fine` / `set_table_generic`; `free` is compared with every reference of its goal |
+| subgraphs: node and edge agreement with the gold subgraph of the same predicate (nodes matched by contract type and arguments, since node ids are the proposer's own), plus the whole graph's role precision and recall | the accepted skill graph |
+| scenarios: success rate, statuses, every run metric averaged (`replanning_span`, `proposal_retries`, ...) | `run_scenario` with the same injected failures |
+| most frequent rejections, by stage and by rule (identifiers and lists blanked) | every round of every proposal, static or inside a run |
+
+```bash
+# the real model; DEEPSEEK_API_KEY comes from the host or a .env file next to docker-compose.yml
+docker compose run --rm mshab python -m mshab.experiments.granularity.evaluate --samples 3
+# one goal, one granularity, static proposals only
+docker compose run --rm mshab python -m mshab.experiments.granularity.evaluate \
+    --goals tidy_house --granularities free --samples 5 --no-scenarios
+# offline dry run of the whole pipeline with the gold graphs as the proposer
+python -m mshab.experiments.granularity.evaluate --proposer scripted
+```
+
+Options: `--model` (`deepseek-chat`), `--base-url`, `--temperature` (server
+default when omitted), `--max-tokens`, `--no-json-mode`, `--retries` (2),
+`--goals`, `--granularities`, `--samples`, `--scenarios`, `--no-scenarios`,
+`--no-static`, `--output`. Traces go to `$MSHAB_EXPS_DIR/planning/<model>-<timestamp>/`
+(`mshab_exps/` on the host, gitignored): one `static.json` and one
+`scenario_<name>.json` per sample, `exchanges.json` with every model call, and
+`summary.json` with the aggregates the console table shows. The scripted
+proposer only answers granularities a gold graph was authored at, so the dry
+run skips the others.
 
 ## Build and inspect
 

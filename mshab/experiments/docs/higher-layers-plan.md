@@ -65,7 +65,7 @@ composition rather than new abstractions:
 ## What was missing
 
 The gaps this plan set out to close, each with the stage that closed it.
-Stages 1 to 4 are implemented; the per-stage sections below record how.
+Stages 1 to 5 are implemented; the per-stage sections below record how.
 
 1. **The granularity lower layers were not a `ContractLibrary`** (stage 1).
    `ConnectedLayers` was its own storage; `SkillGrounder` and `SkillRuntime`
@@ -91,6 +91,10 @@ Stages 1 to 4 are implemented; the per-stage sections below record how.
 6. **No simulator-free environment** (stage 4). Testing the loop on CPU
    needed an `EnvironmentAdapter` whose facts are a symbolic set that
    contract effects and deletes update: `SymbolicEnvironmentAdapter`.
+7. **No real model behind the boundary, and no way to answer a rejection**
+   (stage 5). The scripted proposer answers from gold graphs and cannot
+   revise; a model needs the validator's reasons back and a second chance.
+   `DeepSeekProposer` and the validator's retry rounds closed both.
 
 ## Stage 1: align the granularity lower layers with `mshab.skills`
 
@@ -235,7 +239,7 @@ implementations:
   and a table round-trips through JSON (`save()`/`load()`). Unknown
   fingerprints raise, so a test cannot silently pass on a default answer.
   This is the pseudo VLM.
-- `DeepSeekProposer`: stage 5.
+- `DeepSeekProposer`: the real model, stage 5.
 
 A `ProposalValidator` sits between any proposer and the graph: it parses the
 responses, grounds every node against the library, assembles and applies the
@@ -312,36 +316,67 @@ that does a real model enter.
 
 ## Stage 5: the real model (DeepSeek API)
 
+Package: `mshab/experiments/planning/` (`deepseek.py`, `prompts.py`, the
+validator's retry rounds) and `mshab/experiments/granularity/evaluate.py`.
+
 `DeepSeekProposer` fills `decompose()` and `plan_subgraph()` with one model
 call each, through the DeepSeek chat-completions API (OpenAI-compatible;
 key from `DEEPSEEK_API_KEY`, model configurable, `deepseek-chat` by default).
-Decisions to keep the swap small:
+Decisions that kept the swap small, and how each was implemented:
 
-- The user message is the request JSON; a fixed system prompt states the
-  vocabulary, the relation semantics, the granularity instruction, and the
-  response schema. Ask for JSON output and parse it with the strict
-  `from_dict`; never trust the model's JSON shape.
-- Text only. The DeepSeek chat API takes no image input, so the request
-  carries the contract inventory and symbolic facts; an optional `images`
-  field is reserved for a later vision-capable model.
-- On a `ProposalValidator` rejection, retry that call at most twice, sending the
-  rejection list back as a further user turn. Every request, response, and
-  rejection is logged in the run trace.
-- The client dependency goes in a new `planning` extra in `pyproject.toml`;
-  tests never call the network and use `ScriptedProposer`.
+- The user message is the request JSON, verbatim; a fixed system prompt per
+  call (`prompts.py`) states the vocabulary, the world model, the validator's
+  rules, the relation semantics, all three granularity instructions, and the
+  response schema with an example. JSON output is requested
+  (`response_format` `json_object`), fences and prose around it are tolerated
+  by `extract_json_object()`, and everything after that is the strict
+  `from_dict`; the model's JSON shape is never trusted.
+- Text only. `PlanningContext.images` and `SubgraphRequest.images` exist for
+  a later vision-capable proposer; the symbolic environment never fills them
+  and `DeepSeekProposer` refuses a request that carries one.
+- Retries live in the validator, because only it sees the rejections:
+  `ProposalValidator(retries=2)` runs up to three rounds. A rejection that
+  names a sub-goal repeats that sub-goal's subgraph call with the rejections
+  attached to the request (`SubgraphRequest.rejections`), keeping the
+  decomposition and every answer that was not refused; a rejection that
+  names none (the decomposition, the assembled graph) restarts at call 1.
+  `DeepSeekProposer` keeps one conversation per request fingerprint and turns
+  the attached rejections into a further user turn, so the model sees its own
+  refused answer. Every round, with its requests, responses, and rejections,
+  is in `ValidatedProposal.rounds` / `ProposalRejected.rounds` and therefore
+  in the run trace; the proposer's `exchanges` add the raw replies and
+  token usage.
+- Two validator rules were added for a model that can be wrong in ways the
+  gold graphs never are: an achiever's grounded effects must contain the
+  sub-goal predicate (else the environment could never verify the sub-goal),
+  and the plan-stage "two achievers, no `FALLBACK_TO` order" rejection is
+  attributed to its sub-goal so a retry repeats only that call.
+- The transport is a callable from messages to a reply; `DeepSeekChat` is
+  the real one and imports the `openai` SDK lazily. The dependency is the
+  `planning` extra in `pyproject.toml`, installed in the Docker image; the
+  compose file passes `DEEPSEEK_API_KEY` through from the host or a `.env`
+  file. Tests inject a recording fake and never call the network.
 
-Evaluation, per goal, per granularity setting (`free`, `coarse`, `fine`),
-over several samples:
+Evaluation (`python -m mshab.experiments.granularity.evaluate`), per goal
+(TidyHouse with its five scenarios, SetTable-generic with its nominal
+scenario), per granularity setting (`free`, `coarse`, `fine`), over several
+samples:
 
 - validity rate: accepted on the first try, accepted after retries, rejected;
+  rounds and proposer calls per proposal;
 - decomposition statistics: sub-goal count, predicate vocabulary used,
-  agreement with the coarse or fine gold sequence;
+  agreement with the coarse or fine gold sequence (exact match, order
+  similarity, predicate precision and recall; `free` is compared with both);
 - subgraph agreement: node set and edge set match against the gold subgraph
-  for the same predicate;
+  for the same predicate, nodes matched by contract type and arguments; and
+  the whole graph's role precision and recall, which is granularity-free;
 - controller outcome on the stage-4 scenarios with the same injected
-  failures, including replanning span;
-- the most frequent rejections, which show which validator rule the prompt
-  explains badly.
+  failures, including replanning span and proposal retries;
+- the most frequent rejections by stage and rule, which show which validator
+  rule the prompt explains badly.
+
+`--proposer scripted` runs the same sweep with the gold graphs as the
+proposer; that offline dry run is what the tests exercise.
 
 ## Stage 6: MS-HAB rollout
 
@@ -360,7 +395,7 @@ adapter and executor change.
 | 2 | Coarse and fine TidyHouse gold graphs, SetTable regression graph, builders, renderer | 1 | `test_higher_layer_graphs.py` |
 | 3 | Four request/response documents, `GraphProposer`, `ScriptedProposer`, `assemble_patch`, `ProposalValidator` | 2 | `test_planning_boundary.py` |
 | 4 | `SymbolicEnvironmentAdapter`, `SymbolicPolicyExecutor`, `TaskController`, five scenarios, metrics | 3 | `test_task_controller.py` |
-| 5 | `DeepSeekProposer`, prompts, evaluation script | 4 | offline tests only |
+| 5 | `DeepSeekProposer`, prompts, validator retries, evaluation script | 4 | `test_deepseek_proposer.py`, `test_granularity_evaluation.py` (offline, fake transport) |
 | 6 | MS-HAB adapter and executor | 1, 4 | GPU runner |
 
 ## Decisions taken
@@ -371,7 +406,9 @@ adapter and executor change.
 - TidyHouse (official MS-HAB task) is the primary graph source; SetTable
   re-expressed with generic contracts is the regression case.
 - Aligning the granularity lower layers with `mshab.skills` is stage 1.
-- The first real model is reached through the DeepSeek API, text only.
+- The first real model is reached through the DeepSeek API, text only. The
+  retry budget is the validator's, not the model's: rejections travel back
+  on the request document, and the model answers them as a further turn.
 - Contract ids keep the `mshab.granularity.<type>.all` namespace; the gold
   graphs are experiment-local test graphs.
 - A skill node is one contract call, one MS-HAB atomic subtask. The gold

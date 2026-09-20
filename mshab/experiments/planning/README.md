@@ -1,11 +1,12 @@
 # Proposer boundary
 
 The interface between the controller and whatever generates the upper two
-layers: the scripted pseudo proposer today, a real model later. A *proposer*
+layers: the scripted pseudo proposer, or the real model. A *proposer*
 proposes Layers 1 and 2; the *planner*, `SkillPlanner` in `mshab.skills`,
-decides which node runs next on a graph that already exists. Stage 3 of
-[`../docs/higher-layers-plan.md`](../docs/higher-layers-plan.md). Everything
-here is simulator-independent and standard library only.
+decides which node runs next on a graph that already exists. Stages 3 to 5
+of [`../docs/higher-layers-plan.md`](../docs/higher-layers-plan.md).
+Everything here is simulator-independent and standard library only, except
+`deepseek.py`, which imports the `openai` SDK lazily (the `planning` extra).
 
 ## Two calls
 
@@ -23,21 +24,26 @@ difference in outcome is attributable to the decomposition.
 
 | Document | Fields | Consumed by |
 | --- | --- | --- |
-| `DecompositionRequest` | `task`, `goal`, plus the `PlanningContext`: `contracts`, `entities`, `facts`, `history`, `failure`, `granularity`, `attempt` | the proposer |
+| `DecompositionRequest` | `task`, `goal`, plus the `PlanningContext`: `contracts`, `entities`, `facts`, `history`, `failure`, `granularity`, `attempt`, `images`; and `rejections` | the proposer |
 | `DecompositionResponse` | ordered `subgoals` `[{id, predicate}]`, `rationale` | `SubGoalGraph.from_sequence` |
-| `SubgraphRequest` | `task`, `goal`, `subgoal`, `contracts`, `entities`, `facts`, `neighbours {previous, next}` | the proposer |
+| `SubgraphRequest` | `task`, `goal`, `subgoal`, `contracts`, `entities`, `facts`, `neighbours {previous, next}`, `images`, `rejections` | the proposer |
 | `SubgraphResponse` | `subgraph {subgoal_id, nodes, edges}`, `rationale` | `SkillSubgraph.from_dict` |
+| `Rejection` | `stage`, `subgoal_id`, `message` | the proposer, on a retry |
 
 `contracts` carries the library's `Contract.as_dict()` records verbatim; the
 boundary defines no second contract serialization.
 `PlanningContext.initial(library, task, entities=..., facts=..., granularity=...)`
 builds the context of a first plan; `context.replan(failure, history, facts)`
-the context of the next attempt after a sub-goal failed. Every document has a
-strict `from_dict` through `mshab.skills.schema`: unknown keys, bad
-identifiers, non-scalar arguments, and a contract outside the task namespace
-are rejected at the boundary. A proposer never emits the derived
-`achiever_nodes` and `execution_order` views; `SkillSubgraph.from_dict`
-recomputes them.
+the context of the next attempt after a sub-goal failed. `rejections` is empty
+on a first ask and holds the validator's reasons when the same request is
+asked again (`request.with_rejections(...)`); the fingerprint of a request
+does not change with it. `images` is reserved for a vision-capable proposer:
+the symbolic environment never fills it and the text-only DeepSeek proposer
+refuses a request that carries one. Every document has a strict `from_dict`
+through `mshab.skills.schema`: unknown keys, bad identifiers, non-scalar
+arguments, and a contract outside the task namespace are rejected at the
+boundary. A proposer never emits the derived `achiever_nodes` and
+`execution_order` views; `SkillSubgraph.from_dict` recomputes them.
 
 ## Proposer (`proposer.py`)
 
@@ -52,31 +58,84 @@ or reorders sub-goals.
 `ScriptedProposer` is the pseudo proposer. Answers are keyed by request
 fingerprint: `(task, goal, granularity, attempt, failed sub-goal)` for a
 decomposition and `(task, sub-goal id, predicate)` for a subgraph. An unknown
-fingerprint raises `UnscriptedRequest` instead of answering with a default.
+fingerprint raises `UnscriptedRequest` instead of answering with a default; a
+retry keeps its fingerprint and gets the same answer.
 `gold_proposer(names, library)` in the granularity experiment cuts the tables
 out of the committed gold graphs and `scenario_proposer()` adds a scenario's
 replan answers; `as_dict()`/`from_dict()` and `save()`/`load()` move tables
-through JSON. This package depends on `mshab.skills` only.
+through JSON.
+
+`ProposerUnavailable` is the one error that is not an answer: a transport or
+credential failure. The validator lets it propagate instead of recording a
+rejection.
+
+## Real model (`deepseek.py`, `prompts.py`)
+
+`DeepSeekProposer` answers each call with one chat completion through
+DeepSeek's OpenAI-compatible API. The conversation of a call is:
+
+```text
+system     DECOMPOSITION_SYSTEM_PROMPT or SUBGRAPH_SYSTEM_PROMPT   (fixed)
+user       the request document as JSON, verbatim
+assistant  the reply, parsed as JSON and then strictly (DecompositionResponse.from_dict / SubgraphResponse.from_dict)
+user       on a retry: the validator's rejection list                (REJECTION_TURN)
+assistant  the revised reply
+```
+
+Both system prompts are constants in `prompts.py`: the vocabulary of the
+skill-library guide, the world model (the contract predicates and the two
+symbolic world rules), the rules the validator enforces, the relation
+semantics, the three granularity instructions, and the response schema with
+an example. The granularity the experiment varies is a field of the request,
+never a prompt edit. `extract_json_object()` tolerates fences and prose around
+the JSON; everything after that is the strict `from_dict`, so the model's JSON
+shape is never trusted.
+
+The transport is a plain callable from messages to a reply (`ChatFunction`);
+tests inject a recording fake and never touch the network. `DeepSeekChat` is
+the real one: model `deepseek-chat` by default, key from `DEEPSEEK_API_KEY`,
+`response_format` `json_object`, temperature left to the server unless given.
+Every call is recorded as an `Exchange` (messages, reply, usage, elapsed time,
+parse error if any) in `proposer.exchanges`; `save_exchanges(path)` writes
+them. Text only: a request with `images` is refused.
 
 ## Validator (`validator.py`)
 
-`ProposalValidator(library, task).plan(proposer, goal, context)` runs call 1, then
-call 2 for every sub-goal, then assembles, applies the patch to fresh graphs
-with the library, validates, and runs `SkillPlanner.plan()`. It returns a
-`ValidatedProposal` holding both layers, the patch, the plan, and every request
-and response verbatim (`as_dict()` is the trace record). Otherwise it raises
-`ProposalRejected` with `Rejection(stage, subgoal_id, message)` entries:
+`ProposalValidator(library, task, retries=0).plan(proposer, goal, context)`
+runs call 1, then call 2 for every sub-goal, then assembles, applies the patch
+to fresh graphs with the library, validates, and runs `SkillPlanner.plan()`.
+It returns a `ValidatedProposal` holding both layers, the patch, the plan, the
+accepted requests and responses verbatim, and every `ProposalRound` that was
+tried (`as_dict()` is the trace record). Otherwise it raises
+`ProposalRejected` with the last round's `Rejection(stage, subgoal_id, message)`
+entries and all rounds:
 
 | Stage | What failed |
 | --- | --- |
 | `decomposition` | the proposer errored, returned the wrong type, or the sequence is not a Layer-1 chain |
-| `subgraph` | per sub-goal: wrong owner, no achiever, a node that does not ground (unknown contract, bad arguments), a node id another sub-goal already uses; all sub-goals are checked before the round stops |
+| `subgraph` | per sub-goal: wrong owner, no achiever, a node that does not ground (unknown contract, bad arguments), a node id another sub-goal already uses, an achiever whose grounded effects do not contain the sub-goal predicate; all sub-goals are checked before the round stops |
 | `assembly` | subgraphs do not match the sub-goal sequence |
 | `graph` | `SkillGraphPatch.apply` or `SkillGraph.validate` refused the whole |
-| `plan` | `SkillPlanner` cannot choose, for example two achievers with no `FALLBACK_TO` order |
+| `plan` | a sub-goal's achievers have no primary (two achievers, no `FALLBACK_TO` order; attributed to the sub-goal), or `SkillPlanner` cannot plan the whole |
 
 Nothing live is touched on the way: a rejected round leaves whatever graphs
 the controller holds byte identical.
+
+### Retries
+
+With `retries=n` a rejected round is followed by up to `n` more. What is
+asked again depends on what was refused:
+
+- every rejection names a sub-goal: only those sub-goals' subgraph calls are
+  repeated, each request carrying its rejections; the decomposition and the
+  answers that were not refused are kept (`ProposalRound.decomposition_reused`,
+  `reused_subgoals`);
+- some rejection names no sub-goal (the decomposition itself, the assembled
+  graph): the round starts over at call 1, with the whole list attached.
+
+The real model turns the attached rejections into a further user turn of the
+same conversation; the scripted proposer ignores them. The plan's budget for
+the model is `retries=2`: a refused call is asked at most twice more.
 
 ## Symbolic environment (`symbolic.py`)
 
@@ -98,9 +157,10 @@ not re-implemented here; they run in `SkillRuntime`.
 
 ## Controller (`controller.py`)
 
-`TaskController(library, task, attempts_per_node=2, max_replans=2).run(goal,
-proposer, environment, executor, granularity=..., goal_facts=...)` is the
-`execute -> observe -> re-decide` loop the skill-library guide asks for:
+`TaskController(library, task, attempts_per_node=2, max_replans=2,
+validator=...).run(goal, proposer, environment, executor, granularity=...,
+goal_facts=...)` is the `execute -> observe -> re-decide` loop the
+skill-library guide asks for:
 
 ```text
 proposal = ProposalValidator.plan(proposer, goal, PlanningContext.initial(...))
@@ -129,9 +189,10 @@ Success is judged on `goal_facts` in the final facts, independently of how
 the proposer decomposed the goal.
 
 `RunResult` (`as_dict()`, `save(path)`) is the trace: every proposal with its
-requests and responses verbatim or its rejections, every decision with the
-facts it added and removed, every replan with the failure that caused it, the
-initial and final facts, and `metrics`:
+rounds (requests, responses, rejections verbatim) and, when accepted, the
+accepted answers and plan; every decision with the facts it added and
+removed; every replan with the failure that caused it; the initial and final
+facts; and `metrics`:
 
 | Metric | Meaning |
 | --- | --- |
@@ -143,24 +204,30 @@ initial and final facts, and `metrics`:
 | `goal_facts_achieved` / `goal_facts` | the success criterion, fact by fact |
 | `replans`, `replanning_span` | accepted replans, and how many of their sub-goals did not already hold at the moment the replan was made |
 | `recovery_success` | success after at least one failure or replan |
+| `proposal_retries`, `proposer_calls` | rounds the validator had to repeat, and proposer calls made, over every proposal of the run |
 
-The scenarios that exercise the loop, and the helper that runs one, live in
-[`../granularity/higher_layers/scenarios.py`](../granularity/higher_layers/scenarios.py).
+The scenarios that exercise the loop, the helper that runs one, and the
+evaluation that sweeps a proposer over goals and granularities live in
+[`../granularity/`](../granularity/README.md).
 
 ```python
 from pathlib import Path
 
 from mshab.experiments.granularity import build_granularity_library
 from mshab.experiments.granularity.higher_layers import GOLD_GRAPHS, gold_proposer
-from mshab.experiments.planning import ProposalValidator, PlanningContext
+from mshab.experiments.planning import DeepSeekProposer, ProposalValidator, PlanningContext
 
 library = build_granularity_library(Path("../mshab-assets/data/mshab_checkpoints"))
-proposer = gold_proposer(GOLD_GRAPHS, library)
-validator = ProposalValidator(library, "granularity")
+validator = ProposalValidator(library, "granularity", retries=2)
 context = PlanningContext.initial(library, "granularity", granularity="fine")
-validated = validator.plan(
-    proposer, "Tidy the house: move every object to its target receptacle.", context
-)
+goal = "Tidy the house: move every object to its target receptacle."
+
+scripted = gold_proposer(GOLD_GRAPHS, library)
+validated = validator.plan(scripted, goal, context)
 validated.plan.order            # the 20 nominal node ids
-validated.as_dict()             # requests, responses, and the plan
+validated.as_dict()             # requests, responses, rounds, and the plan
+
+model = DeepSeekProposer(model="deepseek-chat")   # needs DEEPSEEK_API_KEY and the planning extra
+validated = validator.plan(model, goal, context)
+model.exchanges                 # every model call, parse errors included
 ```

@@ -78,7 +78,18 @@ simulator. Use the [SetTable evaluation runner](set-table.md#execute-a-graph-sel
 for full policy rollouts.
 
 The suite has no third-party dependencies, so dropping the `docker compose
-run --rm mshab` prefix also works with any local Python 3.9+.
+run --rm mshab` prefix also works with any local Python 3.9+. The real
+model behind the proposer boundary (`mshab/experiments/planning/deepseek.py`)
+is the one place that needs a package: the `openai` SDK from the `planning`
+extra (`pip install -e ".[planning]"`; the Docker image installs it). Its
+tests use a fake transport, so they run without the package, without a key,
+and without network access. Running the model itself needs
+`DEEPSEEK_API_KEY`, which `docker-compose.yml` passes through from the host
+environment or a `.env` file next to it:
+
+```bash
+docker compose run --rm mshab python -m mshab.experiments.granularity.evaluate --samples 3
+```
 
 Two tests in `test_set_table_graph_decisions.py` reach the official SetTable
 task plan through a hard-coded `<repo>/../mshab-assets/...` path instead of
