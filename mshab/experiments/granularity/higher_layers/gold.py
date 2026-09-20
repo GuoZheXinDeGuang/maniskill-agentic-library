@@ -20,6 +20,7 @@ from mshab.experiments.granularity.higher_layers.builders import (
 )
 from mshab.experiments.granularity.lower_layers.library import EXPERIMENT_TASK
 from mshab.experiments.granularity.paths import DEFAULT_GRAPH_DIR
+from mshab.experiments.planning.metrics import graph_summary
 from mshab.skills import schema
 from mshab.skills.extension import SkillGraphBuilder, SkillGraphPatch
 from mshab.skills.graph import SkillGraph, SubGoalGraph
@@ -99,21 +100,6 @@ def build_gold_graph(
     patch.apply(subgoal_graph, skill_graph, library=library)
     plan = validate_gold_graph(subgoal_graph, skill_graph, library)
     return GoldGraph(spec, patch, subgoal_graph, skill_graph, plan)
-
-
-def graph_summary(skill_graph: SkillGraph) -> Dict[str, Any]:
-    """The structural metrics the granularity experiment records."""
-
-    subgraphs = skill_graph.subgraphs
-    nodes = len(skill_graph.nodes)
-    return {
-        "subgoals": len(skill_graph.subgoal_graph.subgoals),
-        "subgraphs": len(subgraphs),
-        "nodes": nodes,
-        "internal_edges": sum(len(subgraph.edges) for subgraph in subgraphs.values()),
-        "cross_edges": len(skill_graph.cross_edges),
-        "mean_nodes_per_subgraph": nodes / len(subgraphs) if subgraphs else 0.0,
-    }
 
 
 def gold_graph_document(gold: GoldGraph) -> Dict[str, Any]:

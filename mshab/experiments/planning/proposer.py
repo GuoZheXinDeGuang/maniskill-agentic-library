@@ -170,8 +170,9 @@ class ScriptedProposer(GraphProposer):
     A decomposition is keyed by ``(task, goal, granularity, attempt, failed
     sub-goal id)``; a subgraph by ``(task, sub-goal id, predicate)``.  An
     unknown fingerprint raises instead of answering with a default, so a test
-    cannot pass on an answer nobody wrote.  Tables can be cut out of the
-    committed gold graphs or loaded from a JSON scenario file.
+    cannot pass on an answer nobody wrote.  Tables are scripted in code
+    (``mshab.experiments.granularity.higher_layers.scenarios`` cuts them out
+    of the gold graphs) or loaded from JSON.
     """
 
     def __init__(
@@ -215,6 +216,9 @@ class ScriptedProposer(GraphProposer):
     def subgraph_keys(self) -> Tuple[SubgraphKey, ...]:
         return tuple(sorted(self._subgraphs))
 
+    def plan_subgraph_by_key(self, key: SubgraphKey) -> SubgraphResponse:
+        return self._subgraphs[tuple(key)]
+
     # -- the two calls ------------------------------------------------------
 
     def decompose(self, request: DecompositionRequest) -> DecompositionResponse:
@@ -237,55 +241,7 @@ class ScriptedProposer(GraphProposer):
                 "scripted={}".format(key, list(self.subgraph_keys))
             ) from None
 
-    # -- construction from gold graphs and JSON -------------------------------
-
-    @classmethod
-    def from_gold_graphs(
-        cls,
-        names: Iterable[str],
-        library: Optional[ContractLibrary] = None,
-    ) -> "ScriptedProposer":
-        """Cut the initial decomposition and every subgraph out of gold graphs.
-
-        A gold graph's granularity (``coarse``/``fine``) is its decomposition
-        key; a graph without one is keyed as ``free``.  Two gold graphs may
-        share a sub-goal only if they give it the same subgraph.
-        """
-
-        from mshab.experiments.granularity.higher_layers.gold import build_gold_graph
-        from mshab.experiments.granularity.lower_layers.library import EXPERIMENT_TASK
-
-        proposer = cls()
-        for name in names:
-            gold = build_gold_graph(name, library)
-            order = gold.subgoal_graph.execution_order()
-            subgoals = tuple(gold.subgoal_graph.subgoals[subgoal_id] for subgoal_id in order)
-            key = (
-                EXPERIMENT_TASK,
-                gold.spec.goal,
-                gold.spec.granularity or "free",
-                0,
-                None,
-            )
-            if key in proposer._decompositions:
-                raise ValueError(
-                    "gold graph {!r} repeats the decomposition key {}".format(name, key)
-                )
-            proposer.script_decomposition(
-                key, DecompositionResponse(subgoals, "gold graph {}".format(name))
-            )
-            for subgoal in subgoals:
-                subgraph = gold.skill_graph.subgraph_for_subgoal(subgoal.id).unsealed_copy()
-                response = SubgraphResponse(subgraph, "gold graph {}".format(name))
-                subgraph_key = (EXPERIMENT_TASK, subgoal.id, subgoal.predicate)
-                existing = proposer._subgraphs.get(subgraph_key)
-                if existing is not None and existing.as_dict()["subgraph"] != response.as_dict()["subgraph"]:
-                    raise ValueError(
-                        "gold graph {!r} gives sub-goal {!r} a different subgraph "
-                        "than an earlier gold graph".format(name, subgoal.id)
-                    )
-                proposer.script_subgraph(subgraph_key, response)
-        return proposer
+    # -- JSON -----------------------------------------------------------------
 
     def as_dict(self) -> Dict[str, Any]:
         return {

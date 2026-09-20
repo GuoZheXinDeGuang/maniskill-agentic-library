@@ -187,7 +187,7 @@ DecompositionRequest
   entities:    [{name, kind}]                                               (from EnvironmentDescription)
   facts:       sorted current predicates                                    (from EnvironmentSnapshot)
   history:     achieved sub-goals, completed nodes, failed nodes
-  failure:     null | {subgoal_id, node_id, failure_mode, missing_effects}  (reason for a replan)
+  failure:     null | {subgoal_id, node_id, failure_mode, missing_effects, missing_preconditions}
   granularity: "free" | "coarse" | "fine"                                   (the experimental knob)
   attempt:     integer, 0 for the initial plan
 
@@ -248,44 +248,58 @@ untouched.
 
 ## Stage 4: online loop on a symbolic environment
 
-Package: `mshab/experiments/planning/` continued.
+Package: `mshab/experiments/planning/` (symbolic environment, controller) and
+`mshab/experiments/granularity/higher_layers/scenarios.py` (scenarios). The
+planning package depends on `mshab.skills` only; the experiment builds on it.
 
-- `SymbolicEnvironmentAdapter`: facts are a `set[str]`; `reset()` takes the
-  initial facts; `step()` is a no-op. A `SymbolicPolicyExecutor` applies the
-  grounded contract's `effects` and removes its `deletes` on success, and
-  does nothing on an injected failure. Failures are scripted per node id and
-  attempt, so a scenario can say "the first pick of the bowl fails".
-- `TaskController.run(goal, proposer, library, environment, granularity)`
-  implements the loop the guide describes:
+- `SymbolicEnvironmentAdapter`: facts are a set of predicate strings;
+  `reset()` installs the initial facts; `step({"add", "remove"})` applies a
+  change and two world rules the contracts cannot express (`holding(x)`
+  retracts `gripper_empty()` and `at(x,...)`; arriving at `y` retracts every
+  other `reachable(...)`). `SymbolicPolicyExecutor` applies a grounding's
+  effects and deletes on success. A `ScriptedFailure` is keyed by contract
+  type and grounded target, not node id, so it also hits graphs a proposer
+  authored; it names the attempts that fail and the facts the failed attempt
+  changes anyway (a dropped object). `bind_symbolic_policy` gives every
+  contract a ready `SymbolicPolicy` after its checkpoint bindings.
+- `TaskController.run(goal, proposer, environment, executor, granularity,
+  goal_facts)` is the loop:
 
 ```text
-subgoals, graph = validator(proposer, DecompositionRequest(initial))
+proposal = validator.plan(proposer, goal, PlanningContext.initial(...))
 loop:
-    node = SkillPlanner.decide(completed, failed)      # one node
-    if node is None: done
+    absorb facts: the next sub-goal in line whose predicate holds is achieved;
+                  its nodes are skipped
+    node = SkillPlanner.decide(completed, failed)      # one node, None when done
     result = SkillRuntime.execute_node(graph, node.id, executor)
-    record result; mark achieved sub-goals from facts
-    on failure: retry while the node's attempt budget remains,
-                else failed += node                     # Layer-2 fallback happens in decide()
-    on NoViableCandidate: DecompositionRequest with `failure` set and attempt+1,
-                          re-plan subgraphs for the new sub-goals,
-                          swap subgoals/graph, keep history
+    success -> completed; failure -> retry while attempts remain, else failed
+    NoViableCandidate -> Failure(sub-goal, node, mode, missing effects/preconditions),
+                         validator.plan(proposer, goal, context.replan(...)),
+                         swap both layers, derive achievement from the facts again
 ```
 
-- The controller writes a run trace (`requests`, `responses`, `decisions`,
-  `results`) as JSON so a run is reviewable without a debugger.
-- Scenarios for tests, each run at both granularities: nominal TidyHouse; a
-  pick fails once and the controller retries it within a per-node attempt
-  budget (the gold graphs have one candidate per role, so there is no
-  Layer-2 fallback to take; that level is covered by SetTable); a pick
-  exhausts its attempts (Layer-1 replan through the scripted proposer, which
-  returns a decomposition that skips or reorders that object); a partially
-  satisfied initial state (an object already at its destination, so its
-  sub-goal is achieved before any node runs).
-- Metrics recorded per run, following `tasks/tidy_house/README.md`:
-  sub-goal and subgraph counts, mean nodes per subgraph, task success,
-  achieved sub-goals, node executions, redundant node calls, recovery
-  success, and replanning span (how many sub-goals a replan touched).
+- Achievement is judged only for the sub-goal next in line, and stays
+  recorded once granted. Judging every sub-goal against the current facts
+  would let a transient predicate such as `reachable(x)` mark a later
+  sub-goal done and skip nodes that are still needed.
+- Success is judged on the scenario's `goal_facts`, independently of the
+  decomposition. Statuses: `success`, `goal_not_reached`,
+  `proposal_rejected`, `replans_exhausted`.
+- `RunResult` is the trace (`as_dict()`, `save()`): proposals with requests
+  and responses verbatim or their rejections, decisions with facts added and
+  removed, replans with their failures, initial and final facts, metrics.
+- Scenarios, each run at both granularities: `nominal`; `pick_fails_once`
+  (retry within the attempt budget; these graphs have one candidate per
+  role, so Layer-2 fallback stays covered by SetTable); `pick_exhausted`
+  (Layer-1 replan through the scripted proposer, which gives the object up);
+  `object_dropped` (the retry cannot be admitted because nothing is held, so
+  the proposer plans the transfer again); `object_already_delivered` (the
+  coarse sub-goal is skipped whole, the fine ones pick the object up and put
+  it back). A SetTable-generic run covers open and close.
+- Metrics per run: `subgoals`, `subgraphs`, `nodes`, `mean_nodes_per_subgraph`,
+  `node_executions`, `failed_executions`, `admission_failures`, `retries`,
+  `skipped_nodes`, `redundant_executions`, `achieved_subgoals`,
+  `goal_facts_achieved`, `replans`, `replanning_span`, `recovery_success`.
 
 Passing these on CPU is the acceptance test for the pipeline. Only after
 that does a real model enter.
@@ -339,7 +353,7 @@ adapter and executor change.
 | 1 | 53-row manifest, `build_granularity_library`, target-aware `select_policy`; duplicate stores removed | — | `test_granularity_library.py` |
 | 2 | Coarse and fine TidyHouse gold graphs, SetTable regression graph, builders, renderer | 1 | `test_higher_layer_graphs.py` |
 | 3 | Four request/response documents, `GraphProposer`, `ScriptedProposer`, `assemble_patch`, `ProposalValidator` | 2 | `test_planning_boundary.py` |
-| 4 | `SymbolicEnvironmentAdapter`, `SymbolicPolicyExecutor`, `TaskController`, scenarios, metrics | 3 | `test_task_controller.py` |
+| 4 | `SymbolicEnvironmentAdapter`, `SymbolicPolicyExecutor`, `TaskController`, five scenarios, metrics | 3 | `test_task_controller.py` |
 | 5 | `DeepSeekProposer`, prompts, evaluation script | 4 | offline tests only |
 | 6 | MS-HAB adapter and executor | 1, 4 | GPU runner |
 

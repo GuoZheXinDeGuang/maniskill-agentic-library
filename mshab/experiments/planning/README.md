@@ -53,9 +53,10 @@ or reorders sub-goals.
 fingerprint: `(task, goal, granularity, attempt, failed sub-goal)` for a
 decomposition and `(task, sub-goal id, predicate)` for a subgraph. An unknown
 fingerprint raises `UnscriptedRequest` instead of answering with a default.
-`ScriptedProposer.from_gold_graphs(names, library)` cuts the tables out of the
-committed gold graphs; `as_dict()`/`from_dict()` and `save()`/`load()` move
-them through JSON, which is how stage-4 scenarios will add replan answers.
+`gold_proposer(names, library)` in the granularity experiment cuts the tables
+out of the committed gold graphs and `scenario_proposer()` adds a scenario's
+replan answers; `as_dict()`/`from_dict()` and `save()`/`load()` move tables
+through JSON. This package depends on `mshab.skills` only.
 
 ## Validator (`validator.py`)
 
@@ -77,15 +78,84 @@ and response verbatim (`as_dict()` is the trace record). Otherwise it raises
 Nothing live is touched on the way: a rejected round leaves whatever graphs
 the controller holds byte identical.
 
+## Symbolic environment (`symbolic.py`)
+
+`SymbolicEnvironmentAdapter` is an `EnvironmentAdapter` whose whole state is
+a set of predicate facts. `step({"add": [...], "remove": [...]})` applies a
+fact change and then two world rules the contracts cannot express, because a
+contract only retracts predicates it names: `holding(x)` retracts
+`gripper_empty()` and every `at(x,...)`; a step that adds `reachable(y)`
+retracts every other `reachable(...)`. `SymbolicPolicyExecutor` executes a
+grounding by adding its effects and retracting its deletes, unless a
+`ScriptedFailure` for that grounding says otherwise for that attempt: then the
+failure's own `add`/`remove` happen and the execution reports its
+`failure_mode`. Failures are keyed by contract type and grounded target, not
+by node id, so a scenario also applies to graphs whose node ids a proposer
+chose. `bind_symbolic_policy(library)` registers one `SymbolicPolicy`, bound
+after every existing binding, so it is the ready default when no checkpoint
+is downloaded. Admission, invariant monitoring, and effect verification are
+not re-implemented here; they run in `SkillRuntime`.
+
+## Controller (`controller.py`)
+
+`TaskController(library, task, attempts_per_node=2, max_replans=2).run(goal,
+proposer, environment, executor, granularity=..., goal_facts=...)` is the
+`execute -> observe -> re-decide` loop the skill-library guide asks for:
+
+```text
+proposal = ProposalValidator.plan(proposer, goal, PlanningContext.initial(...))
+loop:
+    absorb facts: the next sub-goal in line whose predicate already holds is
+                  achieved, and the nodes of its subgraph are skipped
+    node = SkillPlanner.decide(completed, failed)         # one node, or None: done
+    result = SkillRuntime.execute_node(graph, node.id, executor)
+    success            -> completed
+    failure            -> retry while the node's attempts remain, else failed
+    NoViableCandidate  -> Failure(sub-goal, node, mode, missing effects / preconditions)
+                          ProposalValidator.plan(proposer, goal, context.replan(...))
+                          swap both layers; achievement is derived from the facts again
+```
+
+Achievement follows the guide: a sub-goal counts as achieved when its
+predicate holds at the moment it becomes next in line, and that stays
+recorded even if a later step retracts the predicate. Judging only the
+sub-goal next in line matters: a transient predicate that happens to hold
+early, such as `reachable(x)` before the robot moves on, must not mark a
+later sub-goal done. Each decision has one of four outcomes: `success`,
+`failed`, `admission_failed` (a precondition or invariant was missing when
+`SkillRuntime` admitted the node), or `skipped`. A run ends with status
+`success`, `goal_not_reached`, `proposal_rejected`, or `replans_exhausted`.
+Success is judged on `goal_facts` in the final facts, independently of how
+the proposer decomposed the goal.
+
+`RunResult` (`as_dict()`, `save(path)`) is the trace: every proposal with its
+requests and responses verbatim or its rejections, every decision with the
+facts it added and removed, every replan with the failure that caused it, the
+initial and final facts, and `metrics`:
+
+| Metric | Meaning |
+| --- | --- |
+| `subgoals`, `subgraphs`, `nodes`, `mean_nodes_per_subgraph` | structure of the first accepted proposal |
+| `node_executions`, `successful_executions`, `failed_executions`, `admission_failures`, `retries` | what ran; retries are executions with attempt > 1 |
+| `skipped_nodes` | nodes of sub-goals that were already achieved when they came up |
+| `redundant_executions` | successful executions whose effects all held before they ran |
+| `achieved_subgoals` | distinct sub-goal predicates achieved over the whole run, replans included |
+| `goal_facts_achieved` / `goal_facts` | the success criterion, fact by fact |
+| `replans`, `replanning_span` | accepted replans, and how many of their sub-goals did not already hold at the moment the replan was made |
+| `recovery_success` | success after at least one failure or replan |
+
+The scenarios that exercise the loop, and the helper that runs one, live in
+[`../granularity/higher_layers/scenarios.py`](../granularity/higher_layers/scenarios.py).
+
 ```python
 from pathlib import Path
 
 from mshab.experiments.granularity import build_granularity_library
-from mshab.experiments.granularity.higher_layers import GOLD_GRAPHS
-from mshab.experiments.planning import ProposalValidator, PlanningContext, ScriptedProposer
+from mshab.experiments.granularity.higher_layers import GOLD_GRAPHS, gold_proposer
+from mshab.experiments.planning import ProposalValidator, PlanningContext
 
 library = build_granularity_library(Path("../mshab-assets/data/mshab_checkpoints"))
-proposer = ScriptedProposer.from_gold_graphs(GOLD_GRAPHS, library)
+proposer = gold_proposer(GOLD_GRAPHS, library)
 validator = ProposalValidator(library, "granularity")
 context = PlanningContext.initial(library, "granularity", granularity="fine")
 validated = validator.plan(

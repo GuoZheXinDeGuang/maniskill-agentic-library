@@ -133,6 +133,30 @@ gold.plan.order                       # 20 node ids
 subgoals, graph = load_gold_graph(gold_graph_path("tidy_house_coarse"), library)
 ```
 
+## Scenarios
+
+`higher_layers/scenarios.py` fixes what a run cannot choose: the goal, the
+initial facts, the success criterion (`goal_facts`), and what goes wrong
+(`ScriptedFailure`s keyed by contract type and grounded target). A scenario is
+independent of the proposer and of the granularity; only the scripted
+proposer needs the replan answers it carries, a real model plans them itself.
+`run_scenario(SCENARIOS[name], granularity, library)` runs one on the
+symbolic environment through the controller in
+[`../planning/`](../planning/README.md) and returns the trace.
+
+| Scenario | What happens | Coarse | Fine |
+| --- | --- | --- | --- |
+| `nominal` | every node succeeds | 20 executions | 20 executions |
+| `pick_fails_once` | one pick fails once, the controller retries | 21 executions, 1 retry | same |
+| `pick_exhausted` | one pick never succeeds; the sub-goal fails and the proposer gives the object up | 19 executions, 1 replan spanning 3 sub-goals | 19 executions, 1 replan spanning 12 sub-goals |
+| `object_dropped` | a place drops the object; the retry cannot be admitted, the proposer plans the transfer again | 25 executions, span 4 | 25 executions, span 15 |
+| `object_already_delivered` | the first object starts at its destination | its 4 nodes are skipped, 16 executions | nothing is skipped: 20 executions, the object is picked up and put back |
+
+The last row is the granularity effect in miniature. A coarse sub-goal
+`at(object,destination)` is judged done as a whole; the fine sub-goals judge
+one predicate at a time, so `reachable(object)` is still pursued for an
+object that needs no work.
+
 ## Build and inspect
 
 From the repository root:

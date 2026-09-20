@@ -149,11 +149,15 @@ class Failure:
     node_id: Optional[str] = None
     failure_mode: Optional[str] = None
     missing_effects: Tuple[str, ...] = ()
+    missing_preconditions: Tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.subgoal_id:
             raise ValueError("failure must name the failed sub-goal")
         object.__setattr__(self, "missing_effects", tuple(self.missing_effects))
+        object.__setattr__(
+            self, "missing_preconditions", tuple(self.missing_preconditions)
+        )
 
     def as_dict(self) -> Dict[str, Any]:
         return {
@@ -161,6 +165,7 @@ class Failure:
             "node_id": self.node_id,
             "failure_mode": self.failure_mode,
             "missing_effects": list(self.missing_effects),
+            "missing_preconditions": list(self.missing_preconditions),
         }
 
     @classmethod
@@ -171,7 +176,7 @@ class Failure:
             payload,
             where=where,
             required=("subgoal_id",),
-            optional=("node_id", "failure_mode", "missing_effects"),
+            optional=("node_id", "failure_mode", "missing_effects", "missing_preconditions"),
         )
         return cls(
             subgoal_id=schema.require_identifier(payload, "subgoal_id", where=where),
@@ -179,6 +184,9 @@ class Failure:
             failure_mode=schema.optional_str(payload, "failure_mode", where=where) or None,
             missing_effects=schema.require_str_tuple(
                 payload, "missing_effects", where=where
+            ),
+            missing_preconditions=schema.require_str_tuple(
+                payload, "missing_preconditions", where=where
             ),
         )
 

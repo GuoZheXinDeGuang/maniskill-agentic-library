@@ -25,6 +25,16 @@ from mshab.experiments.granularity.higher_layers.render import (
     gold_graph_svg,
     write_gold_graphs,
 )
+from mshab.experiments.granularity.higher_layers.scenarios import (
+    SCENARIOS,
+    Scenario,
+    ScriptedReplan,
+    gold_proposer,
+    run_scenario,
+    scenario_proposer,
+    tidy_house_goal_facts,
+    tidy_house_initial_facts,
+)
 
 __all__ = [
     "DEFAULT_SET_TABLE_SEGMENTS",
@@ -34,7 +44,10 @@ __all__ = [
     "GRANULARITIES",
     "GoldGraph",
     "GoldGraphSpec",
+    "SCENARIOS",
     "SET_TABLE_GOAL",
+    "Scenario",
+    "ScriptedReplan",
     "SetTableGenericGraphBuilder",
     "TIDY_HOUSE_GOAL",
     "TidyHouseGraphBuilder",
@@ -42,8 +55,13 @@ __all__ = [
     "gold_graph_document",
     "gold_graph_path",
     "gold_graph_svg",
+    "gold_proposer",
     "graph_summary",
     "load_gold_graph",
+    "run_scenario",
+    "scenario_proposer",
+    "tidy_house_goal_facts",
+    "tidy_house_initial_facts",
     "validate_gold_graph",
     "write_gold_graphs",
 ]

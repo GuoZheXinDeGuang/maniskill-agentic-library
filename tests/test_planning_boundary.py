@@ -4,7 +4,7 @@ from tempfile import TemporaryDirectory
 from unittest import TestCase
 
 from mshab.experiments.granularity import build_granularity_library, contract_id
-from mshab.experiments.granularity.higher_layers import GOLD_GRAPHS, build_gold_graph
+from mshab.experiments.granularity.higher_layers import GOLD_GRAPHS, build_gold_graph, gold_proposer
 from mshab.experiments.planning import (
     DecompositionRequest,
     DecompositionResponse,
@@ -145,7 +145,7 @@ class DocumentTests(_Base):
 class ScriptedProposerTests(_Base):
     def setUp(self):
         super().setUp()
-        self.proposer = ScriptedProposer.from_gold_graphs(GOLD_GRAPHS, self.library)
+        self.proposer = gold_proposer(GOLD_GRAPHS, self.library)
 
     def test_reproduces_every_gold_graph_through_the_validator(self):
         for name in GOLD_GRAPHS:
@@ -212,7 +212,7 @@ class ScriptedProposerTests(_Base):
 class PlanValidatorTests(_Base):
     def setUp(self):
         super().setUp()
-        self.proposer = ScriptedProposer.from_gold_graphs(["tidy_house_coarse"], self.library)
+        self.proposer = gold_proposer(["tidy_house_coarse"], self.library)
         self.gold = build_gold_graph("tidy_house_coarse", self.library)
         self.goal = self.gold.spec.goal
 
