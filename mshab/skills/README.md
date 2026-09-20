@@ -98,7 +98,11 @@ Implemented now:
 - checkpoint discovery, many-to-many contract/policy bindings, and policy selection;
 - environment entity/fact/snapshot adapter interface;
 - contract grounding, admission, invariant monitoring, and verification;
-- policy executor interface and auditable execution results.
+- policy executor interface and auditable execution results;
+- the online `execute -> observe -> re-decide` loop on a symbolic environment
+  (`TaskController` in `mshab/experiments/planning/`): per-node retries,
+  Layer-2 fallback through `SkillPlanner.decide()`, and the Layer-1 replan
+  through a proposer.
 
 Simulator-specific follow-up work:
 
@@ -106,6 +110,6 @@ Simulator-specific follow-up work:
 - PPO/BC/DP checkpoint loading and action adapters;
 - measured policy performance and automatic policy routing;
 - production insertion-VLM proposal parsing and validation;
-- online node-level fallback execution; a trained decision model replacing the rule-based `SkillPlanner` is optional later work;
-- the runtime goal -> sub-goal decomposition VLM, whose ordered output feeds `SubGoalGraph.from_sequence`, including the Layer-1 replan after a sub-goal fails (Layer 1 is hand-authored today);
+- running the controller loop on MS-HAB instead of the symbolic environment (a TidyHouse entity/fact extractor and a checkpoint-loading `PolicyExecutor`); a trained decision model replacing the rule-based `SkillPlanner` is optional later work;
+- a real model behind the `GraphProposer` boundary (`decompose()` feeds `SubGoalGraph.from_sequence`, `plan_subgraph()` returns one `SkillSubgraph`); today the scripted proposer answers from hand-authored gold graphs, and the controller already runs the Layer-1 replan through that boundary;
 - insertion and decision quality evaluation.

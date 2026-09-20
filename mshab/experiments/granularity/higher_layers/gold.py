@@ -146,13 +146,7 @@ def load_gold_graph(
             "patch",
         ),
     )
-    version = schema.require_str(document, "schema_version", where=where)
-    if version != SCHEMA_VERSION:
-        raise schema.SchemaError(
-            "{} declares unsupported schema_version {!r}; expected {!r}".format(
-                where, version, SCHEMA_VERSION
-            )
-        )
+    schema.require_schema_version(document, where=where, expected=SCHEMA_VERSION)
     task = schema.require_identifier(document, "task", where=where)
     goal = schema.require_str(document, "goal", where=where)
     patch = SkillGraphPatch.from_dict(document["patch"], task=task)

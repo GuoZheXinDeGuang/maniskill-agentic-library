@@ -169,6 +169,16 @@ class SubGoalGraph:
     def achieved(self, subgoal_id: str, facts: Iterable[str]) -> bool:
         return self._require_subgoal(subgoal_id).predicate in set(facts)
 
+    def predecessors(self, subgoal_id: str) -> FrozenSet[str]:
+        """The sub-goals that a dependency orders before ``subgoal_id``."""
+
+        self._require_subgoal(subgoal_id)
+        return frozenset(
+            dependency.source
+            for dependency in self._dependencies
+            if dependency.target == subgoal_id
+        )
+
     def ready_subgoals(
         self,
         facts: Iterable[str],
@@ -183,11 +193,7 @@ class SubGoalGraph:
         for subgoal in self._subgoals.values():
             if subgoal.id in completed_set or subgoal.predicate in fact_set:
                 continue
-            prerequisites = {
-                dependency.source
-                for dependency in self._dependencies
-                if dependency.target == subgoal.id
-            }
+            prerequisites = self.predecessors(subgoal.id)
             if all(
                 item in completed_set or self._subgoals[item].predicate in fact_set
                 for item in prerequisites

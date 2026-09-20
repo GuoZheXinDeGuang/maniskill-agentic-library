@@ -1,4 +1,5 @@
-"""Graph-granularity experiment: generic lower layers for coarse and fine graphs."""
+"""Graph-granularity experiment: generic lower layers, hand-authored gold graphs,
+and the scenarios that run them on the symbolic environment."""
 
 from mshab.experiments.granularity.higher_layers.gold import (
     GOLD_GRAPHS,
@@ -11,6 +12,7 @@ from mshab.experiments.granularity.lower_layers.library import (
     build_granularity_library,
     contract_id,
     library_document,
+    split_contract_id,
 )
 from mshab.experiments.granularity.lower_layers.manifest import (
     HOUSEHOLD_OBJECTS,
@@ -34,4 +36,5 @@ __all__ = [
     "library_document",
     "load_gold_graph",
     "spec_for",
+    "split_contract_id",
 ]

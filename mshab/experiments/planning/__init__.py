@@ -34,6 +34,8 @@ from mshab.experiments.planning.proposer import (
     subgraph_requests,
 )
 from mshab.experiments.planning.controller import (
+    DEFAULT_ATTEMPTS_PER_NODE,
+    DEFAULT_MAX_REPLANS,
     OUTCOMES,
     STATUSES,
     Decision,
@@ -60,6 +62,8 @@ from mshab.experiments.planning.validator import (
 )
 
 __all__ = [
+    "DEFAULT_ATTEMPTS_PER_NODE",
+    "DEFAULT_MAX_REPLANS",
     "Decision",
     "DecompositionRequest",
     "DecompositionResponse",

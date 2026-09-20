@@ -18,7 +18,28 @@ from mshab.skills.model import (
 
 
 class ContractViolation(RuntimeError):
-    """Raised when a grounded skill cannot safely start or continue."""
+    """Raised when a grounded skill cannot safely start or continue.
+
+    ``phase`` is ``"admission"`` when the node was refused before its policy
+    ran and ``"execution"`` when the invariant monitor stopped it.  The
+    predicates that were missing travel as attributes, so a caller records
+    them instead of recomputing them from the snapshot.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        phase: str = "execution",
+        missing_preconditions: Tuple[str, ...] = (),
+        missing_invariants: Tuple[str, ...] = (),
+    ) -> None:
+        if phase not in ("admission", "execution"):
+            raise ValueError("unknown contract violation phase {!r}".format(phase))
+        super().__init__(message)
+        self.phase = phase
+        self.missing_preconditions = tuple(missing_preconditions)
+        self.missing_invariants = tuple(missing_invariants)
 
 
 @dataclass(frozen=True)
@@ -228,7 +249,8 @@ class SkillRuntime:
                 raise ContractViolation(
                     "invariants violated during {}: {}".format(
                         grounded.id, list(missing)
-                    )
+                    ),
+                    missing_invariants=missing,
                 )
 
         execution = executor.execute(
@@ -269,7 +291,10 @@ class SkillRuntime:
                 "contract cannot start: missing_preconditions={}, "
                 "missing_invariants={}".format(
                     list(missing_preconditions), list(missing_invariants)
-                )
+                ),
+                phase="admission",
+                missing_preconditions=missing_preconditions,
+                missing_invariants=missing_invariants,
             )
 
 

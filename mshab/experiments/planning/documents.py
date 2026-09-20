@@ -28,16 +28,6 @@ SCHEMA_VERSION = "mshab.planning.v1"
 GRANULARITIES = ("free", "coarse", "fine")
 
 
-def _require_version(payload: Mapping[str, Any], *, where: str) -> None:
-    version = payload.get("schema_version")
-    if version is not None and version != SCHEMA_VERSION:
-        raise schema.SchemaError(
-            "{} declares unsupported schema_version {!r}; expected {!r}".format(
-                where, version, SCHEMA_VERSION
-            )
-        )
-
-
 def _require_identifiers(
     payload: Mapping[str, Any], key: str, *, where: str
 ) -> Tuple[str, ...]:
@@ -45,15 +35,6 @@ def _require_identifiers(
     for value in values:
         schema.require_identifier({key: value}, key, where=where)
     return values
-
-
-def _require_int(payload: Mapping[str, Any], key: str, *, where: str) -> int:
-    value = payload.get(key)
-    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
-        raise schema.SchemaError(
-            "{}.{} must be a non-negative integer, got {!r}".format(where, key, value)
-        )
-    return value
 
 
 def _require_granularity(value: Any) -> str:
@@ -293,7 +274,7 @@ class PlanningContext:
             ),
             failure=None if failure is None else Failure.from_dict(failure),
             granularity=granularity,
-            attempt=_require_int(payload, "attempt", where=where),
+            attempt=schema.require_non_negative_int(payload, "attempt", where=where),
         )
 
 
@@ -359,7 +340,7 @@ class DecompositionRequest:
     def from_dict(cls, payload: Mapping[str, Any]) -> "DecompositionRequest":
         where = "decomposition_request"
         payload = schema.require_mapping(payload, where=where)
-        _require_version(payload, where=where)
+        schema.require_schema_version(payload, where=where, expected=SCHEMA_VERSION)
         schema.require_keys(
             payload,
             where=where,
@@ -400,7 +381,7 @@ class DecompositionResponse:
     def from_dict(cls, payload: Mapping[str, Any]) -> "DecompositionResponse":
         where = "decomposition_response"
         payload = schema.require_mapping(payload, where=where)
-        _require_version(payload, where=where)
+        schema.require_schema_version(payload, where=where, expected=SCHEMA_VERSION)
         schema.require_keys(
             payload,
             where=where,
@@ -480,7 +461,7 @@ class SubgraphRequest:
     def from_dict(cls, payload: Mapping[str, Any]) -> "SubgraphRequest":
         where = "subgraph_request"
         payload = schema.require_mapping(payload, where=where)
-        _require_version(payload, where=where)
+        schema.require_schema_version(payload, where=where, expected=SCHEMA_VERSION)
         schema.require_keys(
             payload,
             where=where,
@@ -540,7 +521,7 @@ class SubgraphResponse:
 
         where = "subgraph_response"
         payload = schema.require_mapping(payload, where=where)
-        _require_version(payload, where=where)
+        schema.require_schema_version(payload, where=where, expected=SCHEMA_VERSION)
         schema.require_keys(
             payload,
             where=where,

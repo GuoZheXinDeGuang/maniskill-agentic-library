@@ -137,7 +137,10 @@ is how the attempt summary can print the contract and target a rollout died on.
 
 Closing that gap is the online `execute -> observe -> re-decide` milestone: a
 loop that calls `SkillRuntime.ready_nodes()`, asks the planner for one node,
-executes it, and feeds the `SkillExecutionResult` back.
+executes it, and feeds the `SkillExecutionResult` back. `TaskController` in
+`mshab/experiments/planning/` is that loop on a symbolic environment; stage 6
+of the [higher-layers plan](../../experiments/docs/higher-layers-plan.md)
+brings it to MS-HAB by swapping in an adapter and an executor.
 
 ## One fact, two sources
 

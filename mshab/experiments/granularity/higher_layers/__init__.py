@@ -1,13 +1,17 @@
-"""Layers 1 and 2 of the granularity experiment: the hand-authored gold graphs."""
+"""Layers 1 and 2 of the granularity experiment: the hand-authored gold graphs,
+and the scenarios that run them through the controller on the symbolic
+environment."""
 
 from mshab.experiments.granularity.higher_layers.builders import (
     DEFAULT_SET_TABLE_SEGMENTS,
     DEFAULT_TIDY_HOUSE_TRANSFERS,
-    GRANULARITIES,
+    GOLD_GRANULARITIES,
     SET_TABLE_GOAL,
     TIDY_HOUSE_GOAL,
     SetTableGenericGraphBuilder,
     TidyHouseGraphBuilder,
+    coarse_subgoal_id,
+    fine_subgoal_ids,
 )
 from mshab.experiments.granularity.higher_layers.gold import (
     GOLD_GRAPH_SPECS,
@@ -39,9 +43,9 @@ from mshab.experiments.granularity.higher_layers.scenarios import (
 __all__ = [
     "DEFAULT_SET_TABLE_SEGMENTS",
     "DEFAULT_TIDY_HOUSE_TRANSFERS",
+    "GOLD_GRANULARITIES",
     "GOLD_GRAPHS",
     "GOLD_GRAPH_SPECS",
-    "GRANULARITIES",
     "GoldGraph",
     "GoldGraphSpec",
     "SCENARIOS",
@@ -52,6 +56,8 @@ __all__ = [
     "TIDY_HOUSE_GOAL",
     "TidyHouseGraphBuilder",
     "build_gold_graph",
+    "coarse_subgoal_id",
+    "fine_subgoal_ids",
     "gold_graph_document",
     "gold_graph_path",
     "gold_graph_svg",

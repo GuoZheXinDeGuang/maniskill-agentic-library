@@ -87,13 +87,9 @@ class LibraryCatalog:
                 "layers",
             ),
         )
-        version = schema.require_str(payload, "schema_version", where=where)
-        if version != CATALOG_SCHEMA_VERSION:
-            raise schema.SchemaError(
-                "{} declares unsupported schema_version {!r}; expected {!r}".format(
-                    where, version, CATALOG_SCHEMA_VERSION
-                )
-            )
+        schema.require_schema_version(
+            payload, where=where, expected=CATALOG_SCHEMA_VERSION
+        )
         task = schema.require_identifier(payload, "task", where=where)
         layers = schema.require_mapping(payload["layers"], where="skill_catalog.layers")
         schema.require_keys(layers, where="skill_catalog.layers", required=_LAYER_KEYS)

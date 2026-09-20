@@ -4,7 +4,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
 
-from mshab.experiments.granularity import build_granularity_library
+from mshab.experiments.granularity import build_granularity_library, split_contract_id
 from mshab.experiments.granularity.higher_layers import (
     GOLD_GRAPHS,
     TidyHouseGraphBuilder,
@@ -37,7 +37,7 @@ _TARGET_ARGUMENT = {
 
 
 def _type_and_target(node):
-    _, _, contract_type, target = node.contract_id.split(".")
+    _, contract_type, target = split_contract_id(node.contract_id)
     if target == "all":
         target = node.arguments[_TARGET_ARGUMENT[contract_type]]
     return contract_type, target

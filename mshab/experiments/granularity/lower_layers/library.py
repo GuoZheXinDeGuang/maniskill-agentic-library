@@ -16,7 +16,7 @@ checkpoint and never returns one trained for a different object.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, Union
+from typing import Any, Dict, Tuple, Union
 
 from mshab.experiments.granularity.lower_layers.manifest import (
     POLICY_SPECS,
@@ -36,6 +36,17 @@ def contract_id(contract_type: Union[ContractType, str]) -> str:
     return "mshab.{}.{}.all".format(
         EXPERIMENT_TASK, ContractType(contract_type).value
     )
+
+
+def split_contract_id(contract_id: str) -> Tuple[str, str, str]:
+    """``(task, contract type, target)`` of a ``mshab.<task>.<type>.<target>`` id."""
+
+    parts = contract_id.split(".")
+    if len(parts) != 4 or parts[0] != "mshab" or not all(parts):
+        raise ValueError(
+            "{!r} is not a mshab.<task>.<type>.<target> contract id".format(contract_id)
+        )
+    return parts[1], parts[2], parts[3]
 
 
 def build_granularity_library(checkpoint_root: Path) -> ContractLibrary:

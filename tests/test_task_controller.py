@@ -12,6 +12,7 @@ from mshab.experiments.granularity.higher_layers import (
     run_scenario,
 )
 from mshab.experiments.planning import (
+    EntityDescription,
     ScriptedFailure,
     ScriptedProposer,
     SymbolicEnvironmentAdapter,
@@ -52,7 +53,7 @@ class SymbolicEnvironmentTests(_Base):
             self.library,
             TASK,
             ("present(024_bowl)", "present(dining_table)", "gripper_empty()", "collision_safe()"),
-            (("024_bowl", "object"), ("dining_table", "receptacle")),
+            (EntityDescription("024_bowl", "object"), EntityDescription("dining_table", "receptacle")),
         )
         self.assertTrue(environment.supports_contract_env("PickSubtaskTrain-v0"))
         self.assertEqual(sorted(environment.description.entities), ["024_bowl", "dining_table"])
@@ -250,8 +251,9 @@ class ScenarioTests(_Base):
                 "closed(kitchen_counter)", "closed(fridge)",
             ),
             entities=(
-                ("024_bowl", "object"), ("013_apple", "object"), ("kitchen_counter", "articulation"),
-                ("fridge", "articulation"), ("dining_table", "receptacle"),
+                EntityDescription("024_bowl", "object"), EntityDescription("013_apple", "object"),
+                EntityDescription("kitchen_counter", "articulation"),
+                EntityDescription("fridge", "articulation"), EntityDescription("dining_table", "receptacle"),
             ),
         )
         proposer = gold_proposer(["set_table_generic"], self.library)

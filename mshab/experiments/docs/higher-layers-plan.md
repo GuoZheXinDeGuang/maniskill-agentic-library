@@ -60,31 +60,37 @@ composition rather than new abstractions:
 | One-node decision, fallback inside a subgraph | `SkillPlanner.decide()`, `NoViableCandidate` | `mshab/skills/plan.py` |
 | Admission, monitoring, execution evidence | `SkillRuntime`, `SkillExecutionResult` | `mshab/skills/runtime.py` |
 | Environment boundary | `EnvironmentAdapter`, `EnvironmentSnapshot` | `mshab/skills/environment.py` |
-| Five generic contracts, 53 policies, `EXECUTES` connections | `build_connected_layers()` | `mshab/experiments/granularity/lower_layers/` |
+| Five generic contracts, 53 policies, 53 bindings | `build_granularity_library()` | `mshab/experiments/granularity/lower_layers/` |
 
-## What is missing
+## What was missing
 
-1. **The granularity lower layers are not a `ContractLibrary`.**
-   `ConnectedLayers` is its own storage; `SkillGrounder` and `SkillRuntime`
-   need a `ContractLibrary` with contracts, policies, and bindings. Aligning
-   this with `mshab.skills` is the first step.
-2. **Generic contracts lose policy specificity.** With `pick.all` as the
-   only pick contract, `select_policy()` returns the first ready policy
-   regardless of the object, so `rl.set_table.pick.013_apple` could be
-   selected for a bowl. Policy selection needs a target filter. This does
-   not block stages 2 to 5 but blocks stage 6.
-3. **No online loop.** Nothing today executes a node, observes the result,
-   and asks the proposer again. The SetTable runner replays a frozen plan.
-   Without this loop there is no feedback for a proposer to react to.
-4. **No Layer-1 replan hook.** `NoViableCandidate` ends the run. The guide
-   says a failed sub-goal triggers a fresh goal -> sub-goal decomposition;
-   nobody calls it.
-5. **No proposer request/response schema.** `SkillGraphBuilder.propose()`
-   takes a free-form `context`. The scripted proposer needs precise
-   documents so that the real model can be prompted with the same content.
-6. **No simulator-free environment.** Testing the loop on CPU needs an
-   `EnvironmentAdapter` whose facts are a symbolic set that contract effects
-   and deletes update.
+The gaps this plan set out to close, each with the stage that closed it.
+Stages 1 to 4 are implemented; the per-stage sections below record how.
+
+1. **The granularity lower layers were not a `ContractLibrary`** (stage 1).
+   `ConnectedLayers` was its own storage; `SkillGrounder` and `SkillRuntime`
+   need a `ContractLibrary` with contracts, policies, and bindings.
+   `build_granularity_library()` replaced it.
+2. **Generic contracts lost policy specificity** (stage 1). With `pick.all`
+   as the only pick contract, `select_policy()` returned the first ready
+   policy regardless of the object, so `rl.set_table.pick.013_apple` could
+   be selected for a bowl. `select_policy(..., arguments=...)` now filters by
+   the grounded target.
+3. **No online loop** (stage 4). Nothing executed a node, observed the
+   result, and asked the proposer again; the SetTable runner replays a frozen
+   plan. `TaskController` is that loop.
+4. **No Layer-1 replan hook** (stage 4). `NoViableCandidate` ended the run,
+   although the guide says a failed sub-goal triggers a fresh goal ->
+   sub-goal decomposition. The controller now asks the proposer again with
+   the failure, the history, and the current facts.
+5. **No proposer request/response schema** (stage 3).
+   `SkillGraphBuilder.propose()` takes a free-form `context`; the scripted
+   proposer needed precise documents so that the real model can be prompted
+   with the same content. `mshab/experiments/planning/documents.py` defines
+   them.
+6. **No simulator-free environment** (stage 4). Testing the loop on CPU
+   needed an `EnvironmentAdapter` whose facts are a symbolic set that
+   contract effects and deletes update: `SymbolicEnvironmentAdapter`.
 
 ## Stage 1: align the granularity lower layers with `mshab.skills`
 
@@ -124,15 +130,14 @@ one library constructor.
 - Namespace: the contract ids stay `mshab.granularity.<type>.all`. The
   graphs built on them are test graphs for this experiment, not a library
   that later work extends, so a rename buys nothing.
-- Test: replace `test_granularity_layer3_layer4.py` with a test that builds
-  the library from an empty checkpoint root, checks 5 contracts / 53
-  policies / 53 bindings, grounds `pick` with `024_bowl`, and checks the
-  target-aware selection order.
+- Test: `test_granularity_library.py` (which replaced
+  `test_granularity_layer3_layer4.py`) builds the library from an empty
+  checkpoint root, checks 5 contracts / 53 policies / 53 bindings, grounds
+  `pick` with `024_bowl`, and checks the target-aware selection order.
 
 ## Stage 2: hand-authored gold graphs at two granularities
 
-Package: `mshab/experiments/granularity/higher_layers/` (currently a
-placeholder).
+Package: `mshab/experiments/granularity/higher_layers/`.
 
 A *gold graph* is a hand-authored, validated Layer-1/2 skill graph that
 exists only for this experiment. It plays two roles: it is the answer
@@ -225,8 +230,9 @@ implementations:
   failure.subgoal_id)`; for call 2 it is `(task, subgoal.id, subgoal.predicate)`
   (the predicate alone collides: `at(obj,dest)` is a four-node subgraph in
   the coarse graph and a one-node subgraph in the fine one). The canned
-  answers are cut out of the stage-2 gold graphs, and the table round-trips
-  through JSON so stage-4 scenarios can add replan answers. Unknown
+  answers are cut out of the stage-2 gold graphs by `gold_proposer()`, the
+  stage-4 scenarios add their replan answers through `scenario_proposer()`,
+  and a table round-trips through JSON (`save()`/`load()`). Unknown
   fingerprints raise, so a test cannot silently pass on a default answer.
   This is the pseudo VLM.
 - `DeepSeekProposer`: stage 5.

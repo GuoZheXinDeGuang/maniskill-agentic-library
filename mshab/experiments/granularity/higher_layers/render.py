@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import argparse
 import json
 from pathlib import Path
 from typing import Dict, List, Tuple
@@ -15,14 +14,11 @@ from mshab.experiments.granularity.higher_layers.gold import (
     gold_graph_document,
     graph_summary,
 )
-from mshab.experiments.granularity.lower_layers.library import (
-    build_granularity_library,
-)
-from mshab.experiments.granularity.paths import (
-    DEFAULT_CHECKPOINT_ROOT,
-    DEFAULT_GRAPH_DIR,
-)
+from mshab.experiments.granularity.lower_layers.library import split_contract_id
+from mshab.experiments.granularity.paths import DEFAULT_GRAPH_DIR
+from mshab.experiments.granularity.svg import text
 from mshab.skills.graph import SkillNode
+from mshab.skills.library import ContractLibrary
 
 
 NODE_W = 230
@@ -35,7 +31,6 @@ HEADER_H = 104
 FOOTER_H = 52
 MIN_WIDTH = 1000
 
-_TEXT = "#2f3a4d"
 _MUTED = "#71809b"
 _ROW_FILL = "#f6f3fc"
 _ROW_STROKE = "#d6cdf3"
@@ -44,27 +39,8 @@ _ACHIEVER_STROKE = "#c6531a"
 _ACHIEVER_FILL = "#fffaf2"
 
 
-def _text(
-    x: float,
-    y: float,
-    value: object,
-    *,
-    size: float = 13,
-    weight: int = 400,
-    fill: str = _TEXT,
-    anchor: str = "start",
-) -> str:
-    return (
-        '<text x="{x}" y="{y}" font-size="{size}" font-weight="{weight}" '
-        'fill="{fill}" text-anchor="{anchor}">{value}</text>'
-    ).format(
-        x=x, y=y, size=size, weight=weight, fill=fill, anchor=anchor,
-        value=escape(str(value)),
-    )
-
-
 def _node_caption(node: SkillNode) -> str:
-    contract_type = node.contract_id.split(".")[2]
+    _, contract_type, _ = split_contract_id(node.contract_id)
     return "{}({})".format(
         contract_type, ", ".join(str(value) for value in node.arguments.values())
     )
@@ -108,9 +84,9 @@ def gold_graph_svg(gold: GoldGraph) -> str:
         '<path d="M 0 0 L 10 5 L 0 10 z" fill="{}"/></marker>'.format(_ACHIEVER_STROKE),
         "</defs>",
         '<rect width="{}" height="{}" fill="#ffffff"/>'.format(width, height),
-        _text(MARGIN, 40, gold.spec.name, size=26, weight=700, fill="#6842cb"),
-        _text(MARGIN, 66, gold.spec.goal, size=14, fill=_MUTED),
-        _text(
+        text(MARGIN, 40, gold.spec.name, size=26, weight=700, fill="#6842cb"),
+        text(MARGIN, 66, gold.spec.goal, size=14, fill=_MUTED),
+        text(
             MARGIN,
             88,
             "{} sub-goals · {} skill nodes · {} internal edges · {} cross-subgraph "
@@ -137,9 +113,9 @@ def gold_graph_svg(gold: GoldGraph) -> str:
                 fill=_ROW_FILL, stroke=_ROW_STROKE,
             )
         )
-        out.append(_text(MARGIN + 18, y + ROW_H / 2 - 4, subgoal_id, size=15, weight=700))
+        out.append(text(MARGIN + 18, y + ROW_H / 2 - 4, subgoal_id, size=15, weight=700))
         out.append(
-            _text(
+            text(
                 MARGIN + 18,
                 y + ROW_H / 2 + 17,
                 subgoal_graph.subgoals[subgoal_id].predicate,
@@ -162,10 +138,10 @@ def gold_graph_svg(gold: GoldGraph) -> str:
                 )
             )
             out.append(
-                _text(x + NODE_W / 2, node_y + 23, node_id, size=12, weight=700, anchor="middle")
+                text(x + NODE_W / 2, node_y + 23, node_id, size=12, weight=700, anchor="middle")
             )
             out.append(
-                _text(
+                text(
                     x + NODE_W / 2,
                     node_y + 43,
                     _node_caption(node),
@@ -185,7 +161,7 @@ def gold_graph_svg(gold: GoldGraph) -> str:
                 )
             )
             out.append(
-                _text(
+                text(
                     (sx + NODE_W + tx) / 2,
                     sy + NODE_H / 2 - 7,
                     edge.relation.value.lower(),
@@ -223,7 +199,7 @@ def gold_graph_svg(gold: GoldGraph) -> str:
                 )
 
     out.append(
-        _text(
+        text(
             MARGIN,
             height - 20,
             "row = one sub-goal and its skill subgraph · box = one skill node, one "
@@ -238,11 +214,10 @@ def gold_graph_svg(gold: GoldGraph) -> str:
 
 
 def write_gold_graphs(
-    checkpoint_root: Path, directory: Path = DEFAULT_GRAPH_DIR
+    library: ContractLibrary, directory: Path = DEFAULT_GRAPH_DIR
 ) -> List[str]:
-    """Build every gold graph against the library and write JSON plus SVG."""
+    """Build every gold graph against ``library`` and write JSON plus SVG."""
 
-    library = build_granularity_library(Path(checkpoint_root))
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
     names = []
@@ -255,22 +230,3 @@ def write_gold_graphs(
         names.append(spec.name)
     return names
 
-
-def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Render the gold graphs of the granularity experiment."
-    )
-    parser.add_argument(
-        "--checkpoint-root",
-        type=Path,
-        default=DEFAULT_CHECKPOINT_ROOT,
-        help="mshab_checkpoints root; used to construct Policy objects only",
-    )
-    parser.add_argument("--graphs", type=Path, default=DEFAULT_GRAPH_DIR)
-    args = parser.parse_args()
-    names = write_gold_graphs(args.checkpoint_root, args.graphs)
-    print("wrote gold graphs {} to {}".format(", ".join(names), args.graphs))
-
-
-if __name__ == "__main__":
-    main()

@@ -35,6 +35,7 @@ from mshab.experiments.planning.validator import (
     ProposalValidator,
     Rejection,
     ValidatedProposal,
+    error_message,
 )
 from mshab.skills.environment import EnvironmentAdapter
 from mshab.skills.library import ContractLibrary
@@ -44,6 +45,8 @@ from mshab.skills.runtime import ContractViolation, PolicyExecutor, SkillRuntime
 
 OUTCOMES = ("success", "failed", "admission_failed", "skipped")
 STATUSES = ("success", "goal_not_reached", "proposal_rejected", "replans_exhausted")
+DEFAULT_ATTEMPTS_PER_NODE = 2
+DEFAULT_MAX_REPLANS = 2
 
 
 @dataclass(frozen=True)
@@ -162,20 +165,6 @@ class _ActiveGraph:
         self.failed: Set[str] = set()
         self.achieved: List[str] = []
         self.attempts: Dict[str, int] = {}
-        self.predecessors = {
-            subgoal_id: {
-                dependency.source
-                for dependency in self.subgoal_graph.dependencies
-                if dependency.target == subgoal_id
-            }
-            for subgoal_id in self.subgoal_graph.subgoals
-        }
-
-
-def _message(exc: BaseException) -> str:
-    if exc.args and isinstance(exc.args[0], str):
-        return exc.args[0]
-    return str(exc)
 
 
 class TaskController:
@@ -186,8 +175,8 @@ class TaskController:
         library: ContractLibrary,
         task: str,
         *,
-        attempts_per_node: int = 2,
-        max_replans: int = 2,
+        attempts_per_node: int = DEFAULT_ATTEMPTS_PER_NODE,
+        max_replans: int = DEFAULT_MAX_REPLANS,
         policy_id: Optional[str] = None,
         validator: Optional[ProposalValidator] = None,
     ) -> None:
@@ -311,12 +300,10 @@ class TaskController:
                 )
             except ContractViolation as exc:
                 after = environment.snapshot().facts
-                missing = tuple(
-                    predicate
-                    for predicate in grounded.preconditions + grounded.invariants
-                    if predicate not in before
+                admission = exc.phase == "admission"
+                missing = (
+                    exc.missing_preconditions + exc.missing_invariants if admission else ()
                 )
-                admission = bool(missing)
                 decision = Decision(
                     step=step,
                     node_id=node.id,
@@ -329,7 +316,7 @@ class TaskController:
                     facts_added=tuple(sorted(after - before)),
                     facts_removed=tuple(sorted(before - after)),
                     redundant=redundant,
-                    note=_message(exc),
+                    note=error_message(exc),
                 )
             else:
                 after = result.after.facts
@@ -453,7 +440,7 @@ class TaskController:
             for subgoal_id in active.subgoal_graph.execution_order():
                 if subgoal_id in active.achieved:
                     continue
-                if not active.predecessors[subgoal_id] <= set(active.achieved):
+                if not active.subgoal_graph.predecessors(subgoal_id) <= set(active.achieved):
                     continue
                 if not active.subgoal_graph.achieved(subgoal_id, facts):
                     continue

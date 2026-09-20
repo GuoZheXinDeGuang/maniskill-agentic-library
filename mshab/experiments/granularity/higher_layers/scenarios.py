@@ -14,13 +14,22 @@ from typing import Any, Dict, Iterable, Optional, Sequence, Tuple
 
 from mshab.experiments.granularity.higher_layers.builders import (
     DEFAULT_TIDY_HOUSE_TRANSFERS,
+    GOLD_GRANULARITIES,
     TIDY_HOUSE_GOAL,
+    coarse_subgoal_id,
+    fine_subgoal_ids,
 )
 from mshab.experiments.granularity.higher_layers.gold import build_gold_graph
 from mshab.experiments.granularity.lower_layers.library import EXPERIMENT_TASK
-from mshab.experiments.planning.controller import RunResult, TaskController
+from mshab.experiments.planning.controller import (
+    DEFAULT_ATTEMPTS_PER_NODE,
+    DEFAULT_MAX_REPLANS,
+    RunResult,
+    TaskController,
+)
 from mshab.experiments.planning.documents import (
     DecompositionResponse,
+    EntityDescription,
     SubgraphResponse,
 )
 from mshab.experiments.planning.proposer import ScriptedProposer
@@ -34,7 +43,9 @@ from mshab.experiments.planning.symbolic import (
 from mshab.skills.library import ContractLibrary
 
 
-GOLD_GRAPHS_BY_GRANULARITY = {"coarse": "tidy_house_coarse", "fine": "tidy_house_fine"}
+GOLD_GRAPHS_BY_GRANULARITY = {
+    granularity: "tidy_house_{}".format(granularity) for granularity in GOLD_GRANULARITIES
+}
 
 
 def gold_proposer(
@@ -108,17 +119,20 @@ class Scenario:
     goal: str
     initial_facts: Tuple[str, ...]
     goal_facts: Tuple[str, ...]
-    entities: Tuple[Tuple[str, str], ...]
+    entities: Tuple[EntityDescription, ...]
     failures: Tuple[ScriptedFailure, ...] = ()
     replans: Tuple[ScriptedReplan, ...] = ()
-    attempts_per_node: int = 2
-    max_replans: int = 2
+    attempts_per_node: int = DEFAULT_ATTEMPTS_PER_NODE
+    max_replans: int = DEFAULT_MAX_REPLANS
     description: str = ""
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "initial_facts", tuple(sorted(set(self.initial_facts))))
         object.__setattr__(self, "goal_facts", tuple(self.goal_facts))
-        object.__setattr__(self, "entities", tuple(tuple(item) for item in self.entities))
+        entities = tuple(self.entities)
+        if any(not isinstance(item, EntityDescription) for item in entities):
+            raise TypeError("scenario entities must be EntityDescription instances")
+        object.__setattr__(self, "entities", entities)
         object.__setattr__(self, "failures", tuple(self.failures))
         object.__setattr__(self, "replans", tuple(self.replans))
 
@@ -129,7 +143,7 @@ class Scenario:
             "goal": self.goal,
             "initial_facts": list(self.initial_facts),
             "goal_facts": list(self.goal_facts),
-            "entities": [list(item) for item in self.entities],
+            "entities": [item.as_dict() for item in self.entities],
             "failures": [item.as_dict() for item in self.failures],
             "replans": [item.as_dict() for item in self.replans],
             "attempts_per_node": self.attempts_per_node,
@@ -141,37 +155,34 @@ class Scenario:
 
 
 def coarse_ids(indices: Iterable[int]) -> Tuple[str, ...]:
-    return tuple("object_{}_delivered".format(index) for index in indices)
+    """The coarse sub-goal ids of the given transfers, in transfer order."""
+
+    return tuple(coarse_subgoal_id(index) for index in indices)
 
 
 def fine_ids(indices: Iterable[int]) -> Tuple[str, ...]:
-    ids = []
-    for index in indices:
-        ids.extend(
-            (
-                "object_{}_reachable".format(index),
-                "object_{}_holding".format(index),
-                "destination_{}_reachable".format(index),
-                "object_{}_placed".format(index),
-            )
-        )
-    return tuple(ids)
+    """The fine sub-goal ids of the given transfers, in execution order."""
+
+    return tuple(
+        subgoal_id for index in indices for subgoal_id in fine_subgoal_ids(index)
+    )
 
 
 def tidy_house_entities(
     transfers: Sequence[Tuple[str, str]] = DEFAULT_TIDY_HOUSE_TRANSFERS,
-) -> Tuple[Tuple[str, str], ...]:
-    entities = [(obj, "object") for obj, _ in transfers]
+) -> Tuple[EntityDescription, ...]:
+    entities = [EntityDescription(obj, "object") for obj, _ in transfers]
     for _, destination in transfers:
-        if (destination, "receptacle") not in entities:
-            entities.append((destination, "receptacle"))
+        receptacle = EntityDescription(destination, "receptacle")
+        if receptacle not in entities:
+            entities.append(receptacle)
     return tuple(entities)
 
 
 def tidy_house_initial_facts(
     transfers: Sequence[Tuple[str, str]] = DEFAULT_TIDY_HOUSE_TRANSFERS,
 ) -> Tuple[str, ...]:
-    facts = {"present({})".format(name) for name, _ in tidy_house_entities(transfers)}
+    facts = {"present({})".format(entity.name) for entity in tidy_house_entities(transfers)}
     facts |= {"gripper_empty()", "collision_safe()"}
     return tuple(sorted(facts))
 

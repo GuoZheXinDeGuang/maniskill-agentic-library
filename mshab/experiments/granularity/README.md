@@ -12,15 +12,20 @@ plan that the package follows is
 
 ```text
 lower_layers/
-├── manifest.py   the 53 downloaded MS-HAB RL checkpoints as PolicySpec rows
-└── library.py    build_granularity_library(): 5 generic contracts, 53 policies, 53 bindings
+├── manifest.py    the 53 downloaded MS-HAB RL checkpoints as PolicySpec rows
+└── library.py     build_granularity_library(): 5 generic contracts, 53 policies, 53 bindings
 
 higher_layers/
-├── builders.py   TidyHouseGraphBuilder(granularity), SetTableGenericGraphBuilder
-├── gold.py       registry, validation, JSON document, loader
-└── render.py     SVG rendering and the graphs/ artifacts
+├── builders.py    TidyHouseGraphBuilder(granularity), SetTableGenericGraphBuilder
+├── gold.py        registry, validation, JSON document, loader
+├── scenarios.py   scenarios, gold_proposer()/scenario_proposer(), run_scenario()
+└── render.py      SVG rendering of the gold graphs
 
-graphs/           committed gold graphs: <name>.json and <name>.svg
+paths.py           default checkpoint, artifact, and graph locations
+svg.py             the text primitive both renderers share
+render.py          python -m mshab.experiments.granularity.render: writes artifacts/ and graphs/
+artifacts/         library.json and contract_policy_layers.svg
+graphs/            committed gold graphs: <name>.json and <name>.svg
 ```
 
 Everything else is the ordinary skill-library object model: `Contract` and

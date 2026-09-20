@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from abc import abstractmethod
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
+from typing import Any, Dict, Mapping, Optional, Sequence, Tuple
 
 from mshab.experiments.planning.documents import (
     DecompositionRequest,
@@ -29,7 +29,6 @@ from mshab.skills.graph import (
     SubGoal,
     SubGoalDependency,
 )
-from mshab.skills.library import ContractLibrary
 
 
 def subgraph_requests(
@@ -272,13 +271,7 @@ class ScriptedProposer(GraphProposer):
     def from_dict(cls, payload: Mapping[str, Any]) -> "ScriptedProposer":
         where = "planning_script"
         payload = schema.require_mapping(payload, where=where)
-        version = schema.require_str(payload, "schema_version", where=where)
-        if version != SCRIPT_SCHEMA_VERSION:
-            raise schema.SchemaError(
-                "{} declares unsupported schema_version {!r}; expected {!r}".format(
-                    where, version, SCRIPT_SCHEMA_VERSION
-                )
-            )
+        schema.require_schema_version(payload, where=where, expected=SCRIPT_SCHEMA_VERSION)
         schema.require_keys(
             payload, where=where, required=("schema_version", "decompositions", "subgraphs")
         )
@@ -295,7 +288,7 @@ class ScriptedProposer(GraphProposer):
                 schema.require_identifier(entry, "task", where=entry_where),
                 schema.require_str(entry, "goal", where=entry_where),
                 schema.require_str(entry, "granularity", where=entry_where),
-                _require_attempt(entry, entry_where),
+                schema.require_non_negative_int(entry, "attempt", where=entry_where),
                 schema.optional_identifier(entry, "failed_subgoal", where=entry_where),
             )
             proposer.script_decomposition(key, DecompositionResponse.from_dict(entry["response"]))
@@ -320,10 +313,3 @@ class ScriptedProposer(GraphProposer):
     @classmethod
     def load(cls, path: Path) -> "ScriptedProposer":
         return cls.from_dict(json.loads(Path(path).read_text()))
-
-
-def _require_attempt(entry: Mapping[str, Any], where: str) -> int:
-    value = entry.get("attempt")
-    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
-        raise schema.SchemaError("{}.attempt must be a non-negative integer".format(where))
-    return value

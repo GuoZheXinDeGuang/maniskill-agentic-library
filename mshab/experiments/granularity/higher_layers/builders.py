@@ -26,7 +26,10 @@ from mshab.skills.extension import SkillGraphBuilder, SkillGraphPatch
 from mshab.skills.graph import SkillNode, SkillRelation, SkillSubgraph, SubGoal
 
 
-GRANULARITIES = ("coarse", "fine")
+# The two Layer-1 granularities the gold graphs are authored at.  The proposer
+# boundary (``mshab.experiments.planning.GRANULARITIES``) adds ``free`` for a
+# model that chooses its own decomposition; no gold graph exists for that.
+GOLD_GRANULARITIES = ("coarse", "fine")
 
 # Five transfers of distinct household objects to distinct receptacles.  The
 # receptacle names are symbolic; an environment adapter maps them to scene
@@ -48,6 +51,23 @@ DEFAULT_SET_TABLE_SEGMENTS: Tuple[Tuple[str, str, str], ...] = (
 
 TIDY_HOUSE_GOAL = "Tidy the house: move every object to its target receptacle."
 SET_TABLE_GOAL = "Set the table with the bowl and apple, then close their storage."
+
+
+def coarse_subgoal_id(index: int) -> str:
+    """The one sub-goal of transfer ``index`` in the coarse TidyHouse graph."""
+
+    return "object_{}_delivered".format(index)
+
+
+def fine_subgoal_ids(index: int) -> Tuple[str, str, str, str]:
+    """The four sub-goals of transfer ``index`` in the fine TidyHouse graph, in order."""
+
+    return (
+        "object_{}_reachable".format(index),
+        "object_{}_holding".format(index),
+        "destination_{}_reachable".format(index),
+        "object_{}_placed".format(index),
+    )
 
 
 def navigate_node(node_id: str, target: str, achieves: Sequence[str] = ()) -> SkillNode:
@@ -130,10 +150,10 @@ class TidyHouseGraphBuilder(SkillGraphBuilder):
     """
 
     def __init__(self, granularity: str) -> None:
-        if granularity not in GRANULARITIES:
+        if granularity not in GOLD_GRANULARITIES:
             raise ValueError(
                 "granularity must be one of {}, got {!r}".format(
-                    GRANULARITIES, granularity
+                    GOLD_GRANULARITIES, granularity
                 )
             )
         self.granularity = granularity
@@ -155,7 +175,7 @@ class TidyHouseGraphBuilder(SkillGraphBuilder):
             delivered = "at({},{})".format(obj, destination)
 
             if self.granularity == "coarse":
-                subgoal_id = "object_{}_delivered".format(index)
+                subgoal_id = coarse_subgoal_id(index)
                 subgoals.append(SubGoal(subgoal_id, delivered))
                 subgraphs.append(
                     _chain_subgraph(
@@ -171,10 +191,7 @@ class TidyHouseGraphBuilder(SkillGraphBuilder):
                 )
                 continue
 
-            reachable = "object_{}_reachable".format(index)
-            holding = "object_{}_holding".format(index)
-            destination_reachable = "destination_{}_reachable".format(index)
-            placed = "object_{}_placed".format(index)
+            reachable, holding, destination_reachable, placed = fine_subgoal_ids(index)
             for subgoal_id, predicate, node in (
                 (reachable, "reachable({})".format(obj), navigate_node(navigate_object, obj, (reachable,))),
                 (holding, "holding({})".format(obj), pick_node(pick, obj, (holding,))),

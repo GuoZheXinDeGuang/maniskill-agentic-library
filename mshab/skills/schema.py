@@ -172,15 +172,35 @@ def require_arguments(
     return result
 
 
-def require_schema_version(payload: Mapping[str, Any], *, where: str) -> None:
-    """Accept a document with no version, but reject a version we do not know."""
+def require_non_negative_int(
+    payload: Mapping[str, Any], key: str, *, where: str
+) -> int:
+    """An integer that is zero or more; JSON booleans are rejected as integers."""
+
+    value = payload.get(key)
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise SchemaError(
+            "{}.{} must be a non-negative integer, got {!r}".format(where, key, value)
+        )
+    return value
+
+
+def require_schema_version(
+    payload: Mapping[str, Any], *, where: str, expected: str = SCHEMA_VERSION
+) -> None:
+    """Accept a document with no version, but reject a version we do not know.
+
+    ``expected`` is the graph schema by default; a document family with a
+    version string of its own passes it explicitly instead of re-implementing
+    the check.
+    """
 
     version = payload.get("schema_version")
     if version is None:
         return
-    if version != SCHEMA_VERSION:
+    if version != expected:
         raise SchemaError(
             "{} declares unsupported schema_version {!r}; expected {!r}".format(
-                where, version, SCHEMA_VERSION
+                where, version, expected
             )
         )

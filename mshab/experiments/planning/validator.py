@@ -105,7 +105,9 @@ class ValidatedProposal:
         }
 
 
-def _message(exc: BaseException) -> str:
+def error_message(exc: BaseException) -> str:
+    """The exception's own message, without the type name: what a trace records."""
+
     if exc.args and isinstance(exc.args[0], str):
         return exc.args[0]
     return str(exc)
@@ -144,7 +146,7 @@ class ProposalValidator:
             # The sequence must at least form a Layer-1 chain.
             SubGoalGraph.from_sequence(goal, decomposition.subgoals)
         except _PROPOSER_ERRORS as exc:
-            raise ProposalRejected((Rejection("decomposition", None, _message(exc)),))
+            raise ProposalRejected((Rejection("decomposition", None, error_message(exc)),))
 
         requests = subgraph_requests(self.task, goal, context, decomposition)
         responses: List[SubgraphResponse] = []
@@ -162,7 +164,7 @@ class ProposalValidator:
                     )
                 self._check_subgraph(response, subgoal.id, owners)
             except _PROPOSER_ERRORS as exc:
-                rejections.append(Rejection("subgraph", subgoal.id, _message(exc)))
+                rejections.append(Rejection("subgraph", subgoal.id, error_message(exc)))
                 continue
             responses.append(response)
         if rejections:
@@ -175,7 +177,7 @@ class ProposalValidator:
                 [response.subgraph for response in responses],
             )
         except _PROPOSER_ERRORS as exc:
-            raise ProposalRejected((Rejection("assembly", None, _message(exc)),))
+            raise ProposalRejected((Rejection("assembly", None, error_message(exc)),))
 
         subgoal_graph = SubGoalGraph(goal)
         skill_graph = SkillGraph(self.task, subgoal_graph=subgoal_graph)
@@ -183,12 +185,12 @@ class ProposalValidator:
             patch.apply(subgoal_graph, skill_graph, library=self.library)
             skill_graph.validate()
         except (_PROPOSER_ERRORS + (RuntimeError,)) as exc:
-            raise ProposalRejected((Rejection("graph", None, _message(exc)),))
+            raise ProposalRejected((Rejection("graph", None, error_message(exc)),))
 
         try:
             plan = SkillPlanner(subgoal_graph, skill_graph).plan()
         except (NoViableCandidate, ValueError, KeyError) as exc:
-            raise ProposalRejected((Rejection("plan", None, _message(exc)),))
+            raise ProposalRejected((Rejection("plan", None, error_message(exc)),))
 
         return ValidatedProposal(
             task=self.task,

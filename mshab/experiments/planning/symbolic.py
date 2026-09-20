@@ -21,6 +21,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, Mapping, Optional, Set, Tuple
 
+from mshab.experiments.planning.documents import EntityDescription
 from mshab.skills import schema
 from mshab.skills.environment import (
     EnvironmentAdapter,
@@ -163,7 +164,9 @@ class SymbolicEnvironmentAdapter(EnvironmentAdapter):
 
     ``step`` takes an action of the form ``{"add": [...], "remove": [...]}``
     and applies the world rules afterwards.  Compatibility covers every
-    contract environment id of ``task`` in the library.
+    contract environment id of ``task`` in the library.  ``entities`` are the
+    scene's ``EntityDescription`` records; a proposer sees them again verbatim
+    in its requests.
     """
 
     def __init__(
@@ -171,7 +174,7 @@ class SymbolicEnvironmentAdapter(EnvironmentAdapter):
         library: ContractLibrary,
         task: str,
         initial_facts: Iterable[str],
-        entities: Iterable[Tuple[str, str]] = (),
+        entities: Iterable[EntityDescription] = (),
         *,
         environment_id: str = "symbolic",
         scene_id: Optional[str] = None,
@@ -183,7 +186,8 @@ class SymbolicEnvironmentAdapter(EnvironmentAdapter):
             environment_id=environment_id,
             scene_id=scene_id,
             entities={
-                name: EnvironmentEntity(name, kind, name) for name, kind in entities
+                item.name: EnvironmentEntity(item.name, item.kind, item.name)
+                for item in entities
             },
             compatible_contract_env_ids=tuple(
                 sorted({contract.env_id for contract in library.find(task=task)})

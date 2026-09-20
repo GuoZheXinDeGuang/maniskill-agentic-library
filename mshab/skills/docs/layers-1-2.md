@@ -24,6 +24,7 @@ graphs and patches, which may express a partial order.
 | `add_dependency(source, target)` | Add ordering and reject cycles |
 | `from_sequence(goal, subgoals)` | Build the graph from an ordered sub-goal sequence; dependencies are the consecutive pairs |
 | `ready_subgoals(facts, completed)` | Sub-goals whose predecessors have been achieved |
+| `predecessors(subgoal_id)` | The sub-goals that dependencies order before this one |
 | `execution_order()` | Stable topological order; for a sequence-built graph it is the generating sequence |
 
 Sub-goals may be transient. The task runner should pass already completed
@@ -239,6 +240,9 @@ must satisfy, and the source of the catalog's `execution_plans` section.
    failed. There is no fallback between sub-goals and no substitute sub-goal in
    the graph. Recovery decomposes the goal again from the current environment
    state and decides the new sub-goal sequence afresh. That replan is the job
-   of the runtime goal -> sub-goal decomposition, which is not implemented yet;
-   today `NoViableCandidate` ends the run.
+   of the goal -> sub-goal proposer behind the `GraphProposer` boundary:
+   `TaskController` in `mshab/experiments/planning/` catches
+   `NoViableCandidate`, asks the proposer again with the failure, the history,
+   and the current facts, and swaps in the new layers. The packaged SetTable
+   runner has no such loop, so there `NoViableCandidate` still ends the run.
 
