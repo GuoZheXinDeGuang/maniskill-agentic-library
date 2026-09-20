@@ -10,13 +10,16 @@ SubgraphRequest       one sub-goal + the same scene       ->  SubgraphResponse  
 
 Requests are built by the controller from library and environment objects.
 Responses are parsed strictly through :mod:`mshab.skills.schema`, so a model
-can put nothing but sub-goals, skill nodes, and edges into a graph.
+can put nothing but sub-goals, skill nodes, and edges into a graph.  When the
+validator refuses an answer and asks again, the same request travels back
+with its ``rejections`` filled in; that list is the third kind of document a
+proposer reads.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, Dict, Iterable, Mapping, Optional, Tuple
+from dataclasses import dataclass, field, replace
+from typing import Any, Dict, Iterable, Mapping, Optional, Sequence, Tuple
 
 from mshab.skills import schema
 from mshab.skills.environment import EnvironmentDescription
@@ -26,6 +29,7 @@ from mshab.skills.library import ContractLibrary
 
 SCHEMA_VERSION = "mshab.planning.v1"
 GRANULARITIES = ("free", "coarse", "fine")
+STAGES = ("decomposition", "subgraph", "assembly", "graph", "plan")
 
 
 def _require_identifiers(
@@ -43,6 +47,60 @@ def _require_granularity(value: Any) -> str:
             "granularity must be one of {}, got {!r}".format(GRANULARITIES, value)
         )
     return value
+
+
+def _require_images(images: Iterable[Any]) -> Tuple[str, ...]:
+    images = tuple(images)
+    if any(not isinstance(item, str) or not item for item in images):
+        raise ValueError("images must be non-empty strings (paths, URLs, or data URIs)")
+    return images
+
+
+def _require_rejections(items: Iterable[Any]) -> Tuple["Rejection", ...]:
+    rejections = tuple(items)
+    if any(not isinstance(item, Rejection) for item in rejections):
+        raise TypeError("request rejections must be Rejection instances")
+    return rejections
+
+
+# -- what the validator tells the proposer about its previous answer ---------------
+
+
+@dataclass(frozen=True)
+class Rejection:
+    """One reason an answer was refused, attributed to a stage and a sub-goal.
+
+    Rejections are produced by the validator and travel back to the proposer
+    on the retry of the same request (``DecompositionRequest.rejections``,
+    ``SubgraphRequest.rejections``), so they are boundary documents too.
+    """
+
+    stage: str
+    subgoal_id: Optional[str]
+    message: str
+
+    def __post_init__(self) -> None:
+        if self.stage not in STAGES:
+            raise ValueError("unknown rejection stage {!r}".format(self.stage))
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {"stage": self.stage, "subgoal_id": self.subgoal_id, "message": self.message}
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> "Rejection":
+        where = "rejection"
+        payload = schema.require_mapping(payload, where=where)
+        schema.require_keys(payload, where=where, required=("stage", "subgoal_id", "message"))
+        stage = schema.require_str(payload, "stage", where=where)
+        if stage not in STAGES:
+            raise schema.SchemaError(
+                "{}.stage must be one of {}, got {!r}".format(where, STAGES, stage)
+            )
+        return cls(
+            stage=stage,
+            subgoal_id=schema.optional_identifier(payload, "subgoal_id", where=where),
+            message=schema.optional_str(payload, "message", where=where),
+        )
 
 
 # -- what the proposer is told about the world -----------------------------------
@@ -183,6 +241,10 @@ class PlanningContext:
     failure: Optional[Failure] = None
     granularity: str = "free"
     attempt: int = 0
+    #: Image references of the current scene, for a vision-capable proposer.
+    #: Reserved: the symbolic environment never fills it, and the text-only
+    #: DeepSeek proposer refuses a request that carries one.
+    images: Tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -193,6 +255,7 @@ class PlanningContext:
         if any(not isinstance(fact, str) or not fact for fact in facts):
             raise ValueError("facts must be non-empty strings")
         object.__setattr__(self, "facts", facts)
+        object.__setattr__(self, "images", _require_images(self.images))
         _require_granularity(self.granularity)
         if isinstance(self.attempt, bool) or not isinstance(self.attempt, int) or self.attempt < 0:
             raise ValueError("attempt must be a non-negative integer")
@@ -221,6 +284,7 @@ class PlanningContext:
         failure: Failure,
         history: History,
         facts: Iterable[str],
+        images: Iterable[str] = (),
     ) -> "PlanningContext":
         """The context of the next attempt after a sub-goal failed."""
 
@@ -232,6 +296,7 @@ class PlanningContext:
             failure=failure,
             granularity=self.granularity,
             attempt=self.attempt + 1,
+            images=tuple(images),
         )
 
     def as_dict(self) -> Dict[str, Any]:
@@ -243,13 +308,16 @@ class PlanningContext:
             "failure": None if self.failure is None else self.failure.as_dict(),
             "granularity": self.granularity,
             "attempt": self.attempt,
+            "images": list(self.images),
         }
 
     @classmethod
     def from_dict(cls, payload: Mapping[str, Any]) -> "PlanningContext":
         where = "planning_context"
         payload = schema.require_mapping(payload, where=where)
-        schema.require_keys(payload, where=where, required=_CONTEXT_KEYS)
+        schema.require_keys(
+            payload, where=where, required=_CONTEXT_KEYS, optional=_OPTIONAL_CONTEXT_KEYS
+        )
         return cls._from_fields(payload, where)
 
     @classmethod
@@ -275,6 +343,7 @@ class PlanningContext:
             failure=None if failure is None else Failure.from_dict(failure),
             granularity=granularity,
             attempt=schema.require_non_negative_int(payload, "attempt", where=where),
+            images=schema.require_str_tuple(payload, "images", where=where),
         )
 
 
@@ -287,6 +356,8 @@ _CONTEXT_KEYS = (
     "granularity",
     "attempt",
 )
+# ``images`` is reserved and may be absent from older documents.
+_OPTIONAL_CONTEXT_KEYS = ("images",)
 
 
 def contract_records(
@@ -311,16 +382,25 @@ def entity_descriptions(
 
 @dataclass(frozen=True)
 class DecompositionRequest:
+    """Call 1.  ``rejections`` is non-empty only on a retry of the same request:
+    the reasons the previous answer was refused, for the proposer to fix."""
+
     task: str
     goal: str
     context: PlanningContext
+    rejections: Tuple[Rejection, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.task or not self.goal:
             raise ValueError("decomposition request needs a task and a goal")
+        object.__setattr__(self, "rejections", _require_rejections(self.rejections))
+
+    @property
+    def images(self) -> Tuple[str, ...]:
+        return self.context.images
 
     def fingerprint(self) -> Tuple[str, str, str, int, Optional[str]]:
-        """What a scripted answer is keyed on."""
+        """What a scripted answer is keyed on; a retry keeps its fingerprint."""
 
         failure = self.context.failure
         return (
@@ -331,9 +411,15 @@ class DecompositionRequest:
             None if failure is None else failure.subgoal_id,
         )
 
+    def with_rejections(self, rejections: Sequence[Rejection]) -> "DecompositionRequest":
+        """The same request, asked again after these rejections."""
+
+        return replace(self, rejections=tuple(rejections))
+
     def as_dict(self) -> Dict[str, Any]:
         document = {"schema_version": SCHEMA_VERSION, "task": self.task, "goal": self.goal}
         document.update(self.context.as_dict())
+        document["rejections"] = [item.as_dict() for item in self.rejections]
         return document
 
     @classmethod
@@ -345,12 +431,16 @@ class DecompositionRequest:
             payload,
             where=where,
             required=("task", "goal") + _CONTEXT_KEYS,
-            optional=("schema_version",),
+            optional=("schema_version", "rejections") + _OPTIONAL_CONTEXT_KEYS,
         )
         return cls(
             task=schema.require_identifier(payload, "task", where=where),
             goal=schema.require_str(payload, "goal", where=where),
             context=PlanningContext._from_fields(payload, where),
+            rejections=tuple(
+                Rejection.from_dict(item)
+                for item in schema.require_sequence(payload, "rejections", where=where)
+            ),
         )
 
 
@@ -423,6 +513,10 @@ class Neighbours:
 
 @dataclass(frozen=True)
 class SubgraphRequest:
+    """Call 2, asked once per sub-goal.  ``images`` mirrors the context's
+    reserved field; ``rejections`` is non-empty only on a retry of the same
+    request."""
+
     task: str
     goal: str
     subgoal: SubGoal
@@ -430,6 +524,8 @@ class SubgraphRequest:
     entities: Tuple[EntityDescription, ...] = ()
     facts: Tuple[str, ...] = ()
     neighbours: Neighbours = field(default_factory=Neighbours)
+    images: Tuple[str, ...] = ()
+    rejections: Tuple[Rejection, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.task or not self.goal:
@@ -439,11 +535,18 @@ class SubgraphRequest:
         )
         object.__setattr__(self, "entities", tuple(self.entities))
         object.__setattr__(self, "facts", tuple(sorted(set(self.facts))))
+        object.__setattr__(self, "images", _require_images(self.images))
+        object.__setattr__(self, "rejections", _require_rejections(self.rejections))
 
     def fingerprint(self) -> Tuple[str, str, str]:
         """What a scripted answer is keyed on: the sub-goal's id and predicate."""
 
         return (self.task, self.subgoal.id, self.subgoal.predicate)
+
+    def with_rejections(self, rejections: Sequence[Rejection]) -> "SubgraphRequest":
+        """The same request, asked again after these rejections."""
+
+        return replace(self, rejections=tuple(rejections))
 
     def as_dict(self) -> Dict[str, Any]:
         return {
@@ -455,6 +558,8 @@ class SubgraphRequest:
             "entities": [item.as_dict() for item in self.entities],
             "facts": list(self.facts),
             "neighbours": self.neighbours.as_dict(),
+            "images": list(self.images),
+            "rejections": [item.as_dict() for item in self.rejections],
         }
 
     @classmethod
@@ -466,7 +571,7 @@ class SubgraphRequest:
             payload,
             where=where,
             required=("task", "goal", "subgoal", "contracts", "entities", "facts", "neighbours"),
-            optional=("schema_version",),
+            optional=("schema_version", "images", "rejections"),
         )
         return cls(
             task=schema.require_identifier(payload, "task", where=where),
@@ -481,6 +586,11 @@ class SubgraphRequest:
             ),
             facts=schema.require_str_tuple(payload, "facts", where=where),
             neighbours=Neighbours.from_dict(payload["neighbours"]),
+            images=schema.require_str_tuple(payload, "images", where=where),
+            rejections=tuple(
+                Rejection.from_dict(item)
+                for item in schema.require_sequence(payload, "rejections", where=where)
+            ),
         )
 
 

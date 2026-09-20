@@ -53,6 +53,7 @@ def subgraph_requests(
                 entities=context.entities,
                 facts=context.facts,
                 neighbours=Neighbours(previous, following),
+                images=context.images,
             )
         )
     return tuple(requests)
@@ -154,6 +155,12 @@ class GraphProposer(SkillGraphBuilder):
         return assemble_patch(task, decomposition.subgoals, subgraphs)
 
 
+class ProposerUnavailable(RuntimeError):
+    """The proposer could not be reached at all: a transport or credential
+    failure, not a bad answer.  The validator does not turn it into a
+    rejection; it propagates to whoever runs the experiment."""
+
+
 class UnscriptedRequest(KeyError):
     """The scripted proposer has no canned answer for this request."""
 
@@ -171,7 +178,8 @@ class ScriptedProposer(GraphProposer):
     unknown fingerprint raises instead of answering with a default, so a test
     cannot pass on an answer nobody wrote.  Tables are scripted in code
     (``mshab.experiments.granularity.higher_layers.scenarios`` cuts them out
-    of the gold graphs) or loaded from JSON.
+    of the gold graphs) or loaded from JSON.  A retry of a request (its
+    ``rejections`` filled in) keeps its fingerprint and gets the same answer.
     """
 
     def __init__(

@@ -1,16 +1,19 @@
 """The proposer boundary of the granularity experiment.
 
 Simulator-independent: request and response documents, the ``GraphProposer``
-interface with its graph assembler, the scripted pseudo proposer, the
-validator that turns answers into graphs or named rejections, the symbolic
-environment and executor, and the controller loop that ties them together.
-This package depends on ``mshab.skills`` only; the granularity experiment's
-gold graphs and scenarios build on it.
+interface with its graph assembler, the scripted pseudo proposer, the real
+model behind the same interface (``DeepSeekProposer``, with its fixed
+prompts), the validator that turns answers into graphs or named rejections
+and asks again within a retry budget, the symbolic environment and executor,
+and the controller loop that ties them together.  This package depends on
+``mshab.skills`` only; the granularity experiment's gold graphs, scenarios,
+and evaluation build on it.
 """
 
 from mshab.experiments.planning.documents import (
     GRANULARITIES,
     SCHEMA_VERSION,
+    STAGES,
     DecompositionRequest,
     DecompositionResponse,
     EntityDescription,
@@ -18,6 +21,7 @@ from mshab.experiments.planning.documents import (
     History,
     Neighbours,
     PlanningContext,
+    Rejection,
     SubgraphRequest,
     SubgraphResponse,
     contract_records,
@@ -27,11 +31,29 @@ from mshab.experiments.planning.documents import (
 from mshab.experiments.planning.proposer import (
     SCRIPT_SCHEMA_VERSION,
     GraphProposer,
+    ProposerUnavailable,
     ScriptedProposer,
     UnscriptedRequest,
     assemble_patch,
     root_nodes,
     subgraph_requests,
+)
+from mshab.experiments.planning.prompts import (
+    DECOMPOSITION_SYSTEM_PROMPT,
+    PROMPTS,
+    REJECTION_TURN,
+    SUBGRAPH_SYSTEM_PROMPT,
+    PromptSet,
+)
+from mshab.experiments.planning.deepseek import (
+    DEEPSEEK_API_KEY_VARIABLE,
+    DEEPSEEK_BASE_URL,
+    DEEPSEEK_DEFAULT_MODEL,
+    ChatReply,
+    DeepSeekChat,
+    DeepSeekProposer,
+    Exchange,
+    extract_json_object,
 )
 from mshab.experiments.planning.controller import (
     DEFAULT_ATTEMPTS_PER_NODE,
@@ -54,36 +76,54 @@ from mshab.experiments.planning.symbolic import (
     grounding_key,
 )
 from mshab.experiments.planning.validator import (
-    STAGES,
+    DEFAULT_RETRIES,
     ProposalRejected,
+    ProposalRound,
     ProposalValidator,
-    Rejection,
+    RoundCall,
     ValidatedProposal,
+    error_message,
 )
 
 __all__ = [
+    "DECOMPOSITION_SYSTEM_PROMPT",
+    "DEEPSEEK_API_KEY_VARIABLE",
+    "DEEPSEEK_BASE_URL",
+    "DEEPSEEK_DEFAULT_MODEL",
     "DEFAULT_ATTEMPTS_PER_NODE",
     "DEFAULT_MAX_REPLANS",
+    "DEFAULT_RETRIES",
+    "ChatReply",
     "Decision",
     "DecompositionRequest",
     "DecompositionResponse",
+    "DeepSeekChat",
+    "DeepSeekProposer",
     "EntityDescription",
+    "Exchange",
     "Failure",
     "GRANULARITIES",
-    "History",
-    "OUTCOMES",
-    "Neighbours",
-    "ProposalRejected",
-    "ProposalValidator",
     "GraphProposer",
+    "History",
+    "Neighbours",
+    "OUTCOMES",
+    "PROMPTS",
     "PlanningContext",
+    "PromptSet",
+    "ProposalRejected",
+    "ProposalRound",
+    "ProposalValidator",
+    "ProposerUnavailable",
+    "REJECTION_TURN",
     "Rejection",
     "Replan",
+    "RoundCall",
     "RunResult",
     "SCHEMA_VERSION",
     "SCRIPT_SCHEMA_VERSION",
     "STAGES",
     "STATUSES",
+    "SUBGRAPH_SYSTEM_PROMPT",
     "ScriptedFailure",
     "ScriptedProposer",
     "SubgraphRequest",
@@ -98,6 +138,8 @@ __all__ = [
     "bind_symbolic_policy",
     "contract_records",
     "entity_descriptions",
+    "error_message",
+    "extract_json_object",
     "graph_summary",
     "grounding_key",
     "lean_subgraph_dict",

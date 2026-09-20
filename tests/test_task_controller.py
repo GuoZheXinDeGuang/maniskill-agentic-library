@@ -6,8 +6,8 @@ from unittest import TestCase
 from mshab.experiments.granularity import build_granularity_library, contract_id
 from mshab.experiments.granularity.higher_layers import (
     SCENARIOS,
-    Scenario,
     build_gold_graph,
+    gold_graphs_for,
     gold_proposer,
     run_scenario,
 )
@@ -139,8 +139,11 @@ class ScenarioTests(_Base):
             self.assertEqual(metrics["achieved_subgoals"], len(gold.subgoal_graph.subgoals))
             self.assertEqual(metrics["subgoals"], len(gold.subgoal_graph.subgoals))
             self.assertFalse(metrics["recovery_success"])
+            self.assertEqual(metrics["proposal_retries"], 0)
+            self.assertEqual(metrics["proposer_calls"], 1 + len(gold.subgoal_graph.subgoals))
             self.assertEqual(len(result.proposals), 1)
             self.assertTrue(result.proposals[0]["accepted"])
+            self.assertEqual(len(result.proposals[0]["rounds"]), 1)
 
     def test_a_single_failure_is_retried_without_a_replan(self):
         for granularity in ("coarse", "fine"):
@@ -238,31 +241,38 @@ class ScenarioTests(_Base):
         self.assertEqual(fine.metrics["failed_executions"], 0)
 
     def test_set_table_generic_runs_with_articulations(self):
-        scenario = Scenario(
-            name="set_table_nominal",
-            goal=build_gold_graph("set_table_generic", self.library).spec.goal,
-            initial_facts=(
-                "present(024_bowl)", "present(013_apple)", "present(kitchen_counter)",
-                "present(fridge)", "present(dining_table)", "closed(kitchen_counter)",
-                "closed(fridge)", "gripper_empty()", "collision_safe()",
-            ),
-            goal_facts=(
-                "at(024_bowl,dining_table)", "at(013_apple,dining_table)",
-                "closed(kitchen_counter)", "closed(fridge)",
-            ),
-            entities=(
-                EntityDescription("024_bowl", "object"), EntityDescription("013_apple", "object"),
-                EntityDescription("kitchen_counter", "articulation"),
-                EntityDescription("fridge", "articulation"), EntityDescription("dining_table", "receptacle"),
+        scenario = SCENARIOS["set_table_nominal"]
+        self.assertEqual(scenario.goal, build_gold_graph("set_table_generic", self.library).spec.goal)
+        self.assertEqual(
+            scenario.initial_facts,
+            (
+                "closed(fridge)", "closed(kitchen_counter)", "collision_safe()", "gripper_empty()",
+                "present(013_apple)", "present(024_bowl)", "present(dining_table)",
+                "present(fridge)", "present(kitchen_counter)",
             ),
         )
-        proposer = gold_proposer(["set_table_generic"], self.library)
-        result = run_scenario(scenario, "free", self.library, proposer=proposer)
+        self.assertEqual(
+            scenario.goal_facts,
+            ("at(024_bowl,dining_table)", "at(013_apple,dining_table)", "closed(kitchen_counter)", "closed(fridge)"),
+        )
+        self.assertEqual(
+            [(item.name, item.kind) for item in scenario.entities],
+            [
+                ("024_bowl", "object"), ("013_apple", "object"), ("kitchen_counter", "articulation"),
+                ("fridge", "articulation"), ("dining_table", "receptacle"),
+            ],
+        )
+        # The scripted proposer is found through the scenario's goal: the one
+        # gold graph authored for SetTable, keyed as "free".
+        result = self.run_scenario("set_table_nominal", "free")
         self.assertTrue(result.success)
         self.assertEqual(result.metrics["node_executions"], 16)
         self.assertEqual(result.metrics["redundant_executions"], 0)
         self.assertIn("open(kitchen_counter)", result.achieved_predicates)
         self.assertNotIn("open(kitchen_counter)", result.final_facts)
+        with self.assertRaisesRegex(ValueError, "no gold graph answers"):
+            self.run_scenario("set_table_nominal", "coarse")
+        self.assertEqual(gold_graphs_for(scenario.goal), ("set_table_generic",))
 
     def test_rejected_proposals_and_exhausted_replans_end_the_run(self):
         result = run_scenario(SCENARIOS["nominal"], "coarse", self.library, proposer=ScriptedProposer())
@@ -270,7 +280,9 @@ class ScenarioTests(_Base):
         self.assertFalse(result.success)
         self.assertFalse(result.proposals[0]["accepted"])
         self.assertEqual(result.proposals[0]["rejections"][0]["stage"], "decomposition")
+        self.assertEqual(len(result.proposals[0]["rounds"]), 1)
         self.assertEqual(result.metrics["node_executions"], 0)
+        self.assertEqual(result.metrics["proposer_calls"], 1)
 
         result = self.run_scenario("pick_exhausted", "coarse", max_replans=0)
         self.assertEqual(result.status, "replans_exhausted")

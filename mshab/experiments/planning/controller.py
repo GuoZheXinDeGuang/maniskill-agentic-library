@@ -20,7 +20,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Set, Tuple
 
 from mshab.experiments.planning.documents import (
     Failure,
@@ -373,6 +373,7 @@ class TaskController:
             achieved_predicates,
             goal_facts,
             final_facts,
+            proposals,
         )
         return RunResult(
             task=self.task,
@@ -408,6 +409,7 @@ class TaskController:
                     "attempt": context.attempt,
                     "context": context.as_dict(),
                     "rejections": exc.as_dict(),
+                    "rounds": [item.as_dict() for item in exc.rounds],
                 }
             )
             return None, exc.rejections
@@ -477,13 +479,20 @@ def run_metrics(
     achieved_predicates: Sequence[str],
     goal_facts: Sequence[str],
     final_facts: frozenset,
+    proposals: Sequence[Mapping[str, Any]] = (),
 ) -> Dict[str, Any]:
-    """The per-run measurements the granularity experiment compares."""
+    """The per-run measurements the granularity experiment compares.
+
+    ``proposals`` are the controller's proposal records; their ``rounds``
+    give the cost of talking to the proposer: rejected rounds that were
+    retried, and proposer calls made in total.
+    """
 
     executions = [item for item in decisions if item.outcome != "skipped"]
     successes = [item for item in executions if item.outcome == "success"]
     failures = [item for item in executions if item.outcome != "success"]
     accepted = [item for item in replans if item.accepted]
+    rounds = [record.get("rounds", ()) for record in proposals]
     return {
         "subgoals": initial_summary.get("subgoals", 0),
         "subgraphs": initial_summary.get("subgraphs", 0),
@@ -503,4 +512,6 @@ def run_metrics(
         "replans": len(accepted),
         "replanning_span": sum(item.span for item in accepted),
         "recovery_success": bool(success and (failures or accepted)),
+        "proposal_retries": sum(max(len(items) - 1, 0) for items in rounds),
+        "proposer_calls": sum(len(item["calls"]) for items in rounds for item in items),
     }

@@ -13,13 +13,14 @@ from dataclasses import dataclass
 from typing import Any, Dict, Iterable, Optional, Sequence, Tuple
 
 from mshab.experiments.granularity.higher_layers.builders import (
+    DEFAULT_SET_TABLE_SEGMENTS,
     DEFAULT_TIDY_HOUSE_TRANSFERS,
-    GOLD_GRANULARITIES,
+    SET_TABLE_GOAL,
     TIDY_HOUSE_GOAL,
     coarse_subgoal_id,
     fine_subgoal_ids,
 )
-from mshab.experiments.granularity.higher_layers.gold import build_gold_graph
+from mshab.experiments.granularity.higher_layers.gold import GOLD_GRAPHS, build_gold_graph
 from mshab.experiments.granularity.lower_layers.library import EXPERIMENT_TASK
 from mshab.experiments.planning.controller import (
     DEFAULT_ATTEMPTS_PER_NODE,
@@ -43,9 +44,10 @@ from mshab.experiments.planning.symbolic import (
 from mshab.skills.library import ContractLibrary
 
 
-GOLD_GRAPHS_BY_GRANULARITY = {
-    granularity: "tidy_house_{}".format(granularity) for granularity in GOLD_GRANULARITIES
-}
+def gold_graphs_for(goal: str) -> Tuple[str, ...]:
+    """The gold graphs authored for one goal text, in registry order."""
+
+    return tuple(name for name, spec in GOLD_GRAPHS.items() if spec.goal == goal)
 
 
 def gold_proposer(
@@ -193,6 +195,51 @@ def tidy_house_goal_facts(
     return tuple("at({},{})".format(obj, destination) for obj, destination in transfers)
 
 
+# -- SetTable ----------------------------------------------------------------------
+
+# The destination ``SetTableGenericGraphBuilder`` uses when its context names none.
+DEFAULT_SET_TABLE_DESTINATION = "dining_table"
+
+
+def set_table_entities(
+    segments: Sequence[Tuple[str, str, str]] = DEFAULT_SET_TABLE_SEGMENTS,
+    destination: str = DEFAULT_SET_TABLE_DESTINATION,
+) -> Tuple[EntityDescription, ...]:
+    entities = [EntityDescription(obj, "object") for _, obj, _ in segments]
+    for _, _, source in segments:
+        articulation = EntityDescription(source, "articulation")
+        if articulation not in entities:
+            entities.append(articulation)
+    entities.append(EntityDescription(destination, "receptacle"))
+    return tuple(entities)
+
+
+def set_table_initial_facts(
+    segments: Sequence[Tuple[str, str, str]] = DEFAULT_SET_TABLE_SEGMENTS,
+    destination: str = DEFAULT_SET_TABLE_DESTINATION,
+) -> Tuple[str, ...]:
+    """Every entity present, every storage closed, the gripper empty."""
+
+    facts = {
+        "present({})".format(entity.name)
+        for entity in set_table_entities(segments, destination)
+    }
+    facts |= {"closed({})".format(source) for _, _, source in segments}
+    facts |= {"gripper_empty()", "collision_safe()"}
+    return tuple(sorted(facts))
+
+
+def set_table_goal_facts(
+    segments: Sequence[Tuple[str, str, str]] = DEFAULT_SET_TABLE_SEGMENTS,
+    destination: str = DEFAULT_SET_TABLE_DESTINATION,
+) -> Tuple[str, ...]:
+    """Both objects on the table and both storages closed again."""
+
+    placed = tuple("at({},{})".format(obj, destination) for _, obj, _ in segments)
+    closed = tuple("closed({})".format(source) for _, _, source in segments)
+    return placed + closed
+
+
 def _tidy_house(
     name: str,
     description: str,
@@ -273,6 +320,15 @@ SCENARIOS: Dict[str, Scenario] = {
             "The first object is already at its destination when the run starts.",
             extra_facts=("at({},{})".format(*_FIRST),),
         ),
+        Scenario(
+            name="set_table_nominal",
+            description="The packaged SetTable order on the generic contracts: open the "
+            "storage, retrieve, place, close it again, for the bowl and then the apple.",
+            goal=SET_TABLE_GOAL,
+            initial_facts=set_table_initial_facts(),
+            goal_facts=set_table_goal_facts(),
+            entities=set_table_entities(),
+        ),
     )
 }
 
@@ -283,16 +339,27 @@ SCENARIOS: Dict[str, Scenario] = {
 def scenario_proposer(
     scenario: Scenario, granularity: str, library: Optional[ContractLibrary] = None
 ) -> ScriptedProposer:
-    """The gold graphs' answers plus the scenario's replan answers for one granularity."""
+    """The gold graphs' answers plus the scenario's replan answers for one granularity.
 
-    if granularity not in GOLD_GRAPHS_BY_GRANULARITY:
+    The gold graphs of the scenario's goal provide the initial decomposition
+    and every subgraph; the one at ``granularity`` (``free`` for a graph
+    authored without one) is where the replan answers take their sub-goals.
+    """
+
+    names = gold_graphs_for(scenario.goal)
+    reference = [
+        name for name in names if (GOLD_GRAPHS[name].granularity or "free") == granularity
+    ]
+    if not reference:
         raise ValueError(
-            "scenarios are scripted for granularities {}, not {!r}".format(
-                sorted(GOLD_GRAPHS_BY_GRANULARITY), granularity
+            "no gold graph answers goal {!r} at granularity {!r}; authored: {}".format(
+                scenario.goal,
+                granularity,
+                {name: GOLD_GRAPHS[name].granularity or "free" for name in names},
             )
         )
-    proposer = gold_proposer(GOLD_GRAPHS_BY_GRANULARITY.values(), library)
-    gold = build_gold_graph(GOLD_GRAPHS_BY_GRANULARITY[granularity], library)
+    proposer = gold_proposer(names, library)
+    gold = build_gold_graph(reference[0], library)
     for replan in scenario.replans:
         if replan.granularity != granularity:
             continue
@@ -314,7 +381,9 @@ def run_scenario(
     """Run one scenario at one granularity on the symbolic environment.
 
     The library gets the symbolic policy bound if it does not have it yet.
-    ``controller_options`` override the scenario's attempt and replan budgets.
+    Without ``proposer`` the scripted one answers from the gold graphs of the
+    scenario's goal.  ``controller_options`` override the scenario's attempt
+    and replan budgets, or pass a ``validator`` with a retry budget.
     """
 
     try:
