@@ -1,0 +1,45 @@
+# The skill-library test suite (tests/) is stdlib-only by design: no pytest, no
+# torch, no ManiSkill, no GPU. It therefore needs no install step at all -- the
+# `mshab` namespace package resolves from the repository root -- and the whole
+# suite finishes in about two seconds.
+#
+# Policy rollouts and anything touching the simulator are NOT run here; they
+# need the CUDA image and the downloaded checkpoints. See
+# mshab/skills/docs/running.md.
+
+name: tests
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unittest:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # pyproject still declares requires-python >= 3.8, but the README and
+        # mshab/skills/docs/running.md both say 3.9+. 3.9 is the lowest version
+        # actually claimed by the documentation, so it is the floor tested here.
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Show interpreter
+        run: python -VV
+
+      - name: Run the CPU-only suite
+        # No `pip install`: importing mshab.skills must not require a package
+        # to be built. If this step ever needs one, a dependency leaked into
+        # Layers 1-4 and that is the bug to fix, not this workflow.
+        run: python -m unittest discover -s tests -p 'test_*.py' -v

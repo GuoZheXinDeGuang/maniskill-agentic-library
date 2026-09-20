@@ -170,11 +170,15 @@ mshab_exps/
 bench_results/
 
 nohup*
-test*
+# Upstream's scratch-file rule. Anchored with a leading slash so it only covers
+# ad-hoc `test*` files in the repository root: unanchored, it matched at every
+# depth, so `tests/testdata/`, `tests/test_data/` and `tests/testing_utils.py`
+# were silently ignored and could never be committed as test fixtures.
+/test*
 
-# Keep the historical broad test* rule outside the repository test suite.
-!tests/
-!tests/test_*.py
+# ...but the repository test suite lives in `tests/`, which the rule above
+# still matches at the root.
+!/tests/
 
 ManiSkill/
 nautilus/

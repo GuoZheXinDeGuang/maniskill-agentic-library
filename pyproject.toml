@@ -58,10 +58,18 @@ profile = "black"
 src_paths = ["mshab", "scripts"]
 extra_standard_library = ["typing_extensions"]
 indent = 4
-lines_after_imports = 2
+# -1 is isort's context-sensitive default (2 blank lines before a def/class,
+# 1 otherwise), which is what black also produces. Pinning this to 2 makes the
+# two tools undo each other forever: isort inserts the second blank line, black
+# removes it, isort puts it back.
+lines_after_imports = -1
 multi_line_output = 3
 line_length = 150
-sections = ["FUTURE", "STDLIB", "THIRDPARTY", "GYMNASIUM", "LEARNING", "SAPIEN", "MANI_SKILL", "DIFFUSERS", "MSHAB", "LOCALFOLDER"]
+# FIRSTPARTY covers the repository's non-`mshab` top-level modules (`scripts`,
+# imported by tests/test_set_table_graph_decisions.py). Leaving it out of a
+# custom `sections` list is not a warning: isort aborts with
+# "FIRSTPARTY was not included in the sections setting" on the first such import.
+sections = ["FUTURE", "STDLIB", "THIRDPARTY", "GYMNASIUM", "LEARNING", "SAPIEN", "MANI_SKILL", "DIFFUSERS", "MSHAB", "FIRSTPARTY", "LOCALFOLDER"]
 known_mshab = ["mshab"]
 known_diffusers = ["diffusers"]
 known_mani_skill = ["mani_skill"]
