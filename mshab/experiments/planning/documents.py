@@ -28,6 +28,13 @@ from mshab.skills.library import ContractLibrary
 
 
 SCHEMA_VERSION = "mshab.planning.v1"
+# Tuples, not ``str`` enums like ``Outcome``/``Status`` in controller.py. Both
+# are closed vocabularies checked at construction, so a misspelling raises
+# where it is written; neither is ever compared against a bare literal to pick
+# a branch, which is the case an enum protects and the reason the controller's
+# two vocabularies are enums. They are also fed straight to argparse
+# ``choices`` and interpolated into error messages, both of which want the
+# plain values.
 GRANULARITIES = ("free", "coarse", "fine")
 STAGES = ("decomposition", "subgraph", "assembly", "graph", "plan")
 

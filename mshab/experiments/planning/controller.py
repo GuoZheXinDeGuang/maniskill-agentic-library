@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Set, Tuple
 
@@ -43,8 +44,29 @@ from mshab.skills.plan import NoViableCandidate, SkillPlanner
 from mshab.skills.runtime import ContractViolation, PolicyExecutor, SkillRuntime
 
 
-OUTCOMES = ("success", "failed", "admission_failed", "skipped")
-STATUSES = ("success", "goal_not_reached", "proposal_rejected", "replans_exhausted")
+class Outcome(str, Enum):
+    """What the controller did with one skill node.
+
+    A ``str`` enum like the Layer-1..4 vocabularies in :mod:`mshab.skills`:
+    the members compare equal to their wire values, so a serialized decision
+    reads the same as before, while a mistyped ``Outcome.SUCESS`` fails at
+    the attribute access instead of quietly evaluating to ``False`` in a
+    comparison.
+    """
+
+    SUCCESS = "success"
+    FAILED = "failed"
+    ADMISSION_FAILED = "admission_failed"
+    SKIPPED = "skipped"
+
+
+class Status(str, Enum):
+    """How one whole run ended."""
+
+    SUCCESS = "success"
+    GOAL_NOT_REACHED = "goal_not_reached"
+    PROPOSAL_REJECTED = "proposal_rejected"
+    REPLANS_EXHAUSTED = "replans_exhausted"
 DEFAULT_ATTEMPTS_PER_NODE = 2
 DEFAULT_MAX_REPLANS = 2
 
@@ -58,7 +80,7 @@ class Decision:
     subgoal_id: str
     contract_id: str
     attempt: int
-    outcome: str
+    outcome: Outcome
     policy_id: Optional[str] = None
     failure_mode: Optional[str] = None
     missing_effects: Tuple[str, ...] = ()
@@ -69,8 +91,12 @@ class Decision:
     note: str = ""
 
     def __post_init__(self) -> None:
-        if self.outcome not in OUTCOMES:
-            raise ValueError("unknown decision outcome {!r}".format(self.outcome))
+        try:
+            object.__setattr__(self, "outcome", Outcome(self.outcome))
+        except ValueError as exc:
+            raise ValueError(
+                "unknown decision outcome {!r}".format(self.outcome)
+            ) from exc
 
     def as_dict(self) -> Dict[str, Any]:
         return {
@@ -79,7 +105,7 @@ class Decision:
             "subgoal_id": self.subgoal_id,
             "contract_id": self.contract_id,
             "attempt": self.attempt,
-            "outcome": self.outcome,
+            "outcome": self.outcome.value,
             "policy_id": self.policy_id,
             "failure_mode": self.failure_mode,
             "missing_effects": list(self.missing_effects),
@@ -120,7 +146,7 @@ class RunResult:
     task: str
     goal: str
     granularity: str
-    status: str
+    status: Status
     success: bool
     proposals: Tuple[Dict[str, Any], ...]
     decisions: Tuple[Decision, ...]
@@ -131,12 +157,18 @@ class RunResult:
     achieved_predicates: Tuple[str, ...]
     metrics: Dict[str, Any]
 
+    def __post_init__(self) -> None:
+        try:
+            object.__setattr__(self, "status", Status(self.status))
+        except ValueError as exc:
+            raise ValueError("unknown run status {!r}".format(self.status)) from exc
+
     def as_dict(self) -> Dict[str, Any]:
         return {
             "task": self.task,
             "goal": self.goal,
             "granularity": self.granularity,
-            "status": self.status,
+            "status": self.status.value,
             "success": self.success,
             "metrics": dict(self.metrics),
             "proposals": [dict(item) for item in self.proposals],
@@ -229,7 +261,7 @@ class TaskController:
 
         proposal, _ = self._propose(proposer, goal, context, proposals)
         if proposal is None:
-            status = "proposal_rejected"
+            status = Status.PROPOSAL_REJECTED
             active = None
         else:
             active = _ActiveGraph(proposal)
@@ -243,7 +275,7 @@ class TaskController:
                 node = active.planner.decide(active.completed, active.failed)
             except NoViableCandidate as exc:
                 if len([item for item in replans if item.accepted]) >= self.max_replans:
-                    status = "replans_exhausted"
+                    status = Status.REPLANS_EXHAUSTED
                     break
                 if last_failure is None:
                     pending = [
@@ -264,7 +296,7 @@ class TaskController:
                 proposal, rejections = self._propose(proposer, goal, context, proposals)
                 if proposal is None:
                     replans.append(Replan(step, last_failure, False, rejections))
-                    status = "proposal_rejected"
+                    status = Status.PROPOSAL_REJECTED
                     break
                 span = sum(
                     1
@@ -310,7 +342,7 @@ class TaskController:
                     subgoal_id=owner,
                     contract_id=node.contract_id,
                     attempt=attempt,
-                    outcome="admission_failed" if admission else "failed",
+                    outcome=Outcome.ADMISSION_FAILED if admission else Outcome.FAILED,
                     failure_mode="precondition_violated" if admission else "invariant_violated",
                     missing_preconditions=missing,
                     facts_added=tuple(sorted(after - before)),
@@ -331,7 +363,7 @@ class TaskController:
                     subgoal_id=owner,
                     contract_id=node.contract_id,
                     attempt=attempt,
-                    outcome="success" if result.success else "failed",
+                    outcome=Outcome.SUCCESS if result.success else Outcome.FAILED,
                     policy_id=result.policy_id,
                     failure_mode=result.failure_mode,
                     missing_effects=missing_effects,
@@ -343,7 +375,7 @@ class TaskController:
                     ),
                 )
             decisions.append(decision)
-            if decision.outcome == "success":
+            if decision.outcome is Outcome.SUCCESS:
                 active.completed.add(node.id)
                 active.executed.append(node.id)
             elif attempt >= self.attempts_per_node:
@@ -364,7 +396,7 @@ class TaskController:
         else:
             success = False
         if status is None:
-            status = "success" if success else "goal_not_reached"
+            status = Status.SUCCESS if success else Status.GOAL_NOT_REACHED
         metrics = run_metrics(
             initial_summary,
             decisions,
@@ -463,7 +495,7 @@ class TaskController:
                             subgoal_id=subgoal_id,
                             contract_id=subgraph.nodes[node_id].contract_id,
                             attempt=0,
-                            outcome="skipped",
+                            outcome=Outcome.SKIPPED,
                             note="sub-goal already achieved: {}".format(predicate),
                         )
                     )
@@ -488,9 +520,9 @@ def run_metrics(
     retried, and proposer calls made in total.
     """
 
-    executions = [item for item in decisions if item.outcome != "skipped"]
-    successes = [item for item in executions if item.outcome == "success"]
-    failures = [item for item in executions if item.outcome != "success"]
+    executions = [item for item in decisions if item.outcome is not Outcome.SKIPPED]
+    successes = [item for item in executions if item.outcome is Outcome.SUCCESS]
+    failures = [item for item in executions if item.outcome is not Outcome.SUCCESS]
     accepted = [item for item in replans if item.accepted]
     rounds = [record.get("rounds", ()) for record in proposals]
     return {
@@ -505,9 +537,9 @@ def run_metrics(
         "node_executions": len(executions),
         "successful_executions": len(successes),
         "failed_executions": len(failures),
-        "admission_failures": sum(item.outcome == "admission_failed" for item in executions),
+        "admission_failures": sum(item.outcome is Outcome.ADMISSION_FAILED for item in executions),
         "retries": sum(item.attempt > 1 for item in executions),
-        "skipped_nodes": sum(item.outcome == "skipped" for item in decisions),
+        "skipped_nodes": sum(item.outcome is Outcome.SKIPPED for item in decisions),
         "redundant_executions": sum(item.redundant for item in successes),
         "replans": len(accepted),
         "replanning_span": sum(item.span for item in accepted),

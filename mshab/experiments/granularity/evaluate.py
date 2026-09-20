@@ -602,7 +602,10 @@ class Evaluation:
         self.tally.add_records(run.proposals)
         self._write(directory, "scenario_{}.json".format(scenario.name), run.as_dict())
         return {
-            "status": run.status,
+            # .value, not the member: this record is both json.dumps'd and
+            # interpolated into the progress log, and "{}".format() on a str
+            # enum prints "Status.SUCCESS".
+            "status": run.status.value,
             "success": run.success,
             "elapsed": round(time.monotonic() - started, 3),
             "proposals": len(run.proposals),
