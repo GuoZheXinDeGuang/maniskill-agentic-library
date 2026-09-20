@@ -79,6 +79,8 @@ docker compose run --rm mshab                         # interactive shell in /wo
 The repository is bind-mounted at `/work/mshab`, so host edits take effect
 without a rebuild, and `MS_ASSET_DIR`, `MSHAB_EXPS_DIR` and `SAPIEN_NO_DISPLAY`
 are preset. Evaluation outputs land on the host under `./mshab_exps`.
+`DEEPSEEK_API_KEY` is passed through from the host environment or a `.env`
+file for the planning experiment under `mshab/experiments/`.
 Policy checkpoints are mounted from a host directory (`MSHAB_CKPT_DIR`,
 default `/data/mshab/mshab_checkpoints`); see the
 [checkpoint guide](./mshab/skills/docs/running.md#download-checkpoints) for the

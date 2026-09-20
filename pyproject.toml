@@ -35,6 +35,10 @@ dynamic = ["version"]
 
 train = ["omegaconf", "wandb", "tensorboard", "tensorboardX", "diffusers", "msgpack", "torchvision"]
 dev = ["ipdb", "jupyterlab", "ipython", "black", "isort"]
+# The real model behind the proposer boundary (mshab/experiments/planning/deepseek.py):
+# DeepSeek's API is OpenAI-compatible, so the openai SDK is the client. Tests never
+# import it; only DeepSeekChat does, lazily.
+planning = ["openai>=1.0"]
 
 [tool.setuptools]
 include-package-data = true

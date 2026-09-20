@@ -5,7 +5,8 @@
 # Follows the "Setup and Installation" section of README.md:
 #   1. python >= 3.9 environment
 #   2. ManiSkill3 (`mshab` branch) installed from source
-#   3. `pip install -e .[train,dev]` for this repo
+#   3. `pip install -e .[train,dev,planning]` for this repo (`planning` adds the
+#      openai SDK the DeepSeek proposer of mshab/experiments/planning uses)
 #   4. ycb / ReplicaCAD / ReplicaCADRearrange assets (downloaded at *run* time,
 #      see `mshab-download-assets` below -- they are several GB and belong in a
 #      mounted volume, not in the image)
@@ -104,13 +105,13 @@ RUN git clone ${MANISKILL_REPO} -b ${MANISKILL_BRANCH} --single-branch /work/Man
 RUN python -c "exec('import sapien.physx as physx\ntry:\n  physx.enable_gpu()\nexcept Exception:\n  pass')"
 
 # ---------------------------------------------------------------------------
-# MS-HAB itself (train + dev extras)
+# MS-HAB itself (train + dev + planning extras)
 # ---------------------------------------------------------------------------
 # NOTE: `mshab` is an implicit namespace package (no top-level __init__.py), so
 # the whole tree is copied before installing -- don't stub one in to win a cache
 # layer, it changes how setuptools resolves the package.
 COPY . /work/mshab
-RUN pip install -e "/work/mshab[train,dev]"
+RUN pip install -e "/work/mshab[train,dev,planning]"
 
 # ---------------------------------------------------------------------------
 # Assets

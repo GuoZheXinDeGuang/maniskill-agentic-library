@@ -32,6 +32,11 @@ services:
       # and tensorboard logs appear on the host under ./mshab_exps (gitignored)
       # instead of being lost with the container.
       MSHAB_EXPS_DIR: /work/mshab/mshab_exps
+      # The DeepSeek proposer (mshab/experiments/planning) reads its key from
+      # here. Export it on the host or put `DEEPSEEK_API_KEY=...` in a `.env`
+      # file next to this compose file (gitignored); it is never baked into
+      # the image.
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
     volumes:
       # ycb / ReplicaCAD / ReplicaCADRearrange + generated datasets
       - mshab-assets:/root/.maniskill
