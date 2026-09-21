@@ -40,10 +40,7 @@ from typing import (
     Tuple,
 )
 
-from mshab.experiments.granularity.higher_layers.builders import (
-    SET_TABLE_GOAL,
-    TIDY_HOUSE_GOAL,
-)
+from mshab.experiments.granularity.higher_layers.builders import SET_TABLE_GOAL
 from mshab.experiments.granularity.higher_layers.gold import (
     GOLD_GRAPHS,
     GoldGraph,
@@ -146,12 +143,6 @@ def _scenarios_for(goal: str) -> Tuple[str, ...]:
 
 
 EVALUATION_GOALS: Mapping[str, EvaluationGoal] = {
-    "tidy_house": EvaluationGoal(
-        "tidy_house",
-        TIDY_HOUSE_GOAL,
-        _references_for(TIDY_HOUSE_GOAL),
-        _scenarios_for(TIDY_HOUSE_GOAL),
-    ),
     "set_table": EvaluationGoal(
         "set_table",
         SET_TABLE_GOAL,
@@ -271,8 +262,8 @@ def subgraph_agreement(
     """Node and edge agreement with the gold subgraph of the same predicate.
 
     Nodes are matched by role and edges by the roles they join.  The whole
-    graph's role set is compared too: it is the same 20 atomic subtasks at
-    every TidyHouse granularity, so a difference there is not a granularity
+    graph's role set is compared too: it is the same 16 atomic subtasks at
+    every SetTable granularity, so a difference there is not a granularity
     effect but a planning one.
     """
 

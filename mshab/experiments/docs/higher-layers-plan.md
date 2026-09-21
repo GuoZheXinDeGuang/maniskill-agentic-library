@@ -45,7 +45,7 @@ stage 2  gold graphs          hand-authored L1/L2 over those contracts, coarse a
 stage 3  proposer boundary     Decomposition/Subgraph request and response documents + ScriptedProposer
 stage 4  online loop          execute -> observe -> re-decide, symbolic environment, replan hook
 stage 5  real model           DeepSeek API behind the same boundary, granularity sweep
-stage 6  MS-HAB               the same controller on the simulator: TidyHouse adapter, checkpoint executor, GPU runner
+stage 6  MS-HAB               the same controller on the simulator: SetTable adapter, checkpoint executor, GPU runner
 ```
 
 ## What the upper layers already provide
@@ -101,7 +101,7 @@ All six stages are implemented; the per-stage sections below record how.
    had no fact extractor and `PolicyExecutor` no implementation, and the
    official environment is a state machine over its own plan that advances
    and terminates by itself. `mshab/experiments/rollout/` supplies the
-   TidyHouse episode (entities, facts, node -> plan subtask), an environment
+   episode (entities, facts, node -> plan subtask), an environment
    subclass whose pointer the runtime controls, and the checkpoint executor.
 
 ## Stage 1: align the granularity lower layers with `mshab.skills`
@@ -157,21 +157,24 @@ the scripted proposer returns in stages 3 and 4, and it is the reference
 the real model's output is compared against in stage 5. Gold graphs are
 not a library for later work to build on.
 
-TidyHouse is an official MS-HAB long-horizon task (alongside PrepareGroceries
-and SetTable): five object transfers, 20 atomic subtasks, no articulations,
-RL checkpoints for all nine object categories. That makes it the primary
-task here, exactly as `tasks/tidy_house/README.md` already proposes.
+SetTable is an official MS-HAB long-horizon task (alongside TidyHouse and
+PrepareGroceries): two objects taken out of two storages (the bowl out of
+the kitchen counter drawer, the apple out of the fridge) onto the dining
+table, each storage closed again, 16 atomic subtasks in two eight-subtask
+segments (`navigate, open, navigate, pick, navigate, place, navigate,
+close`), RL checkpoints for both objects and both articulations. It is the
+task of the experiment since 2026-09-21; until then the experiment ran on
+TidyHouse (five transfers, 20 subtasks, no articulations), whose design
+`tasks/tidy_house/README.md` keeps as a note.
 
-Builders follow the `SetTableGraphBuilder` pattern but reference the generic
-contracts with explicit arguments. Each result is saved as a `SkillGraphPatch`
-JSON document under `mshab/experiments/granularity/graphs/<name>.json`:
+Builders reference the generic contracts with explicit arguments. Each
+result is saved as a `SkillGraphPatch` JSON document under
+`mshab/experiments/granularity/graphs/<name>.json`:
 
 | Graph | Sub-goals | Nodes | Role |
 | --- | --- | --- | --- |
-| `tidy_house_coarse` | 5 | 20 | One `at(object_i,destination_i)` sub-goal per object |
-| `tidy_house_fine` | 20 | 20 | `reachable -> holding -> reachable(dest) -> at` per object; same nodes, different ownership |
-| `set_table_generic` | 8 | 16 | The packaged SetTable re-expressed with generic contracts; regression against the existing catalog |
-| `prepare_groceries` | 7 to 9 | ~20 | Fridge open/close plus object transfers; exercises articulations (second priority, not built yet: the official transfer sequence is not in this checkout) |
+| `set_table_coarse` | 2 | 16 | One `at(object,dining_table)` sub-goal per object; its subgraph is the whole segment, the closing of the storage included as the achiever's follow-up |
+| `set_table_fine` | 16 | 16 | `reachable(storage) -> open -> reachable(object) -> holding -> reachable(table) -> at -> reachable(storage) -> closed` per object; same nodes, different ownership |
 
 Every skill node is one contract call, which is one MS-HAB atomic subtask:
 the only unit a policy can execute and the only unit the environment
@@ -179,14 +182,16 @@ verifies. Node granularity is therefore fixed, and the experiment varies
 only how many sub-goals own the nodes. With one generic contract per type
 there is exactly one candidate node per role, so the gold graphs contain no
 `FALLBACK_TO` chains; Layer-2 fallback stays covered by the packaged
-SetTable graph.
+SetTable graph. The goal text (*"Set the table with the bowl and apple, then
+close their storage."*) names the results only and never says which storage
+holds which object.
 
 Each graph is validated three ways before it is committed: `SkillGraph.
 validate()` on load, `SkillPlanner.plan()` produces a full path, and every
 node grounds against the stage-1 library. A generator script rebuilds the
 JSON files and an SVG per graph, mirroring the existing `render.py`.
 
-The coarse and fine TidyHouse graphs are the two ends of the granularity
+The coarse and fine SetTable graphs are the two ends of the granularity
 axis. They serve as the scripted proposer's canned answers in stage 3 and as
 the references the real model is compared against in stage 5.
 
@@ -299,7 +304,10 @@ loop:
 - Achievement is judged only for the sub-goal next in line, and stays
   recorded once granted. Judging every sub-goal against the current facts
   would let a transient predicate such as `reachable(x)` mark a later
-  sub-goal done and skip nodes that are still needed.
+  sub-goal done and skip nodes that are still needed. A sub-goal whose
+  nodes have started is achieved only once the planner wants nothing more
+  from it, so a predicate that comes true at the achiever does not skip the
+  follow-ups behind it (2026-09-21).
 - Success is judged on the scenario's `goal_facts`, independently of the
   decomposition. Statuses: `success`, `goal_not_reached`,
   `proposal_rejected`, `replans_exhausted`.
@@ -311,9 +319,16 @@ loop:
   role, so Layer-2 fallback stays covered by SetTable); `pick_exhausted`
   (Layer-1 replan through the scripted proposer, which gives the object up);
   `object_dropped` (the retry cannot be admitted because nothing is held, so
-  the proposer plans the transfer again); `object_already_delivered` (the
-  coarse sub-goal is skipped whole, the fine ones pick the object up and put
-  it back). A SetTable-generic run covers open and close.
+  the proposer plans the object again without re-opening its storage);
+  `object_already_delivered` (the coarse sub-goal is skipped whole, the fine
+  ones open the storage, pick the object up, put it back, and close the
+  storage); `storage_already_open` (the coarse sub-goal fails at the
+  inadmissible `open` and is replanned, the fine `open` sub-goal is
+  absorbed); `object_elsewhere` (the objects are in each other's storage:
+  the pick behind the closed storage times out and the replan tries the
+  other one). Where the objects are is never a fact: a scenario keeps it as
+  *storage physics*, a `ScriptedFailure` with `unless` that makes a pick
+  time out while the object's real storage is closed.
 - Metrics per run: `subgoals`, `subgraphs`, `nodes`, `mean_nodes_per_subgraph`,
   `node_executions`, `failed_executions`, `admission_failures`, `retries`,
   `skipped_nodes`, `redundant_executions`, `achieved_subgoals`,
@@ -366,8 +381,7 @@ Decisions that kept the swap small, and how each was implemented:
   file. Tests inject a recording fake and never call the network.
 
 Evaluation (`python -m mshab.experiments.granularity.evaluate`), per goal
-(TidyHouse with its five scenarios, SetTable-generic with its nominal
-scenario), per granularity setting (`free`, `coarse`, `fine`), over several
+(SetTable with its seven scenarios), per granularity setting (`free`, `coarse`, `fine`), over several
 samples:
 
 - validity rate: accepted on the first try, accepted after retries, rejected;
@@ -395,35 +409,42 @@ and the granularity library are reused unchanged, as the plan required; the
 stage swaps in an adapter and an executor. See the package README for the
 details; the decisions were:
 
-- **One official episode is the scene.** A TidyHouse sequential plan (20
-  subtasks: navigate, pick, navigate, place per transfer) is read as plain
-  JSON. Objects are named by category so `pick(024_bowl)` grounds to the
-  bowl checkpoint (a second instance is `024_bowl_2`); receptacles take their
-  scene names from the episode config's `goal_receptacles`
-  (`frl_apartment_table_01`, ...), checked against the plan's objects first,
-  else `receptacle_<k>` by distinct goal rectangle. The goal text pairs every
-  object with its receptacle, which the stage-5 smoke test showed a model
-  needs. `TidyHouseEpisode` is standard library only and tested on CPU.
+- **One official episode is the scene.** A SetTable sequential plan (16
+  subtasks: navigate, open, navigate, pick, navigate, place, navigate, close
+  per object) is read as plain JSON. Objects are named by category so
+  `pick(024_bowl)` grounds to the bowl checkpoint (a second instance is
+  `024_bowl_2`); storages by articulation type (`kitchen_counter`, `fridge`),
+  which is also the target of their open and close checkpoints; receptacles
+  take their scene names from the episode config's `goal_receptacles`
+  (`frl_apartment_table_02`, ...), checked against the plan's objects first,
+  else `receptacle_<k>` by distinct goal rectangle. The goal text names the
+  objects and the table and asks for the storages to be closed, but not
+  which storage holds which object. `SetTableEpisode` is standard library
+  only and tested on CPU.
 - **The policies observe the pointed subtask, so executing a node means
-  pointing the environment at its plan subtask.** `TidyHouseEpisode.
-  subtask_for` maps a grounding to a subtask index: the transfer's own for
+  pointing the environment at its plan subtask.** `SetTableEpisode.
+  subtask_for` maps a grounding to a subtask index: the segment's own for
   pick and place (a place to another receptacle than the plan's is
   `UnsupportedGrounding`, reported as the failure mode `no_matching_subtask`),
-  the navigation before it for `navigate(object)` and `navigate(receptacle)`
-  (a shared receptacle resolves to the transfer whose object is held). The
+  open and close for the segment that still needs the storage, the
+  navigation before the open for `navigate(storage)` while it is closed and
+  the one before the close once it stands open, the navigation before the
+  place of the segment whose object is held for `navigate(receptacle)`. The
   official `SequentialTask-v0` advances the pointer and ends the episode by
   itself, so `SkillRollout-v0` subclasses it: the pointer moves only through
   `point_at`, `evaluate()` reports the pointed subtask's checkers as
   `subtask_success` and never advances, and `scene_measurements()` runs the
-  grasp, place, and navigation checks for every object and goal of the plan
-  so the whole scene becomes facts.
+  grasp, place, navigation, and articulation-joint checks for every subtask
+  of the plan so the whole scene becomes facts.
 - **Facts are MS-HAB's own checkers.** `holding(x)` is the grasp check,
   `at(x,r)` the object inside its goal and not grasped, `reachable(x)`
-  navigation success for that target without the arm terms,
-  `gripper_empty()` when nothing is grasped, `collision_safe()` the pointed
-  subtask's cumulative-force limit. Nothing is re-implemented: admission,
-  invariant monitoring, and effect verification run in `SkillRuntime` on
-  these facts, exactly as on the symbolic environment.
+  navigation success for that target without the arm terms, `closed(s)` the
+  close checker's joint term and `open(s)` the open checker's (a storage that
+  is measured and not closed counts as open), `gripper_empty()` when nothing
+  is grasped, `collision_safe()` the pointed subtask's cumulative-force
+  limit. Nothing is re-implemented: admission, invariant monitoring, and
+  effect verification run in `SkillRuntime` on these facts, exactly as on
+  the symbolic environment.
 - **Two checks decide a node.** MS-HAB's subtask checker ends the policy run
   (arm at rest, robot still, object grasped or placed), then the runtime
   verifies the contract's effects on the facts. The horizon is the
@@ -433,50 +454,63 @@ details; the decisions were:
   count and refreshes the facts before re-raising, so a retry is admitted
   with the clean slate an MS-HAB subtask starts with.
 - **Layer 4 is the library's choice, restricted to the task.**
-  `build_granularity_library(root, task_families=("tidy_house",))` binds the
-  21 TidyHouse checkpoints; without the filter the PrepareGroceries
+  `build_granularity_library(root, task_families=("set_table",))` binds the
+  11 SetTable checkpoints; without the filter the PrepareGroceries
   checkpoint of the same object sorts first and would be selected.
   `CheckpointPolicyExecutor` loads SAC and PPO as `mshab.evaluate` does.
 - **A rule-based pseudo model plays the scripted proposer's role.** The
   scripted tables cannot answer a replan they were not given, and a real
-  episode's entities are in no table. `TidyHouseRuleProposer` decomposes the
-  undelivered transfers (a held one first) through `TidyHouseGraphBuilder`
-  with the transfers' original numbers, retries a failed transfer once and
-  then drops it, never drops a transfer whose object is in the gripper, and
-  shortens a coarse subgraph to `navigate -> place` when the object is
-  already held. On the gold graphs' own transfers it reproduces them exactly.
-  The real model runs through the same command line.
+  episode's entities are in no table. `SetTableRuleProposer` decomposes the
+  objects not yet on the table (a held one first) through
+  `SetTableGraphBuilder` with the steps the facts leave open (no `open` for a
+  storage that stands open, no `pick` for a held object, a `close` whenever
+  the storage was or will be open), retries a failed segment once and then
+  gives its object up while still closing its storage, and never gives up a
+  segment whose object is in the gripper. Unlike a model it knows the true
+  scene, the storage each object is in included. On the gold graphs' own
+  segments it reproduces them exactly. The real model runs through the same
+  command line.
 
 The runner is `python -m mshab.experiments.rollout`; `--dry-run` validates
 the proposal and maps every node to its plan subtask without a simulator.
-The first GPU runs (rule proposer, five episodes) executed the official
-checkpoints through the controller: on plan 6 the place policy broke the
-contact-force limit on every attempt, and the official evaluator fails the
-same episode at the same subtask; plans 10, 21, and 42 delivered two to
-four of five objects, with a dropped object picked up again after a Layer-1
-replan and the fine decomposition skipping the sub-goals a replan found
-already achieved. The package README records the numbers. Runs write the
-trace, the executions with their simulator steps, the one-plan document the
-environment loaded, and a video.
+The TidyHouse version of this stage ran on the GPU on 2026-09-20 (rule
+proposer, five episodes; the README of commit `d7fa8de` records the
+numbers: the pipeline reproduced the official evaluator's failure on one
+plan, recovered a dropped object through a Layer-1 replan on another, and
+the fine decomposition skipped the sub-goals a replan found already
+achieved). The SetTable version has not been run on the GPU yet. Runs write
+the trace, the executions with their simulator steps, the one-plan document
+the environment loaded, and a video.
 
 ## Deliverables and order
 
 | # | Deliverable | Depends on | Test |
 | --- | --- | --- | --- |
 | 1 | 53-row manifest, `build_granularity_library`, target-aware `select_policy`; duplicate stores removed | — | `test_granularity_library.py` |
-| 2 | Coarse and fine TidyHouse gold graphs, SetTable regression graph, builders, renderer | 1 | `test_higher_layer_graphs.py` |
+| 2 | Coarse and fine SetTable gold graphs, builder, renderer | 1 | `test_higher_layer_graphs.py` |
 | 3 | Four request/response documents, `GraphProposer`, `ScriptedProposer`, `assemble_patch`, `ProposalValidator` | 2 | `test_planning_boundary.py` |
-| 4 | `SymbolicEnvironmentAdapter`, `SymbolicPolicyExecutor`, `TaskController`, five scenarios, metrics | 3 | `test_task_controller.py` |
+| 4 | `SymbolicEnvironmentAdapter`, `SymbolicPolicyExecutor`, `TaskController`, seven scenarios, metrics | 3 | `test_task_controller.py` |
 | 5 | `DeepSeekProposer`, prompts, validator retries, evaluation script | 4 | `test_deepseek_proposer.py`, `test_granularity_evaluation.py` (offline, fake transport) |
-| 6 | `TidyHouseEpisode`, `SkillRollout-v0`, `RolloutEnvironmentAdapter`, `CheckpointPolicyExecutor`, `TidyHouseRuleProposer`, the rollout runner | 1, 4, 5 | `test_rollout.py` (CPU: episode, facts, mapping, rule proposer, dry run); the GPU runner for the simulator |
+| 6 | `SetTableEpisode`, `SkillRollout-v0`, `RolloutEnvironmentAdapter`, `CheckpointPolicyExecutor`, `SetTableRuleProposer`, the rollout runner | 1, 4, 5 | `test_rollout.py` (CPU: episode, facts, mapping, rule proposer, dry run); the GPU runner for the simulator |
 
 ## Decisions taken
 
 - The VLM authors both upper layers, in two calls: one decomposition, then
   one independent subgraph per sub-goal. Granularity is controlled in the
   decomposition call and is the experimental variable.
-- TidyHouse (official MS-HAB task) is the primary graph source; SetTable
-  re-expressed with generic contracts is the regression case.
+- SetTable (official MS-HAB task) is the graph source since 2026-09-21;
+  the experiment started on TidyHouse, and the packaged SetTable graph in
+  `mshab/skills/tasks/set_table/` stays the reference for Layer-2 fallback.
+- The coarse decomposition is one sub-goal per object (2026-09-21): the
+  closing of the storage belongs to the same sub-goal as the placing, as
+  the achiever's follow-up. For that, `SkillPlanner` runs the nodes an
+  achiever enables inside its own subgraph after it, and the controller
+  marks a started sub-goal achieved only when the planner wants nothing more
+  from it; an untouched sub-goal whose predicate already holds is still
+  skipped whole.
+- The goal text does not say which storage holds which object
+  (2026-09-21): the proposer has to find out from a failed pick and plan the
+  fallback itself. The scenarios keep the truth as storage physics.
 - Aligning the granularity lower layers with `mshab.skills` is stage 1.
 - The first real model is reached through the DeepSeek API, text only. The
   retry budget is the validator's, not the model's: rejections travel back

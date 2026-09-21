@@ -30,24 +30,22 @@ class EvaluationTests(TestCase):
         self.addCleanup(self.temporary_directory.cleanup)
         self.library = build_granularity_library(Path(self.temporary_directory.name))
 
-    def test_registry_covers_both_goals(self):
-        tidy = EVALUATION_GOALS["tidy_house"]
-        self.assertEqual(tidy.references, {"coarse": "tidy_house_coarse", "fine": "tidy_house_fine"})
-        self.assertEqual(tidy.scenarios[0], "nominal")
-        self.assertEqual(len(tidy.scenarios), 5)
-        self.assertEqual(tidy.reference_names("free"), ("tidy_house_coarse", "tidy_house_fine"))
-        self.assertEqual(tidy.reference_names("fine"), ("tidy_house_fine",))
+    def test_registry_covers_the_goal(self):
+        self.assertEqual(list(EVALUATION_GOALS), ["set_table"])
         table = EVALUATION_GOALS["set_table"]
-        self.assertEqual(table.references, {"free": "set_table_generic"})
-        self.assertEqual(table.scenarios, ("set_table_nominal",))
+        self.assertEqual(table.references, {"coarse": "set_table_coarse", "fine": "set_table_fine"})
+        self.assertEqual(table.scenarios[0], "nominal")
+        self.assertEqual(len(table.scenarios), 7)
+        self.assertEqual(table.reference_names("free"), ("set_table_coarse", "set_table_fine"))
+        self.assertEqual(table.reference_names("fine"), ("set_table_fine",))
         self.assertEqual(table.nominal.goal, table.goal)
 
     def test_the_gold_proposer_agrees_with_its_own_gold_graph(self):
         with TemporaryDirectory() as tmp:
             evaluation = Evaluation(self.library, scripted_factory(self.library), retries=2, output=Path(tmp))
-            summary = evaluation.run(["tidy_house"], ["coarse", "fine"], samples=1)
-            for granularity, reference, span in (("coarse", "tidy_house_coarse", 3), ("fine", "tidy_house_fine", 12)):
-                block = summary["goals"]["tidy_house"][granularity]
+            summary = evaluation.run(["set_table"], ["coarse", "fine"], samples=1)
+            for granularity, reference, span in (("coarse", "set_table_coarse", 2), ("fine", "set_table_fine", 9)):
+                block = summary["goals"]["set_table"][granularity]
                 self.assertEqual(block["validity"], {"accepted_first_try": 1, "accepted_after_retries": 0, "rejected": 0})
                 self.assertEqual(block["rounds"], 1.0)
                 self.assertEqual(block["calls"], 1 + block["decomposition"]["subgoals"]["mean"])
@@ -56,56 +54,61 @@ class EvaluationTests(TestCase):
                 self.assertEqual(block["subgraphs"][reference]["nodes_match_rate"], 1.0)
                 self.assertEqual(block["subgraphs"][reference]["edges_match_rate"], 1.0)
                 self.assertEqual(block["subgraphs"][reference]["graph_role_recall"], 1.0)
-                self.assertEqual(sorted(block["scenarios"]), sorted(EVALUATION_GOALS["tidy_house"].scenarios))
+                self.assertEqual(sorted(block["scenarios"]), sorted(EVALUATION_GOALS["set_table"].scenarios))
                 self.assertEqual(block["scenarios"]["nominal"]["success_rate"], 1.0)
                 self.assertEqual(block["scenarios"]["nominal"]["statuses"], {"success": 1})
-                self.assertEqual(block["scenarios"]["nominal"]["metrics"]["node_executions"], 20)
+                self.assertEqual(block["scenarios"]["nominal"]["metrics"]["node_executions"], 16)
                 self.assertEqual(block["scenarios"]["nominal"]["metrics"]["proposal_retries"], 0)
                 self.assertEqual(block["scenarios"]["nominal"]["metrics"]["proposer_calls"], block["calls"])
                 self.assertEqual(block["scenarios"]["pick_exhausted"]["success_rate"], 0.0)
                 self.assertEqual(block["scenarios"]["pick_exhausted"]["metrics"]["replanning_span"], span)
                 self.assertEqual(block["scenarios"]["object_dropped"]["metrics"]["recovery_success"], 1.0)
+                self.assertEqual(block["scenarios"]["object_elsewhere"]["success_rate"], 1.0)
                 self.assertEqual(block["errors"], 0)
-            self.assertEqual(summary["goals"]["tidy_house"]["coarse"]["decomposition"]["vocabulary"], {"at": 5})
+            self.assertEqual(summary["goals"]["set_table"]["coarse"]["decomposition"]["vocabulary"], {"at": 2})
             self.assertEqual(
-                summary["goals"]["tidy_house"]["fine"]["decomposition"]["vocabulary"],
-                {"reachable": 10, "holding": 5, "at": 5},
+                summary["goals"]["set_table"]["fine"]["decomposition"]["vocabulary"],
+                {"reachable": 8, "open": 2, "holding": 2, "at": 2, "closed": 2},
             )
             self.assertEqual(summary["rejections"], [])
             self.assertEqual(summary["samples"], 2)
             json.dumps(summary)
-            root = Path(tmp) / "tidy_house"
+            root = Path(tmp) / "set_table"
             static = json.loads((root / "coarse" / "sample_00" / "static.json").read_text())
             self.assertTrue(static["accepted"])
             self.assertEqual(len(static["rounds"]), 1)
-            self.assertEqual(static["evaluation"]["decomposition"]["subgoals"], 5)
+            self.assertEqual(static["evaluation"]["decomposition"]["subgoals"], 2)
             run = json.loads((root / "fine" / "sample_00" / "scenario_object_dropped.json").read_text())
             self.assertEqual(run["status"], "success")
             self.assertEqual(len(run["proposals"][0]["rounds"]), 1)
 
     def test_agreement_metrics_separate_the_two_granularities(self):
-        coarse = build_gold_graph("tidy_house_coarse", self.library)
-        fine = build_gold_graph("tidy_house_fine", self.library)
+        coarse = build_gold_graph("set_table_coarse", self.library)
+        fine = build_gold_graph("set_table_fine", self.library)
         subgoals = tuple(coarse.subgoal_graph.subgoals[i] for i in coarse.subgoal_graph.execution_order())
         agreement = decomposition_agreement(subgoals, fine.subgoal_graph)
         self.assertFalse(agreement["exact"])
         self.assertEqual(agreement["precision"], 1.0)
-        self.assertEqual(agreement["recall"], 0.25)
-        self.assertEqual(agreement["order_similarity"], 0.25)
-        self.assertEqual((agreement["subgoals"], agreement["gold_subgoals"]), (5, 20))
+        # Recall is over the fine graph's 13 distinct predicates (it reaches
+        # each storage and the table twice); order similarity over its 16 rows.
+        self.assertAlmostEqual(agreement["recall"], 2 / 13)
+        self.assertEqual(agreement["order_similarity"], 0.125)
+        self.assertEqual((agreement["subgoals"], agreement["gold_subgoals"]), (2, 16))
         subgraphs = subgraph_agreement(coarse.subgoal_graph, coarse.skill_graph, fine)
-        self.assertEqual(subgraphs["matched"], 5)
+        self.assertEqual(subgraphs["matched"], 2)
         self.assertEqual(subgraphs["nodes_match_rate"], 0.0)
-        self.assertEqual(subgraphs["node_jaccard"], 0.25)
+        # A coarse segment has seven distinct roles (the storage is navigated
+        # to twice); the fine gold subgraph of at(...) has one.
+        self.assertAlmostEqual(subgraphs["node_jaccard"], 1 / 7)
         self.assertEqual(subgraphs["edge_jaccard"], 0.0)
         self.assertEqual(subgraphs["graph_role_precision"], 1.0)
         self.assertEqual(subgraphs["graph_role_recall"], 1.0)
-        self.assertEqual(len(subgraphs["missing_predicates"]), 15)
+        self.assertEqual(len(subgraphs["missing_predicates"]), 11)
         self.assertEqual(subgraphs["unmatched_predicates"], [])
         self.assertEqual(subgraphs["per_subgoal"][0]["gold_nodes"], 1)
         self.assertEqual(
-            node_role(coarse.skill_graph.nodes["pick_object_1"]),
-            ("pick", (("object", "002_master_chef_can"),)),
+            node_role(coarse.skill_graph.nodes["pick_bowl"]),
+            ("pick", (("object", "024_bowl"),)),
         )
         self.assertEqual(order_similarity(["a", "b", "c"], ["a", "c"]), 2 / 3)
         self.assertEqual(order_similarity([], []), 1.0)
@@ -144,7 +147,7 @@ class EvaluationTests(TestCase):
         self.assertEqual(summary["rejections"][0]["count"], 4)
         self.assertIn("no scripted decomposition", summary["rejections"][0]["rule"])
         with self.assertRaisesRegex(KeyError, "unknown evaluation goal"):
-            evaluation.run(["prepare_groceries"], ["free"], samples=1)
+            evaluation.run(["tidy_house"], ["free"], samples=1)
         with self.assertRaisesRegex(ValueError, "granularity must be one of"):
             evaluation.run(["set_table"], ["medium"], samples=1)
 
@@ -155,31 +158,32 @@ class EvaluationTests(TestCase):
                 summary = main(
                     [
                         "--proposer", "scripted",
-                        "--goals", "set_table", "tidy_house",
+                        "--goals", "set_table",
                         "--granularities", "free", "coarse",
                         "--samples", "1",
-                        "--scenarios", "nominal", "set_table_nominal",
+                        "--scenarios", "nominal", "storage_already_open",
                         "--output", str(output),
                         "--checkpoint-root", tmp,
                     ]
                 )
-            self.assertEqual(sorted(summary["goals"]), ["set_table", "tidy_house"])
+            self.assertEqual(list(summary["goals"]), ["set_table"])
             # The scripted proposer only answers granularities a gold graph was authored at.
-            self.assertEqual(list(summary["goals"]["tidy_house"]), ["coarse"])
-            self.assertEqual(list(summary["goals"]["set_table"]), ["free"])
-            table = summary["goals"]["set_table"]["free"]
+            self.assertEqual(list(summary["goals"]["set_table"]), ["coarse"])
+            table = summary["goals"]["set_table"]["coarse"]
             self.assertEqual(table["validity"]["accepted_first_try"], 1)
-            self.assertEqual(table["decomposition"]["agreement"]["set_table_generic"]["exact_rate"], 1.0)
-            self.assertEqual(table["scenarios"]["set_table_nominal"]["success_rate"], 1.0)
-            self.assertEqual(table["scenarios"]["set_table_nominal"]["metrics"]["node_executions"], 16)
-            self.assertEqual(list(summary["goals"]["tidy_house"]["coarse"]["scenarios"]), ["nominal"])
+            self.assertEqual(table["decomposition"]["agreement"]["set_table_coarse"]["exact_rate"], 1.0)
+            self.assertEqual(sorted(table["scenarios"]), ["nominal", "storage_already_open"])
+            self.assertEqual(table["scenarios"]["nominal"]["success_rate"], 1.0)
+            self.assertEqual(table["scenarios"]["nominal"]["metrics"]["node_executions"], 16)
+            self.assertEqual(table["scenarios"]["storage_already_open"]["metrics"]["admission_failures"], 2)
             document = json.loads((output / "summary.json").read_text())
             self.assertEqual(document["proposer"]["proposer"], "ScriptedProposer")
-            self.assertEqual(document["samples"], 2)
+            self.assertEqual(document["samples"], 1)
             self.assertFalse((output / "exchanges.json").exists())
             output_text = printed.getvalue()
-            self.assertIn("[set_table free #0] static proposal", output_text)
-            self.assertIn("set_table    free    n=1   first=1 retried=0 rejected=0", output_text)
-            self.assertIn("vs set_table_generic    exact=1.00", output_text)
+            self.assertIn("[set_table coarse #0] static proposal", output_text)
+            self.assertIn("set_table    coarse  n=1   first=1 retried=0 rejected=0", output_text)
+            self.assertIn("vs set_table_coarse", output_text)
+            self.assertIn("exact=1.00", output_text)
             self.assertNotIn("most frequent rejections", output_text)
             self.assertIn("wrote", output_text)

@@ -8,8 +8,8 @@ from unittest import TestCase, mock
 from mshab.experiments.granularity import build_granularity_library, contract_id
 from mshab.experiments.granularity.higher_layers import (
     build_gold_graph,
-    tidy_house_entities,
-    tidy_house_initial_facts,
+    set_table_entities,
+    set_table_initial_facts,
 )
 from mshab.experiments.planning import (
     DECOMPOSITION_SYSTEM_PROMPT,
@@ -94,24 +94,24 @@ class _Base(TestCase):
         self.temporary_directory = TemporaryDirectory()
         self.addCleanup(self.temporary_directory.cleanup)
         self.library = build_granularity_library(Path(self.temporary_directory.name))
-        self.gold = build_gold_graph("tidy_house_coarse", self.library)
+        self.gold = build_gold_graph("set_table_coarse", self.library)
         self.goal = self.gold.spec.goal
 
     def context(self, granularity="coarse"):
         return PlanningContext.initial(
             self.library,
             TASK,
-            entities=tidy_house_entities(),
-            facts=tidy_house_initial_facts(),
+            entities=set_table_entities(),
+            facts=set_table_initial_facts(),
             granularity=granularity,
         )
 
-    def bad_subgraph(self, subgoal_id="object_2_delivered"):
+    def bad_subgraph(self, subgoal_id="apple_delivered"):
         """A subgraph the validator refuses: its node names a contract that does not exist."""
 
         subgraph = SkillSubgraph(subgoal_id, TASK)
         subgraph.add_node(
-            SkillNode("fly_2", "mshab.granularity.fly.all", {"target": "003_cracker_box"}, (subgoal_id,))
+            SkillNode("fly_apple", "mshab.granularity.fly.all", {"target": "013_apple"}, (subgoal_id,))
         )
         return json.dumps(SubgraphResponse(subgraph).as_dict())
 
@@ -135,16 +135,16 @@ class ProposerTests(_Base):
         self.assertEqual(exchange.fingerprint, request.fingerprint())
         self.assertEqual(exchange.messages, tuple(conversation))
 
-        subgoal = self.gold.subgoal_graph.subgoals["object_1_delivered"]
+        subgoal = self.gold.subgoal_graph.subgoals["bowl_delivered"]
         subgraph_request = SubgraphRequest(
             TASK, self.goal, subgoal, request.context.contracts,
             entities=request.context.entities, facts=request.context.facts,
-            neighbours=Neighbours(None, "at(003_cracker_box,dining_table)"),
+            neighbours=Neighbours(None, "at(013_apple,dining_table)"),
         )
         answer = proposer.plan_subgraph(subgraph_request)
         self.assertEqual(
             answer.subgraph.execution_order(),
-            self.gold.skill_graph.subgraph_for_subgoal("object_1_delivered").execution_order(),
+            self.gold.skill_graph.subgraph_for_subgoal("bowl_delivered").execution_order(),
         )
         self.assertEqual(chat.conversations[1][0]["content"], SUBGRAPH_SYSTEM_PROMPT)
         self.assertEqual(json.loads(chat.conversations[1][1]["content"]), subgraph_request.as_dict())
@@ -171,7 +171,7 @@ class ProposerTests(_Base):
         proposer = DeepSeekProposer(chat)
         request = DecompositionRequest(TASK, self.goal, self.context())
         for _ in range(3):
-            self.assertEqual(len(proposer.decompose(request).subgoals), 5)
+            self.assertEqual(len(proposer.decompose(request).subgoals), 2)
         self.assertEqual(proposer.exchanges[2].reply.usage, {"total_tokens": 15})
         with self.assertRaisesRegex(ValueError, "empty"):
             proposer.decompose(request)
@@ -240,40 +240,37 @@ class ProposerTests(_Base):
 
 class RetryTests(_Base):
     def test_a_refused_subgraph_call_is_retried_in_its_own_conversation(self):
-        chat = GoldChat(self.gold, {"object_2_delivered": [self.bad_subgraph()]})
+        chat = GoldChat(self.gold, {"apple_delivered": [self.bad_subgraph()]})
         proposer = DeepSeekProposer(chat)
         validator = ProposalValidator(self.library, TASK, retries=2)
         proposal = validator.plan(proposer, self.goal, self.context())
         self.assertEqual(proposal.skill_graph.as_dict(), self.gold.skill_graph.as_dict())
         self.assertEqual(proposal.retries, 1)
         first, second = proposal.rounds
-        self.assertEqual([call.call for call in first.calls], ["decompose"] + ["plan_subgraph"] * 5)
+        self.assertEqual([call.call for call in first.calls], ["decompose"] + ["plan_subgraph"] * 2)
         self.assertEqual(
             [(item.stage, item.subgoal_id) for item in first.rejections],
-            [("subgraph", "object_2_delivered")],
+            [("subgraph", "apple_delivered")],
         )
         self.assertIn("unknown contract 'mshab.granularity.fly.all'", first.rejections[0].message)
         self.assertIn("unknown contract", first.calls[2].error)
         self.assertIsNotNone(first.calls[2].response)
         self.assertTrue(second.decomposition_reused)
-        self.assertEqual(
-            second.reused_subgoals,
-            ("object_1_delivered", "object_3_delivered", "object_4_delivered", "object_5_delivered"),
-        )
-        self.assertEqual([(call.call, call.subgoal_id) for call in second.calls], [("plan_subgraph", "object_2_delivered")])
+        self.assertEqual(second.reused_subgoals, ("bowl_delivered",))
+        self.assertEqual([(call.call, call.subgoal_id) for call in second.calls], [("plan_subgraph", "apple_delivered")])
         self.assertEqual(second.calls[0].request.rejections, first.rejections)
         self.assertEqual(second.calls[0].error, None)
         # The retry is a further user turn of the same conversation, after the refused answer.
-        self.assertEqual(len(chat.conversations), 7)
+        self.assertEqual(len(chat.conversations), 4)
         retry = chat.conversations[-1]
         self.assertEqual([message["role"] for message in retry], ["system", "user", "assistant", "user"])
         self.assertEqual(retry[2]["content"], self.bad_subgraph())
         self.assertIn("unknown contract 'mshab.granularity.fly.all'", retry[3]["content"])
-        self.assertEqual([exchange.turn for exchange in proposer.exchanges], [0] * 6 + [1])
+        self.assertEqual([exchange.turn for exchange in proposer.exchanges], [0] * 3 + [1])
         # The accepted answers come from different rounds; the trace has both.
         trace = proposal.as_dict()
         self.assertEqual(len(trace["rounds"]), 2)
-        self.assertEqual(trace["rounds"][0]["calls"][2]["subgoal_id"], "object_2_delivered")
+        self.assertEqual(trace["rounds"][0]["calls"][2]["subgoal_id"], "apple_delivered")
         self.assertEqual(trace["rounds"][1]["reused_subgoals"], list(second.reused_subgoals))
         self.assertEqual(trace["subgraphs"][1]["request"]["rejections"][0]["stage"], "subgraph")
         json.dumps(trace)
@@ -281,7 +278,7 @@ class RetryTests(_Base):
             path = Path(tmp) / "exchanges.json"
             proposer.save_exchanges(path)
             document = json.loads(path.read_text())
-        self.assertEqual(len(document), 7)
+        self.assertEqual(len(document), 4)
         self.assertEqual(document[-1]["turn"], 1)
         # The refused answer parsed fine; the exchange log records parse and
         # schema errors only, the validator's reason lives in the round.
@@ -290,22 +287,22 @@ class RetryTests(_Base):
 
     def test_retries_run_out_after_two_more_rounds(self):
         bad = self.bad_subgraph()
-        chat = GoldChat(self.gold, {"object_2_delivered": [bad, bad, bad]})
+        chat = GoldChat(self.gold, {"apple_delivered": [bad, bad, bad]})
         with self.assertRaises(ProposalRejected) as raised:
             ProposalValidator(self.library, TASK, retries=2).plan(DeepSeekProposer(chat), self.goal, self.context())
         self.assertEqual(len(raised.exception.rounds), 3)
-        self.assertEqual([len(item.calls) for item in raised.exception.rounds], [6, 1, 1])
-        self.assertEqual(len(chat.conversations), 8)
+        self.assertEqual([len(item.calls) for item in raised.exception.rounds], [3, 1, 1])
+        self.assertEqual(len(chat.conversations), 5)
         self.assertEqual(
             [message["role"] for message in chat.conversations[-1]],
             ["system", "user", "assistant", "user", "assistant", "user"],
         )
         # Without a retry budget the first refusal is final, as before.
-        chat = GoldChat(self.gold, {"object_2_delivered": [bad]})
+        chat = GoldChat(self.gold, {"apple_delivered": [bad]})
         with self.assertRaises(ProposalRejected) as raised:
             ProposalValidator(self.library, TASK).plan(DeepSeekProposer(chat), self.goal, self.context())
         self.assertEqual(len(raised.exception.rounds), 1)
-        self.assertEqual(len(chat.conversations), 6)
+        self.assertEqual(len(chat.conversations), 3)
         with self.assertRaisesRegex(ValueError, "retries cannot be negative"):
             ProposalValidator(self.library, TASK, retries=-1)
 
@@ -323,7 +320,7 @@ class RetryTests(_Base):
         self.assertIsNone(first.calls[0].response)
         self.assertFalse(second.decomposition_reused)
         self.assertEqual(second.reused_subgoals, ())
-        self.assertEqual([call.call for call in second.calls], ["decompose"] + ["plan_subgraph"] * 5)
+        self.assertEqual([call.call for call in second.calls], ["decompose"] + ["plan_subgraph"] * 2)
         self.assertEqual(second.calls[0].request.rejections, first.rejections)
         self.assertEqual(
             [message["role"] for message in chat.conversations[1]],
@@ -332,17 +329,17 @@ class RetryTests(_Base):
         self.assertIn("cannot repeat", chat.conversations[1][3]["content"])
 
     def test_a_plan_stage_rejection_is_attributed_and_retried_per_sub_goal(self):
-        ambiguous = SkillSubgraph("object_3_delivered", TASK)
+        ambiguous = SkillSubgraph("apple_delivered", TASK)
         for node_id in ("place_a", "place_b"):
             ambiguous.add_node(
                 SkillNode(
                     node_id, contract_id("place"),
-                    {"object": "004_sugar_box", "destination": "coffee_table"},
-                    ("object_3_delivered",),
+                    {"object": "013_apple", "destination": "dining_table"},
+                    ("apple_delivered",),
                 )
             )
         chat = GoldChat(
-            self.gold, {"object_3_delivered": [json.dumps(SubgraphResponse(ambiguous).as_dict())]}
+            self.gold, {"apple_delivered": [json.dumps(SubgraphResponse(ambiguous).as_dict())]}
         )
         proposal = ProposalValidator(self.library, TASK, retries=1).plan(
             DeepSeekProposer(chat), self.goal, self.context()
@@ -350,9 +347,9 @@ class RetryTests(_Base):
         first, second = proposal.rounds
         self.assertEqual(
             [(item.stage, item.subgoal_id) for item in first.rejections],
-            [("plan", "object_3_delivered")],
+            [("plan", "apple_delivered")],
         )
         self.assertIn("no FALLBACK_TO order", first.rejections[0].message)
         self.assertTrue(second.decomposition_reused)
-        self.assertEqual([call.subgoal_id for call in second.calls], ["object_3_delivered"])
+        self.assertEqual([call.subgoal_id for call in second.calls], ["apple_delivered"])
         self.assertEqual(proposal.skill_graph.as_dict(), self.gold.skill_graph.as_dict())

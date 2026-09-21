@@ -61,7 +61,7 @@ at the end of the table, which are relative to the repository root.
 | `plan.py` | `SkillPlanner`/`SkillPlan`: choose one achiever per sub-goal |
 | `schema.py` | Strict `from_dict` primitives for untrusted documents |
 | `tasks/set_table/` | Packaged SetTable graph, contract manifest, and stack builders |
-| `tasks/tidy_house/` | Design note only, no code: the coarse/fine variants the granularity experiment implements elsewhere |
+| `tasks/tidy_house/` | Design note only, no code: a coarse/fine TidyHouse design the granularity experiment implemented until 2026-09-21, when the experiment moved to SetTable |
 | `starter.py` | Backward-compatible SetTable imports |
 | `model.py` | Layer 3 contract and Layer 4 policy definitions |
 | `environment.py` | Environment description, entity mapping, snapshots, and adapter |
@@ -78,12 +78,12 @@ at the end of the table, which are relative to the repository root.
 | `tests/skills/test_set_table_graph_decisions.py` | Manual graph -> repeated one-node decision test |
 | `tests/skills/test_skill_library_checkpoints.py` | CPU-only downloaded-checkpoint integration tests |
 | `tests/granularity/test_granularity_library.py` | The granularity experiment's `ContractLibrary` under `mshab/experiments/`, including target-aware policy selection |
-| `tests/granularity/test_higher_layer_graphs.py` | The experiment's gold graphs: validity, grounding, coarse/fine equivalence, SetTable regression, committed artifacts |
+| `tests/granularity/test_higher_layer_graphs.py` | The experiment's SetTable gold graphs: validity, grounding, coarse/fine equivalence, follow-ups, the packaged-plan regression, committed artifacts |
 | `tests/planning/test_planning_boundary.py` | The proposer boundary under `mshab/experiments/planning/`: documents, scripted proposer, assembler, validator rejections |
 | `tests/planning/test_task_controller.py` | The symbolic environment and the `execute -> observe -> re-decide` controller on the experiment's scenarios at both granularities |
 | `tests/planning/test_deepseek_proposer.py` | The real model behind the boundary with a fake transport: prompts, lenient-then-strict parsing, the validator's retry rounds and the further user turn |
 | `tests/granularity/test_granularity_evaluation.py` | The stage-5 evaluation: agreement metrics against the gold graphs, rejection tally, the scripted dry run of the sweep |
-| `tests/rollout/test_rollout.py` | Stage 6 on CPU: one official TidyHouse plan as the symbolic scene, facts from the environment's measurements, node -> plan subtask, the rule-based proposer, the runner's dry run |
+| `tests/rollout/test_rollout.py` | Stage 6 on CPU: one official SetTable plan as the symbolic scene, facts from the environment's measurements, node -> plan subtask, the rule-based proposer, the runner's dry run |
 | `tests/skills/test_task_packages.py` | Public and compatibility imports of the packaged SetTable graph |
 
 ### Where a task's code lives
@@ -97,7 +97,7 @@ do not share a format:
 | Contains | Hand-authored reference implementations | Controlled experiments |
 | Contract ids | One per object, `mshab.set_table.pick.013_apple` | Five generic, `mshab.granularity.pick.all` |
 | Serialized as | `LibraryCatalog` (`catalog.py`) | Gold-graph documents (`SkillGraphPatch` JSON) |
-| Today | SetTable, the packaged reference example | TidyHouse coarse/fine, SetTable regression; the MS-HAB rollout under `experiments/rollout/` |
+| Today | SetTable, the packaged reference example: eight sub-goals, specialised and generic candidates | SetTable coarse (2 sub-goals) and fine (16), scenarios, the MS-HAB rollout under `experiments/rollout/` |
 
 The two serialization formats stay separate on purpose: `LibraryCatalog` is
 the SetTable test artifact, and later work builds on the experiment's
@@ -106,12 +106,13 @@ namespace, and why a skill node is exactly one MS-HAB atomic subtask are
 recorded under "Decisions taken" in the
 [higher-layers plan](../experiments/docs/higher-layers-plan.md).
 
-So TidyHouse appears twice and neither copy is stale:
-[`tasks/tidy_house/README.md`](./tasks/tidy_house/README.md) states the
-controlled coarse/fine design, and
-[`mshab/experiments/granularity/`](../experiments/granularity/README.md)
-implements it. There is no `tasks/tidy_house/` Python module and none is
-planned.
+So SetTable appears twice and neither copy is stale: this package holds the
+hand-authored reference graph with its candidate nodes, and
+[`mshab/experiments/granularity/`](../experiments/granularity/README.md) the
+controlled coarse/fine graphs over the generic contracts.
+[`tasks/tidy_house/README.md`](./tasks/tidy_house/README.md) is a design note
+for a TidyHouse variant of the experiment; there is no `tasks/tidy_house/`
+Python module and none is planned.
 
 
 ## Current implementation boundary
@@ -137,15 +138,15 @@ Implemented now:
   measures validity, agreement with the gold graphs, and controller outcome
   per granularity;
 - the same controller loop on MS-HAB (`mshab/experiments/rollout/`): a
-  TidyHouse entity/fact extractor behind `MSHabEnvironmentAdapter`, a
+  SetTable entity/fact extractor behind `MSHabEnvironmentAdapter`, a
   `PolicyExecutor` that loads the SAC/PPO checkpoints, an environment whose
   subtask pointer the runtime controls (`SkillRollout-v0`), and a GPU runner
   that rolls a proposer's plan out on one official episode with video.
 
 Simulator-specific follow-up work:
 
-- production vectorized SetTable entity/fact extractors (the TidyHouse ones
-  in the rollout package drive one environment);
+- production vectorized entity/fact extractors (the SetTable one in the
+  rollout package drives one environment);
 - BC/DP checkpoint loading and action adapters (the executor loads the RL
   checkpoints);
 - measured policy performance and automatic policy routing;

@@ -9,10 +9,13 @@ no candidate left the sub-goal has failed and the proposer is asked again
 with the failure, the history, and the current facts.
 
 Sub-goal achievement follows the guide: a sub-goal counts as achieved when
-its predicate holds at the moment it becomes the next one in line, and that
-stays recorded even if a later step retracts the predicate.  The skill nodes
-of a sub-goal achieved that way are skipped.  After a replan achievement is
-derived from the current facts again; the earlier history stays in the trace.
+its predicate holds and its subgraph is either untouched (it becomes the next
+one in line with its predicate already true, and its skill nodes are skipped)
+or finished (its achiever and every follow-up have run).  A predicate that
+comes true while follow-ups are still pending does not cut the subgraph
+short.  Achievement stays recorded even if a later step retracts the
+predicate.  After a replan achievement is derived from the current facts
+again; the earlier history stays in the trace.
 """
 
 from __future__ import annotations
@@ -460,12 +463,16 @@ class TaskController:
         step: int,
         achieved_predicates: List[str],
     ) -> int:
-        """Mark the sub-goals next in line whose predicates already hold.
+        """Mark the sub-goals next in line whose predicates hold and whose work is done.
 
         Only a sub-goal whose predecessors are all achieved is examined, so a
         transient predicate that happens to hold early is not mistaken for a
-        later sub-goal being done.  The nodes of a sub-goal achieved this way
-        are recorded as skipped and count as completed for the planner.
+        later sub-goal being done.  A sub-goal none of whose nodes has run is
+        achieved whole and its nodes are recorded as skipped; one that has
+        started is achieved only once the planner wants nothing more from it,
+        so a predicate that comes true at the achiever does not skip the
+        follow-ups behind it.  Unused candidates of a finished sub-goal are
+        recorded as skipped too, and count as completed for the planner.
         """
 
         changed = True
@@ -477,6 +484,8 @@ class TaskController:
                 if not active.subgoal_graph.predecessors(subgoal_id) <= set(active.achieved):
                     continue
                 if not active.subgoal_graph.achieved(subgoal_id, facts):
+                    continue
+                if not TaskController._work_done(active, subgoal_id):
                     continue
                 active.achieved.append(subgoal_id)
                 predicate = active.subgoal_graph.subgoals[subgoal_id].predicate
@@ -501,6 +510,25 @@ class TaskController:
                     )
                 changed = True
         return step
+
+    @staticmethod
+    def _work_done(active: _ActiveGraph, subgoal_id: str) -> bool:
+        """Nothing of the sub-goal has run, or nothing the planner wants is left."""
+
+        subgraph = active.skill_graph.subgraph_for_subgoal(subgoal_id)
+        started = any(
+            node_id in active.completed or node_id in active.failed
+            for node_id in subgraph.nodes
+        )
+        if not started:
+            return True
+        try:
+            remaining = active.planner.remaining(subgoal_id, active.completed, active.failed)
+        except NoViableCandidate:
+            # Every achiever failed, yet the predicate holds: the result is
+            # there, and there is no candidate left that could add to it.
+            return True
+        return not remaining
 
 
 def run_metrics(

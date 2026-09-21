@@ -21,7 +21,7 @@ from omegaconf import OmegaConf
 from mshab.agents.ppo import Agent as PPOAgent
 from mshab.agents.sac import Agent as SACAgent
 from mshab.experiments.rollout.environment import RolloutEnvironmentAdapter
-from mshab.experiments.rollout.episode import TidyHouseEpisode, UnsupportedGrounding
+from mshab.experiments.rollout.episode import SetTableEpisode, UnsupportedGrounding
 from mshab.skills.model import ArtifactStatus, CheckpointPolicy, GroundedSkill, Policy
 from mshab.skills.runtime import (
     ContractMonitor,
@@ -52,7 +52,7 @@ class CheckpointPolicyExecutor(PolicyExecutor):
 
     def __init__(
         self,
-        episode: TidyHouseEpisode,
+        episode: SetTableEpisode,
         *,
         device: Optional[str] = None,
         log: Optional[Callable[[str], None]] = None,

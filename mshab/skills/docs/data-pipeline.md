@@ -135,16 +135,17 @@ is how the attempt summary can print the contract and target a rollout died on.
 | `EnvironmentAdapter`, `EnvironmentSnapshot` | Entity resolution and fact extraction | No SetTable entity/fact extractor is wired up |
 | `SkillPlanner` at runtime | Re-decide after each node | Runs only in stage A; the sequence is frozen into the catalog |
 
-That is the SetTable path. The online `execute -> observe -> re-decide` loop
-exists: `TaskController` in `mshab/experiments/planning/` runs it on a
-symbolic environment, and `mshab/experiments/rollout/` (stage 6 of the
-[higher-layers plan](../../experiments/docs/higher-layers-plan.md)) runs it
-on MS-HAB for TidyHouse, where every object in the table above is on the
-path: the adapter extracts facts from the environment's own checkers, the
-runtime admits and verifies each node, the library selects the checkpoint,
-the executor steps it, and the planner decides after every node. Bringing
-the packaged SetTable graph onto that path needs a SetTable episode (its
-articulations included) in place of the TidyHouse one.
+That is the packaged SetTable path. The online `execute -> observe ->
+re-decide` loop exists: `TaskController` in `mshab/experiments/planning/`
+runs it on a symbolic environment, and `mshab/experiments/rollout/` (stage 6
+of the [higher-layers plan](../../experiments/docs/higher-layers-plan.md))
+runs it on MS-HAB for a SetTable episode over the experiment's generic
+contracts, where every object in the table above is on the path: the adapter
+extracts facts from the environment's own checkers (the articulation joints
+included), the runtime admits and verifies each node, the library selects
+the checkpoint, the executor steps it, and the planner decides after every
+node. Bringing the packaged graph itself onto that path needs its specialised
+contracts bound in that rollout in place of the generic ones.
 
 ## One fact, two sources
 
@@ -160,5 +161,5 @@ and the scripts win:
   `POLICY_TYPE_TASK_SUBTASK_TO_TARG_IDS` and the single `policy_type` flag.
 
 Both disappear once stage C goes through `SkillRuntime`, which reads the
-horizon off the contract and the policy off the library; the TidyHouse
+horizon off the contract and the policy off the library; the experiment's
 rollout does exactly that.

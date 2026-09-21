@@ -1,15 +1,15 @@
 """Roll a proposer's plan out on MS-HAB: the stage-6 command line.
 
-    python -m mshab.experiments.rollout --granularity coarse                 # rule proposer, plan 6
+    python -m mshab.experiments.rollout --granularity coarse                 # rule proposer, plan 0
     python -m mshab.experiments.rollout --granularity fine --plan-index 42
     python -m mshab.experiments.rollout --proposer deepseek --granularity free
     python -m mshab.experiments.rollout --dry-run                            # no simulator
 
-One run is one official TidyHouse episode: the plan is read, the episode's
+One run is one official SetTable episode: the plan is read, the episode's
 entities and goal are derived, the proposer is asked through the validator,
 and ``TaskController`` executes the graph on ``SkillRollout-v0`` with the RL
 checkpoints, replanning through the same proposer when a sub-goal fails.
-The run directory holds ``episode.json``, the one-plan ``tidy_house_plan.json``
+The run directory holds ``episode.json``, the one-plan ``set_table_plan.json``
 the environment loaded, ``trace.json`` (the controller's ``RunResult``),
 ``executions.json`` (every policy run with its subtask and simulator
 steps), ``summary.json``, the model's ``exchanges.json`` when one was used,
@@ -54,41 +54,45 @@ from mshab.experiments.planning.documents import GRANULARITIES, PlanningContext
 from mshab.experiments.planning.proposer import GraphProposer, ProposerUnavailable
 from mshab.experiments.planning.validator import ProposalRejected, ProposalValidator
 from mshab.experiments.rollout.episode import (
-    TRANSFER_SUBTASK_TYPES,
-    TidyHouseEpisode,
+    SEGMENT_SUBTASK_TYPES,
+    SetTableEpisode,
     UnsupportedGrounding,
     load_episode,
     sequential_plan_path,
 )
 from mshab.experiments.rollout.proposer import (
     DEFAULT_GIVE_UP_AFTER,
-    TidyHouseRuleProposer,
+    SetTableRuleProposer,
 )
 from mshab.skills.library import ContractLibrary
 
 
 ROLLOUT_SCHEMA_VERSION = "mshab.rollout-summary.v1"
-TASK_FAMILY = "tidy_house"
-#: The first train plan whose five objects are five distinct categories, so
-#: every symbolic object name is also the name of its specialised checkpoint.
-DEFAULT_PLAN_INDEX = 6
+TASK_FAMILY = "set_table"
+#: Every official SetTable plan moves one bowl and one apple, so any plan
+#: names the specialised checkpoints; the first one is the default.
+DEFAULT_PLAN_INDEX = 0
 #: The validator's retry budget for the real model, as in the stage-5 sweep.
 DEFAULT_MODEL_RETRIES = 2
 PROPOSERS = ("rule", "deepseek")
-PLAN_FILE_NAME = "tidy_house_plan.json"
+PLAN_FILE_NAME = "set_table_plan.json"
 
 
-def nominal_facts(episode: TidyHouseEpisode) -> tuple:
-    """The facts the episode starts from when nothing has happened yet."""
+def nominal_facts(episode: SetTableEpisode) -> tuple:
+    """The facts the episode starts from when nothing has happened yet.
+
+    Every storage is closed; where the objects are is not a fact.
+    """
 
     facts = {"present({})".format(entity.name) for entity in episode.entities()}
+    facts |= {"closed({})".format(source) for source in episode.sources}
     facts |= {"gripper_empty()", "collision_safe()"}
     return tuple(sorted(facts))
 
 
 def step_budget(
     library: ContractLibrary,
-    episode: TidyHouseEpisode,
+    episode: SetTableEpisode,
     attempts_per_node: int,
     max_replans: int,
 ) -> int:
@@ -105,7 +109,7 @@ def step_budget(
         contract.contract_type_name: contract.max_episode_steps + 2
         for contract in library.find(task=EXPERIMENT_TASK)
     }
-    per_pass = sum(horizons[kind] for kind in TRANSFER_SUBTASK_TYPES) * len(episode.transfers)
+    per_pass = sum(horizons[kind] for kind in SEGMENT_SUBTASK_TYPES) * len(episode.segments)
     return per_pass * attempts_per_node * (1 + max_replans) + 1
 
 
@@ -113,14 +117,15 @@ def node_subtasks(
     proposal_plan_order: Sequence[str],
     skill_graph,
     library: ContractLibrary,
-    episode: TidyHouseEpisode,
+    episode: SetTableEpisode,
     facts: Sequence[str],
 ) -> List[Dict[str, Any]]:
     """Which plan subtask every node of a validated proposal stands for.
 
     The facts are rolled forward with every node's effects and deletes, as the
-    symbolic environment would, so a navigation to a receptacle two transfers
-    share resolves to the transfer whose object is held at that point.
+    symbolic environment would, so a navigation to a storage resolves to the
+    navigation before its open while it is closed and to the one before its
+    close once it stands open.
     """
 
     rows = []
@@ -151,20 +156,22 @@ def node_subtasks(
 # -- reporting -------------------------------------------------------------------------
 
 
-def episode_lines(episode: TidyHouseEpisode) -> List[str]:
+def episode_lines(episode: SetTableEpisode) -> List[str]:
     lines = [
         "episode: plan {} of {} ({}, {})".format(
             episode.plan_index, episode.dataset, episode.build_config_name, episode.init_config_name
         ),
         "goal: {}".format(episode.goal),
-        "{:>2}  {:<24} {:<28} {:<24} {}".format(
-            "#", "object", "destination", "instance", "receptacle instance"
+        "{:>2}  {:<8} {:<12} {:<18} {:<20} {:<16} {:<20} {}".format(
+            "#", "label", "object", "storage", "destination", "instance",
+            "storage instance", "receptacle instance",
         ),
     ]
-    for item in episode.transfers:
+    for item in episode.segments:
         lines.append(
-            "{:>2}  {:<24} {:<28} {:<24} {}".format(
-                item.index, item.object, item.destination, item.object_instance,
+            "{:>2}  {:<8} {:<12} {:<18} {:<20} {:<16} {:<20} {}".format(
+                item.index, item.label, item.object, item.source, item.destination,
+                item.object_instance, item.source_instance,
                 item.receptacle_instance or "(unnamed: receptacle by goal rectangle)",
             )
         )
@@ -228,7 +235,7 @@ def result_lines(result: RunResult, executions: Sequence[Dict[str, Any]]) -> Lis
 
 def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Roll a proposer's TidyHouse plan out on MS-HAB (stage 6)."
+        description="Roll a proposer's SetTable plan out on MS-HAB (stage 6)."
     )
     parser.add_argument("--proposer", choices=PROPOSERS, default="rule",
                         help="the rule-based pseudo model, or the real model")
@@ -236,7 +243,7 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
                         help="the rule proposer answers coarse and fine only")
     parser.add_argument("--split", choices=("train", "val"), default="train")
     parser.add_argument("--plan-index", type=int, default=DEFAULT_PLAN_INDEX,
-                        help="which official plan; default {} (five distinct objects)".format(DEFAULT_PLAN_INDEX))
+                        help="which official plan; default {}".format(DEFAULT_PLAN_INDEX))
     parser.add_argument("--task-plan", type=Path, default=None,
                         help="an all.json to read instead of the official split's")
     parser.add_argument("--rearrange-root", type=Path, default=DEFAULT_REARRANGE_ROOT,
@@ -248,7 +255,7 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser.add_argument("--retries", type=int, default=DEFAULT_MODEL_RETRIES,
                         help="how often the validator asks a refused call again")
     parser.add_argument("--give-up-after", type=int, default=DEFAULT_GIVE_UP_AFTER,
-                        help="rule proposer: replans a transfer may cause before it is dropped")
+                        help="rule proposer: replans a segment may cause before its object is given up")
     parser.add_argument("--no-video", action="store_true")
     parser.add_argument("--no-info-on-video", action="store_true")
     parser.add_argument("--output", type=Path, default=None,
@@ -263,7 +270,7 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def make_proposer(args: argparse.Namespace, episode: TidyHouseEpisode) -> GraphProposer:
+def make_proposer(args: argparse.Namespace, episode: SetTableEpisode) -> GraphProposer:
     if args.proposer == "rule":
         if args.granularity not in GOLD_GRANULARITIES:
             sys.exit(
@@ -271,7 +278,7 @@ def make_proposer(args: argparse.Namespace, episode: TidyHouseEpisode) -> GraphP
                     "/".join(GOLD_GRANULARITIES), args.granularity
                 )
             )
-        return TidyHouseRuleProposer(episode, give_up_after=args.give_up_after)
+        return SetTableRuleProposer(episode, give_up_after=args.give_up_after)
     try:
         return DeepSeekProposer(
             model=args.model,

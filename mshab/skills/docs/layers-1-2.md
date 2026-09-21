@@ -194,7 +194,8 @@ output: one selected SkillNode id
 Each decision must:
 
 1. respect sub-goal dependency order;
-2. choose an instrumental node or one achiever from the active subgraph;
+2. choose an instrumental node, one achiever, or a follow-up of that achiever
+   from the active subgraph;
 3. avoid executing unused `ALTERNATIVE_TO` candidates;
 4. send only the selected node to Layer-3 grounding.
 
@@ -205,7 +206,16 @@ the `FALLBACK_TO` chain is the primary, and each `FALLBACK_TO` target is the nex
 candidate to try once its predecessor is reported failed. The same rule
 selects instrumental prerequisites: for every prerequisite chain the planner
 wants the member that already completed, else the first member that has not
-failed. Before returning a
+failed. It also wants the achiever's *follow-ups*: the non-achiever nodes the
+achiever enables inside its own subgraph, directly or through other
+follow-ups, resolved along their own fallback chains the same way. A
+follow-up is work that belongs to the sub-goal but comes once its predicate
+holds, for example navigating back to a drawer and closing it after the
+object was placed; the planner runs it after the achiever and before the
+next sub-goal. A node that merely shares a prerequisite with the achiever,
+such as the setup of an alternative candidate, is not a follow-up.
+`planner.remaining(subgoal_id, completed, failed)` lists what the planner
+still wants from one sub-goal. Before returning a
 node it also checks `graph.ready_nodes(completed)`: Layer 1 fixes only the
 coarse sub-goal order, and the finer Layer-2 relations are what the planner
 obeys.

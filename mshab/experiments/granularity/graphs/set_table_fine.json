@@ -1,8 +1,8 @@
 {
   "context": {},
   "goal": "Set the table with the bowl and apple, then close their storage.",
-  "granularity": null,
-  "name": "set_table_generic",
+  "granularity": "fine",
+  "name": "set_table_fine",
   "nominal_plan": {
     "order": [
       "navigate_to_bowl_source",
@@ -23,14 +23,22 @@
       "close_apple_source"
     ],
     "selections": {
+      "apple_destination_reachable": "navigate_apple_to_destination",
+      "apple_holding": "pick_apple",
       "apple_placed": "place_apple",
-      "apple_retrieved": "pick_apple",
+      "apple_reachable": "navigate_to_apple",
       "apple_source_closed": "close_apple_source",
       "apple_source_open": "open_apple_source",
+      "apple_source_reachable": "navigate_to_apple_source",
+      "apple_source_reachable_again": "navigate_back_to_apple_source",
+      "bowl_destination_reachable": "navigate_bowl_to_destination",
+      "bowl_holding": "pick_bowl",
       "bowl_placed": "place_bowl",
-      "bowl_retrieved": "pick_bowl",
+      "bowl_reachable": "navigate_to_bowl",
       "bowl_source_closed": "close_bowl_source",
-      "bowl_source_open": "open_bowl_source"
+      "bowl_source_open": "open_bowl_source",
+      "bowl_source_reachable": "navigate_to_bowl_source",
+      "bowl_source_reachable_again": "navigate_back_to_bowl_source"
     }
   },
   "patch": {
@@ -38,15 +46,36 @@
       {
         "relation": "enables",
         "source_node": null,
-        "source_subgoal": "bowl_source_open",
-        "target_node": "navigate_to_bowl",
-        "target_subgoal": "bowl_retrieved"
+        "source_subgoal": "bowl_source_reachable",
+        "target_node": "open_bowl_source",
+        "target_subgoal": "bowl_source_open"
       },
       {
         "relation": "enables",
         "source_node": null,
-        "source_subgoal": "bowl_retrieved",
+        "source_subgoal": "bowl_source_open",
+        "target_node": "navigate_to_bowl",
+        "target_subgoal": "bowl_reachable"
+      },
+      {
+        "relation": "enables",
+        "source_node": null,
+        "source_subgoal": "bowl_reachable",
+        "target_node": "pick_bowl",
+        "target_subgoal": "bowl_holding"
+      },
+      {
+        "relation": "enables",
+        "source_node": null,
+        "source_subgoal": "bowl_holding",
         "target_node": "navigate_bowl_to_destination",
+        "target_subgoal": "bowl_destination_reachable"
+      },
+      {
+        "relation": "enables",
+        "source_node": null,
+        "source_subgoal": "bowl_destination_reachable",
+        "target_node": "place_bowl",
         "target_subgoal": "bowl_placed"
       },
       {
@@ -54,6 +83,13 @@
         "source_node": null,
         "source_subgoal": "bowl_placed",
         "target_node": "navigate_back_to_bowl_source",
+        "target_subgoal": "bowl_source_reachable_again"
+      },
+      {
+        "relation": "enables",
+        "source_node": null,
+        "source_subgoal": "bowl_source_reachable_again",
+        "target_node": "close_bowl_source",
         "target_subgoal": "bowl_source_closed"
       },
       {
@@ -61,6 +97,13 @@
         "source_node": null,
         "source_subgoal": "bowl_source_closed",
         "target_node": "navigate_to_apple_source",
+        "target_subgoal": "apple_source_reachable"
+      },
+      {
+        "relation": "enables",
+        "source_node": null,
+        "source_subgoal": "apple_source_reachable",
+        "target_node": "open_apple_source",
         "target_subgoal": "apple_source_open"
       },
       {
@@ -68,13 +111,27 @@
         "source_node": null,
         "source_subgoal": "apple_source_open",
         "target_node": "navigate_to_apple",
-        "target_subgoal": "apple_retrieved"
+        "target_subgoal": "apple_reachable"
       },
       {
         "relation": "enables",
         "source_node": null,
-        "source_subgoal": "apple_retrieved",
+        "source_subgoal": "apple_reachable",
+        "target_node": "pick_apple",
+        "target_subgoal": "apple_holding"
+      },
+      {
+        "relation": "enables",
+        "source_node": null,
+        "source_subgoal": "apple_holding",
         "target_node": "navigate_apple_to_destination",
+        "target_subgoal": "apple_destination_reachable"
+      },
+      {
+        "relation": "enables",
+        "source_node": null,
+        "source_subgoal": "apple_destination_reachable",
+        "target_node": "place_apple",
         "target_subgoal": "apple_placed"
       },
       {
@@ -82,6 +139,13 @@
         "source_node": null,
         "source_subgoal": "apple_placed",
         "target_node": "navigate_back_to_apple_source",
+        "target_subgoal": "apple_source_reachable_again"
+      },
+      {
+        "relation": "enables",
+        "source_node": null,
+        "source_subgoal": "apple_source_reachable_again",
+        "target_node": "close_apple_source",
         "target_subgoal": "apple_source_closed"
       }
     ],
@@ -89,28 +153,35 @@
     "skill_subgraphs": [
       {
         "achiever_nodes": [
-          "open_bowl_source"
+          "navigate_to_bowl_source"
         ],
-        "edges": [
-          {
-            "relation": "enables",
-            "source": "navigate_to_bowl_source",
-            "target": "open_bowl_source"
-          }
-        ],
+        "edges": [],
         "execution_order": [
-          "navigate_to_bowl_source",
-          "open_bowl_source"
+          "navigate_to_bowl_source"
         ],
         "nodes": [
           {
-            "achieves": [],
+            "achieves": [
+              "bowl_source_reachable"
+            ],
             "arguments": {
               "target": "kitchen_counter"
             },
             "contract_id": "mshab.granularity.navigate.all",
             "id": "navigate_to_bowl_source"
-          },
+          }
+        ],
+        "subgoal_id": "bowl_source_reachable"
+      },
+      {
+        "achiever_nodes": [
+          "open_bowl_source"
+        ],
+        "edges": [],
+        "execution_order": [
+          "open_bowl_source"
+        ],
+        "nodes": [
           {
             "achieves": [
               "bowl_source_open"
@@ -126,31 +197,38 @@
       },
       {
         "achiever_nodes": [
-          "pick_bowl"
+          "navigate_to_bowl"
         ],
-        "edges": [
-          {
-            "relation": "enables",
-            "source": "navigate_to_bowl",
-            "target": "pick_bowl"
-          }
-        ],
+        "edges": [],
         "execution_order": [
-          "navigate_to_bowl",
-          "pick_bowl"
+          "navigate_to_bowl"
         ],
         "nodes": [
           {
-            "achieves": [],
+            "achieves": [
+              "bowl_reachable"
+            ],
             "arguments": {
               "target": "024_bowl"
             },
             "contract_id": "mshab.granularity.navigate.all",
             "id": "navigate_to_bowl"
-          },
+          }
+        ],
+        "subgoal_id": "bowl_reachable"
+      },
+      {
+        "achiever_nodes": [
+          "pick_bowl"
+        ],
+        "edges": [],
+        "execution_order": [
+          "pick_bowl"
+        ],
+        "nodes": [
           {
             "achieves": [
-              "bowl_retrieved"
+              "bowl_holding"
             ],
             "arguments": {
               "object": "024_bowl"
@@ -159,32 +237,39 @@
             "id": "pick_bowl"
           }
         ],
-        "subgoal_id": "bowl_retrieved"
+        "subgoal_id": "bowl_holding"
       },
       {
         "achiever_nodes": [
-          "place_bowl"
+          "navigate_bowl_to_destination"
         ],
-        "edges": [
-          {
-            "relation": "enables",
-            "source": "navigate_bowl_to_destination",
-            "target": "place_bowl"
-          }
-        ],
+        "edges": [],
         "execution_order": [
-          "navigate_bowl_to_destination",
-          "place_bowl"
+          "navigate_bowl_to_destination"
         ],
         "nodes": [
           {
-            "achieves": [],
+            "achieves": [
+              "bowl_destination_reachable"
+            ],
             "arguments": {
               "target": "dining_table"
             },
             "contract_id": "mshab.granularity.navigate.all",
             "id": "navigate_bowl_to_destination"
-          },
+          }
+        ],
+        "subgoal_id": "bowl_destination_reachable"
+      },
+      {
+        "achiever_nodes": [
+          "place_bowl"
+        ],
+        "edges": [],
+        "execution_order": [
+          "place_bowl"
+        ],
+        "nodes": [
           {
             "achieves": [
               "bowl_placed"
@@ -201,17 +286,32 @@
       },
       {
         "achiever_nodes": [
-          "close_bowl_source"
+          "navigate_back_to_bowl_source"
         ],
-        "edges": [
+        "edges": [],
+        "execution_order": [
+          "navigate_back_to_bowl_source"
+        ],
+        "nodes": [
           {
-            "relation": "enables",
-            "source": "navigate_back_to_bowl_source",
-            "target": "close_bowl_source"
+            "achieves": [
+              "bowl_source_reachable_again"
+            ],
+            "arguments": {
+              "target": "kitchen_counter"
+            },
+            "contract_id": "mshab.granularity.navigate.all",
+            "id": "navigate_back_to_bowl_source"
           }
         ],
+        "subgoal_id": "bowl_source_reachable_again"
+      },
+      {
+        "achiever_nodes": [
+          "close_bowl_source"
+        ],
+        "edges": [],
         "execution_order": [
-          "navigate_back_to_bowl_source",
           "close_bowl_source"
         ],
         "nodes": [
@@ -224,42 +324,41 @@
             },
             "contract_id": "mshab.granularity.close.all",
             "id": "close_bowl_source"
-          },
-          {
-            "achieves": [],
-            "arguments": {
-              "target": "kitchen_counter"
-            },
-            "contract_id": "mshab.granularity.navigate.all",
-            "id": "navigate_back_to_bowl_source"
           }
         ],
         "subgoal_id": "bowl_source_closed"
       },
       {
         "achiever_nodes": [
-          "open_apple_source"
+          "navigate_to_apple_source"
         ],
-        "edges": [
-          {
-            "relation": "enables",
-            "source": "navigate_to_apple_source",
-            "target": "open_apple_source"
-          }
-        ],
+        "edges": [],
         "execution_order": [
-          "navigate_to_apple_source",
-          "open_apple_source"
+          "navigate_to_apple_source"
         ],
         "nodes": [
           {
-            "achieves": [],
+            "achieves": [
+              "apple_source_reachable"
+            ],
             "arguments": {
               "target": "fridge"
             },
             "contract_id": "mshab.granularity.navigate.all",
             "id": "navigate_to_apple_source"
-          },
+          }
+        ],
+        "subgoal_id": "apple_source_reachable"
+      },
+      {
+        "achiever_nodes": [
+          "open_apple_source"
+        ],
+        "edges": [],
+        "execution_order": [
+          "open_apple_source"
+        ],
+        "nodes": [
           {
             "achieves": [
               "apple_source_open"
@@ -275,31 +374,38 @@
       },
       {
         "achiever_nodes": [
-          "pick_apple"
+          "navigate_to_apple"
         ],
-        "edges": [
-          {
-            "relation": "enables",
-            "source": "navigate_to_apple",
-            "target": "pick_apple"
-          }
-        ],
+        "edges": [],
         "execution_order": [
-          "navigate_to_apple",
-          "pick_apple"
+          "navigate_to_apple"
         ],
         "nodes": [
           {
-            "achieves": [],
+            "achieves": [
+              "apple_reachable"
+            ],
             "arguments": {
               "target": "013_apple"
             },
             "contract_id": "mshab.granularity.navigate.all",
             "id": "navigate_to_apple"
-          },
+          }
+        ],
+        "subgoal_id": "apple_reachable"
+      },
+      {
+        "achiever_nodes": [
+          "pick_apple"
+        ],
+        "edges": [],
+        "execution_order": [
+          "pick_apple"
+        ],
+        "nodes": [
           {
             "achieves": [
-              "apple_retrieved"
+              "apple_holding"
             ],
             "arguments": {
               "object": "013_apple"
@@ -308,32 +414,39 @@
             "id": "pick_apple"
           }
         ],
-        "subgoal_id": "apple_retrieved"
+        "subgoal_id": "apple_holding"
       },
       {
         "achiever_nodes": [
-          "place_apple"
+          "navigate_apple_to_destination"
         ],
-        "edges": [
-          {
-            "relation": "enables",
-            "source": "navigate_apple_to_destination",
-            "target": "place_apple"
-          }
-        ],
+        "edges": [],
         "execution_order": [
-          "navigate_apple_to_destination",
-          "place_apple"
+          "navigate_apple_to_destination"
         ],
         "nodes": [
           {
-            "achieves": [],
+            "achieves": [
+              "apple_destination_reachable"
+            ],
             "arguments": {
               "target": "dining_table"
             },
             "contract_id": "mshab.granularity.navigate.all",
             "id": "navigate_apple_to_destination"
-          },
+          }
+        ],
+        "subgoal_id": "apple_destination_reachable"
+      },
+      {
+        "achiever_nodes": [
+          "place_apple"
+        ],
+        "edges": [],
+        "execution_order": [
+          "place_apple"
+        ],
+        "nodes": [
           {
             "achieves": [
               "apple_placed"
@@ -350,17 +463,32 @@
       },
       {
         "achiever_nodes": [
-          "close_apple_source"
+          "navigate_back_to_apple_source"
         ],
-        "edges": [
+        "edges": [],
+        "execution_order": [
+          "navigate_back_to_apple_source"
+        ],
+        "nodes": [
           {
-            "relation": "enables",
-            "source": "navigate_back_to_apple_source",
-            "target": "close_apple_source"
+            "achieves": [
+              "apple_source_reachable_again"
+            ],
+            "arguments": {
+              "target": "fridge"
+            },
+            "contract_id": "mshab.granularity.navigate.all",
+            "id": "navigate_back_to_apple_source"
           }
         ],
+        "subgoal_id": "apple_source_reachable_again"
+      },
+      {
+        "achiever_nodes": [
+          "close_apple_source"
+        ],
+        "edges": [],
         "execution_order": [
-          "navigate_back_to_apple_source",
           "close_apple_source"
         ],
         "nodes": [
@@ -373,14 +501,6 @@
             },
             "contract_id": "mshab.granularity.close.all",
             "id": "close_apple_source"
-          },
-          {
-            "achieves": [],
-            "arguments": {
-              "target": "fridge"
-            },
-            "contract_id": "mshab.granularity.navigate.all",
-            "id": "navigate_back_to_apple_source"
           }
         ],
         "subgoal_id": "apple_source_closed"
@@ -388,35 +508,72 @@
     ],
     "subgoal_dependencies": [
       {
-        "source": "bowl_source_open",
-        "target": "bowl_retrieved"
+        "source": "bowl_source_reachable",
+        "target": "bowl_source_open"
       },
       {
-        "source": "bowl_retrieved",
+        "source": "bowl_source_open",
+        "target": "bowl_reachable"
+      },
+      {
+        "source": "bowl_reachable",
+        "target": "bowl_holding"
+      },
+      {
+        "source": "bowl_holding",
+        "target": "bowl_destination_reachable"
+      },
+      {
+        "source": "bowl_destination_reachable",
         "target": "bowl_placed"
       },
       {
         "source": "bowl_placed",
+        "target": "bowl_source_reachable_again"
+      },
+      {
+        "source": "bowl_source_reachable_again",
         "target": "bowl_source_closed"
       },
       {
         "source": "bowl_source_closed",
+        "target": "apple_source_reachable"
+      },
+      {
+        "source": "apple_source_reachable",
         "target": "apple_source_open"
       },
       {
         "source": "apple_source_open",
-        "target": "apple_retrieved"
+        "target": "apple_reachable"
       },
       {
-        "source": "apple_retrieved",
+        "source": "apple_reachable",
+        "target": "apple_holding"
+      },
+      {
+        "source": "apple_holding",
+        "target": "apple_destination_reachable"
+      },
+      {
+        "source": "apple_destination_reachable",
         "target": "apple_placed"
       },
       {
         "source": "apple_placed",
+        "target": "apple_source_reachable_again"
+      },
+      {
+        "source": "apple_source_reachable_again",
         "target": "apple_source_closed"
       }
     ],
     "subgoals": [
+      {
+        "description": "",
+        "id": "bowl_source_reachable",
+        "predicate": "reachable(kitchen_counter)"
+      },
       {
         "description": "",
         "id": "bowl_source_open",
@@ -424,8 +581,18 @@
       },
       {
         "description": "",
-        "id": "bowl_retrieved",
+        "id": "bowl_reachable",
+        "predicate": "reachable(024_bowl)"
+      },
+      {
+        "description": "",
+        "id": "bowl_holding",
         "predicate": "holding(024_bowl)"
+      },
+      {
+        "description": "",
+        "id": "bowl_destination_reachable",
+        "predicate": "reachable(dining_table)"
       },
       {
         "description": "",
@@ -434,8 +601,18 @@
       },
       {
         "description": "",
+        "id": "bowl_source_reachable_again",
+        "predicate": "reachable(kitchen_counter)"
+      },
+      {
+        "description": "",
         "id": "bowl_source_closed",
         "predicate": "closed(kitchen_counter)"
+      },
+      {
+        "description": "",
+        "id": "apple_source_reachable",
+        "predicate": "reachable(fridge)"
       },
       {
         "description": "",
@@ -444,13 +621,28 @@
       },
       {
         "description": "",
-        "id": "apple_retrieved",
+        "id": "apple_reachable",
+        "predicate": "reachable(013_apple)"
+      },
+      {
+        "description": "",
+        "id": "apple_holding",
         "predicate": "holding(013_apple)"
+      },
+      {
+        "description": "",
+        "id": "apple_destination_reachable",
+        "predicate": "reachable(dining_table)"
       },
       {
         "description": "",
         "id": "apple_placed",
         "predicate": "at(013_apple,dining_table)"
+      },
+      {
+        "description": "",
+        "id": "apple_source_reachable_again",
+        "predicate": "reachable(fridge)"
       },
       {
         "description": "",
@@ -463,12 +655,12 @@
   "schema_version": "mshab.granularity-gold-graph.v1",
   "source_task": "set_table",
   "summary": {
-    "cross_edges": 7,
-    "internal_edges": 8,
-    "mean_nodes_per_subgraph": 2.0,
+    "cross_edges": 15,
+    "internal_edges": 0,
+    "mean_nodes_per_subgraph": 1.0,
     "nodes": 16,
-    "subgoals": 8,
-    "subgraphs": 8
+    "subgoals": 16,
+    "subgraphs": 16
   },
   "task": "granularity"
 }

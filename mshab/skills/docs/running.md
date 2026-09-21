@@ -100,9 +100,9 @@ present in the assets volume.
 ## Run the controller on MS-HAB
 
 The stage-6 rollout (`mshab/experiments/rollout/`) executes a proposer's plan
-for one official TidyHouse episode with the RL checkpoints, replanning
+for one official SetTable episode with the RL checkpoints, replanning
 through the proposer when a sub-goal fails. It needs the GPU, the ReplicaCAD
-assets, and the TidyHouse checkpoints (`rl/tidy_house/**`, 21 policies):
+assets, and the SetTable checkpoints (`rl/set_table/**`, 11 policies):
 
 ```bash
 docker compose run --rm mshab python -m mshab.experiments.rollout --granularity coarse

@@ -678,3 +678,54 @@ class InstrumentalFallbackTests(TestCase):
 
         with self.assertRaisesRegex(ValueError, "fallback of both"):
             subgraph.relate("nav_b", "nav_c", SkillRelation.FALLBACK_TO)
+
+
+def _follow_up_graph():
+    """One sub-goal whose achiever (place) enables two follow-ups (navigate back, close)."""
+
+    subgoals = SubGoalGraph.from_sequence("set", [SubGoal("placed", "at(024_bowl,table)")])
+    graph = SkillGraph("set_table", subgoal_graph=subgoals)
+    placed = SkillSubgraph("placed", "set_table")
+    placed.add_node(SkillNode("nav_table", "mshab.set_table.navigate.all", {"target": "table"}))
+    placed.add_node(
+        SkillNode("place", "mshab.set_table.place.024_bowl", {"destination": "table"}, achieves=("placed",))
+    )
+    placed.add_node(SkillNode("nav_back", "mshab.set_table.navigate.all", {"target": "fridge"}))
+    placed.add_node(SkillNode("close", "mshab.set_table.close.fridge", {}))
+    placed.add_node(SkillNode("close_slow", "mshab.set_table.close.fridge", {}))
+    # A node that only shares a prerequisite with the achiever: the setup of
+    # some other candidate, not a follow-up.
+    placed.add_node(SkillNode("nav_photo", "mshab.set_table.navigate.all", {"target": "camera"}))
+    placed.relate("nav_table", "place", SkillRelation.ENABLES)
+    placed.relate("nav_table", "nav_photo", SkillRelation.ENABLES)
+    placed.relate("place", "nav_back", SkillRelation.ENABLES)
+    placed.relate("nav_back", "close", SkillRelation.ENABLES)
+    placed.relate("close", "close_slow", SkillRelation.FALLBACK_TO)
+    graph.add_subgraph(placed)
+    return subgoals, graph
+
+
+class FollowUpTests(TestCase):
+    """Nodes the achiever enables inside its subgraph run after it, before the next sub-goal."""
+
+    def test_follow_ups_are_planned_after_the_achiever(self):
+        subgoals, graph = _follow_up_graph()
+        planner = SkillPlanner(subgoals, graph)
+
+        self.assertEqual(planner.plan().order, ("nav_table", "place", "nav_back", "close"))
+        self.assertEqual(planner.plan().selections, {"placed": "place"})
+        self.assertEqual(planner.remaining("placed"), ("nav_table", "place", "nav_back", "close"))
+        self.assertEqual(planner.remaining("placed", completed=("nav_table", "place")), ("nav_back", "close"))
+        self.assertEqual(planner.remaining("placed", completed=("nav_table", "place", "nav_back", "close")), ())
+        self.assertEqual(planner.decide(completed=("nav_table", "place")).id, "nav_back")
+        self.assertIsNone(planner.decide(completed=("nav_table", "place", "nav_back", "close")))
+
+    def test_a_failed_follow_up_falls_back_and_an_exhausted_one_fails_the_sub_goal(self):
+        subgoals, graph = _follow_up_graph()
+        planner = SkillPlanner(subgoals, graph)
+
+        self.assertEqual(planner.plan(failed=("close",)).order, ("nav_table", "place", "nav_back", "close_slow"))
+        with self.assertRaisesRegex(NoViableCandidate, "all failed"):
+            planner.plan(failed=("close", "close_slow"))
+        with self.assertRaisesRegex(NoViableCandidate, "every achiever"):
+            planner.remaining("placed", failed=("place",))

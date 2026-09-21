@@ -13,7 +13,7 @@ DEFAULT_ASSET_ROOT = Path(
 )
 DEFAULT_CHECKPOINT_ROOT = DEFAULT_ASSET_ROOT / "data" / "mshab_checkpoints"
 # The official task plans, spawn data, and episode configs of the rearrange
-# dataset; the stage-6 rollout reads one TidyHouse episode from here.
+# dataset; the stage-6 rollout reads one SetTable episode from here.
 DEFAULT_REARRANGE_ROOT = (
     DEFAULT_ASSET_ROOT / "data" / "scene_datasets" / "replica_cad_dataset" / "rearrange"
 )

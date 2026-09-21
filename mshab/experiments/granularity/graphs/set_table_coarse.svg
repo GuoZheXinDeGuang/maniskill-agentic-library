@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="2530" height="368" viewBox="0 0 2530 368" role="img" aria-labelledby="title description">
+<title id="title">set_table_coarse</title>
+<desc id="description">Set the table with the bowl and apple, then close their storage.</desc>
+<defs>
+<marker id="edge" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#7552d6"/></marker>
+<marker id="cross" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#c6531a"/></marker>
+</defs>
+<rect width="2530" height="368" fill="#ffffff"/>
+<text x="30" y="40" font-size="26" font-weight="700" fill="#6842cb" text-anchor="start">set_table_coarse</text>
+<text x="30" y="66" font-size="14" font-weight="400" fill="#71809b" text-anchor="start">Set the table with the bowl and apple, then close their storage.</text>
+<text x="30" y="88" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">2 sub-goals · 16 skill nodes · 14 internal edges · 1 cross-subgraph edges · 8.0 nodes per subgraph · task granularity · granularity coarse</text>
+<rect x="30" y="110" width="2470" height="94" rx="14" fill="#f6f3fc" stroke="#d6cdf3" stroke-width="1.5"/>
+<text x="48" y="153.0" font-size="15" font-weight="700" fill="#2f3a4d" text-anchor="start">bowl_delivered</text>
+<text x="48" y="174.0" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">at(024_bowl,dining_table)</text>
+<rect x="360" y="128.0" width="230" height="58" rx="10" fill="#ffffff" stroke="#7552d6" stroke-width="1.6"/>
+<text x="475.0" y="151.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">navigate_to_bowl_source</text>
+<text x="475.0" y="171.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">navigate(kitchen_counter)</text>
+<rect x="630" y="128.0" width="230" height="58" rx="10" fill="#ffffff" stroke="#7552d6" stroke-width="1.6"/>
+<text x="745.0" y="151.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">open_bowl_source</text>
+<text x="745.0" y="171.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">open(kitchen_counter)</text>
+<rect x="900" y="128.0" width="230" height="58" rx="10" fill="#ffffff" stroke="#7552d6" stroke-width="1.6"/>
+<text x="1015.0" y="151.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">navigate_to_bowl</text>
+<text x="1015.0" y="171.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">navigate(024_bowl)</text>
+<rect x="1170" y="128.0" width="230" height="58" rx="10" fill="#ffffff" stroke="#7552d6" stroke-width="1.6"/>
+<text x="1285.0" y="151.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">pick_bowl</text>
+<text x="1285.0" y="171.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">pick(024_bowl)</text>
+<rect x="1440" y="128.0" width="230" height="58" rx="10" fill="#ffffff" stroke="#7552d6" stroke-width="1.6"/>
+<text x="1555.0" y="151.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">navigate_bowl_to_destination</text>
+<text x="1555.0" y="171.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">navigate(dining_table)</text>
+<rect x="1710" y="128.0" width="230" height="58" rx="10" fill="#fffaf2" stroke="#c6531a" stroke-width="2.5"/>
+<text x="1825.0" y="151.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">place_bowl</text>
+<text x="1825.0" y="171.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">place(024_bowl, dining_table)</text>
+<rect x="1980" y="128.0" width="230" height="58" rx="10" fill="#ffffff" stroke="#7552d6" stroke-width="1.6"/>
+<text x="2095.0" y="151.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">navigate_back_to_bowl_source</text>
+<text x="2095.0" y="171.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">navigate(kitchen_counter)</text>
+<rect x="2250" y="128.0" width="230" height="58" rx="10" fill="#ffffff" stroke="#7552d6" stroke-width="1.6"/>
+<text x="2365.0" y="151.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">close_bowl_source</text>
+<text x="2365.0" y="171.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">close(kitchen_counter)</text>
+<path d="M 590 157.0 L 630 157.0" fill="none" stroke="#7552d6" stroke-width="1.8" marker-end="url(#edge)"/>
+<text x="610.0" y="150.0" font-size="10" font-weight="400" fill="#7552d6" text-anchor="middle">enables</text>
+<path d="M 860 157.0 L 900 157.0" fill="none" stroke="#7552d6" stroke-width="1.8" marker-end="url(#edge)"/>
+<text x="880.0" y="150.0" font-size="10" font-weight="400" fill="#7552d6" text-anchor="middle">enables</text>
+<path d="M 1130 157.0 L 1170 157.0" fill="none" stroke="#7552d6" stroke-width="1.8" marker-end="url(#edge)"/>
+<text x="1150.0" y="150.0" font-size="10" font-weight="400" fill="#7552d6" text-anchor="middle">enables</text>
+<path d="M 1400 157.0 L 1440 157.0" fill="none" stroke="#7552d6" stroke-width="1.8" marker-end="url(#edge)"/>
+<text x="1420.0" y="150.0" font-size="10" font-weight="400" fill="#7552d6" text-anchor="middle">enables</text>
+<path d="M 1670 157.0 L 1710 157.0" fill="none" stroke="#7552d6" stroke-width="1.8" marker-end="url(#edge)"/>
+<text x="1690.0" y="150.0" font-size="10" font-weight="400" fill="#7552d6" text-anchor="middle">enables</text>
+<path d="M 1940 157.0 L 1980 157.0" fill="none" stroke="#7552d6" stroke-width="1.8" marker-end="url(#edge)"/>
+<text x="1960.0" y="150.0" font-size="10" font-weight="400" fill="#7552d6" text-anchor="middle">enables</text>
+<path d="M 2210 157.0 L 2250 157.0" fill="none" stroke="#7552d6" stroke-width="1.8" marker-end="url(#edge)"/>
+<text x="2230.0" y="150.0" font-size="10" font-weight="400" fill="#7552d6" text-anchor="middle">enables</text>
+<rect x="30" y="216" width="2470" height="94" rx="14" fill="#f6f3fc" stroke="#d6cdf3" stroke-width="1.5"/>
+<text x="48" y="259.0" font-size="15" font-weight="700" fill="#2f3a4d" text-anchor="start">apple_delivered</text>
+<text x="48" y="280.0" font-size="13" font-weight="400" fill="#71809b" text-anchor="start">at(013_apple,dining_table)</text>
+<rect x="360" y="234.0" width="230" height="58" rx="10" fill="#ffffff" stroke="#7552d6" stroke-width="1.6"/>
+<text x="475.0" y="257.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">navigate_to_apple_source</text>
+<text x="475.0" y="277.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">navigate(fridge)</text>
+<rect x="630" y="234.0" width="230" height="58" rx="10" fill="#ffffff" stroke="#7552d6" stroke-width="1.6"/>
+<text x="745.0" y="257.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">open_apple_source</text>
+<text x="745.0" y="277.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">open(fridge)</text>
+<rect x="900" y="234.0" width="230" height="58" rx="10" fill="#ffffff" stroke="#7552d6" stroke-width="1.6"/>
+<text x="1015.0" y="257.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">navigate_to_apple</text>
+<text x="1015.0" y="277.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">navigate(013_apple)</text>
+<rect x="1170" y="234.0" width="230" height="58" rx="10" fill="#ffffff" stroke="#7552d6" stroke-width="1.6"/>
+<text x="1285.0" y="257.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">pick_apple</text>
+<text x="1285.0" y="277.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">pick(013_apple)</text>
+<rect x="1440" y="234.0" width="230" height="58" rx="10" fill="#ffffff" stroke="#7552d6" stroke-width="1.6"/>
+<text x="1555.0" y="257.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">navigate_apple_to_destination</text>
+<text x="1555.0" y="277.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">navigate(dining_table)</text>
+<rect x="1710" y="234.0" width="230" height="58" rx="10" fill="#fffaf2" stroke="#c6531a" stroke-width="2.5"/>
+<text x="1825.0" y="257.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">place_apple</text>
+<text x="1825.0" y="277.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">place(013_apple, dining_table)</text>
+<rect x="1980" y="234.0" width="230" height="58" rx="10" fill="#ffffff" stroke="#7552d6" stroke-width="1.6"/>
+<text x="2095.0" y="257.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">navigate_back_to_apple_source</text>
+<text x="2095.0" y="277.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">navigate(fridge)</text>
+<rect x="2250" y="234.0" width="230" height="58" rx="10" fill="#ffffff" stroke="#7552d6" stroke-width="1.6"/>
+<text x="2365.0" y="257.0" font-size="12" font-weight="700" fill="#2f3a4d" text-anchor="middle">close_apple_source</text>
+<text x="2365.0" y="277.0" font-size="12" font-weight="400" fill="#6245b1" text-anchor="middle">close(fridge)</text>
+<path d="M 590 263.0 L 630 263.0" fill="none" stroke="#7552d6" stroke-width="1.8" marker-end="url(#edge)"/>
+<text x="610.0" y="256.0" font-size="10" font-weight="400" fill="#7552d6" text-anchor="middle">enables</text>
+<path d="M 860 263.0 L 900 263.0" fill="none" stroke="#7552d6" stroke-width="1.8" marker-end="url(#edge)"/>
+<text x="880.0" y="256.0" font-size="10" font-weight="400" fill="#7552d6" text-anchor="middle">enables</text>
+<path d="M 1130 263.0 L 1170 263.0" fill="none" stroke="#7552d6" stroke-width="1.8" marker-end="url(#edge)"/>
+<text x="1150.0" y="256.0" font-size="10" font-weight="400" fill="#7552d6" text-anchor="middle">enables</text>
+<path d="M 1400 263.0 L 1440 263.0" fill="none" stroke="#7552d6" stroke-width="1.8" marker-end="url(#edge)"/>
+<text x="1420.0" y="256.0" font-size="10" font-weight="400" fill="#7552d6" text-anchor="middle">enables</text>
+<path d="M 1670 263.0 L 1710 263.0" fill="none" stroke="#7552d6" stroke-width="1.8" marker-end="url(#edge)"/>
+<text x="1690.0" y="256.0" font-size="10" font-weight="400" fill="#7552d6" text-anchor="middle">enables</text>
+<path d="M 1940 263.0 L 1980 263.0" fill="none" stroke="#7552d6" stroke-width="1.8" marker-end="url(#edge)"/>
+<text x="1960.0" y="256.0" font-size="10" font-weight="400" fill="#7552d6" text-anchor="middle">enables</text>
+<path d="M 2210 263.0 L 2250 263.0" fill="none" stroke="#7552d6" stroke-width="1.8" marker-end="url(#edge)"/>
+<text x="2230.0" y="256.0" font-size="10" font-weight="400" fill="#7552d6" text-anchor="middle">enables</text>
+<path d="M 1825.0 186.0 V 210.0 H 475.0 V 234.0" fill="none" stroke="#c6531a" stroke-width="1.8" marker-end="url(#cross)"/>
+<text x="30" y="348" font-size="12" font-weight="400" fill="#71809b" text-anchor="start">row = one sub-goal and its skill subgraph · box = one skill node, one contract call · orange border = achiever · purple arrow = relation inside a subgraph · orange arrow = cross-subgraph ENABLES (from any achiever)</text>
+</svg>

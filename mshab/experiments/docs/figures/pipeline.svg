@@ -13,8 +13,8 @@
 <text x="64" y="154" font-size="14" font-weight="700" fill="#2f3a4d" text-anchor="start">Request</text>
 <text x="64" y="176" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">DecompositionRequest / SubgraphRequest</text>
 <text x="64" y="193" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">goal text</text>
-<text x="64" y="210" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">entities: objects, receptacles</text>
-<text x="64" y="227" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">facts: present(...), gripper_empty(), ...</text>
+<text x="64" y="210" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">entities: objects, storages, receptacle</text>
+<text x="64" y="227" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">facts: present(...), closed(...), gripper_empty(), ...</text>
 <text x="64" y="244" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">contracts: 5 × Contract.as_dict()</text>
 <text x="64" y="261" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">granularity: free | coarse | fine</text>
 <text x="64" y="278" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">history + failure   (on a replan)</text>
@@ -29,7 +29,7 @@
 <text x="366" y="269" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">→ one SkillSubgraph of contract calls (Layer 2)</text>
 <text x="354" y="306" font-size="11" font-weight="400" fill="#71809b" text-anchor="start">DeepSeekProposer: one chat completion per call, JSON</text>
 <text x="354" y="320" font-size="11" font-weight="400" fill="#71809b" text-anchor="start">ScriptedProposer: tables cut from the gold graphs</text>
-<text x="354" y="334" font-size="11" font-weight="400" fill="#71809b" text-anchor="start">TidyHouseRuleProposer: rules, for the MS-HAB rollout</text>
+<text x="354" y="334" font-size="11" font-weight="400" fill="#71809b" text-anchor="start">SetTableRuleProposer: rules, for the MS-HAB rollout</text>
 <rect x="710" y="160" width="200" height="134" rx="10" fill="#ffffff" stroke="#7552d6" stroke-width="2"/>
 <text x="724" y="184" font-size="14" font-weight="700" fill="#7552d6" text-anchor="start">assemble_patch</text>
 <text x="724" y="206" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">Layer 1: the sequence with</text>
@@ -72,14 +72,14 @@
 <text x="470" y="444" font-size="12" font-weight="400" fill="#71809b" text-anchor="start">stage 4 on the symbolic environment, stage 6 on MS-HAB · the loop itself never changes</text>
 <rect x="50" y="460" width="400" height="222" rx="10" fill="#ffffff" stroke="#399447" stroke-width="2"/>
 <text x="64" y="484" font-size="14" font-weight="700" fill="#399447" text-anchor="start">TaskController</text>
-<text x="64" y="506" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">1  absorb facts: the next sub-goal whose predicate</text>
+<text x="64" y="506" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">1  absorb facts: an untouched sub-goal whose predicate</text>
 <text x="64" y="522" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">    already holds is achieved, its nodes are skipped</text>
-<text x="64" y="538" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">2  SkillPlanner.decide(completed, failed) → one node</text>
-<text x="64" y="554" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">3  SkillRuntime.execute_node: admission (preconditions,</text>
-<text x="64" y="570" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">    invariants) → policy run → verify the effects</text>
-<text x="64" y="586" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">4  success → completed · failure → retry, ≤ 2 attempts</text>
-<text x="64" y="602" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">5  NoViableCandidate → Failure(sub-goal, node, mode,</text>
-<text x="64" y="618" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">    missing effects / preconditions) → replan</text>
+<text x="64" y="538" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">2  SkillPlanner.decide(completed, failed) → one node:</text>
+<text x="64" y="554" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">    prerequisites, the achiever, then its follow-ups</text>
+<text x="64" y="570" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">3  SkillRuntime.execute_node: admission (preconditions,</text>
+<text x="64" y="586" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">    invariants) → policy run → verify the effects</text>
+<text x="64" y="602" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">4  success → completed · failure → retry, ≤ 2 attempts</text>
+<text x="64" y="618" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">5  NoViableCandidate → Failure(sub-goal, node, mode) → replan</text>
 <rect x="490" y="460" width="310" height="222" rx="10" fill="#ffffff" stroke="#7552d6" stroke-width="2"/>
 <text x="504" y="484" font-size="14" font-weight="700" fill="#7552d6" text-anchor="start">SkillRuntime + PolicyExecutor</text>
 <text x="504" y="506" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">select_policy(contract, grounded arguments):</text>
@@ -126,17 +126,17 @@
 <text x="64" y="816" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">Layer 3   five generic contracts: navigate · pick · place · open · close, ids mshab.granularity.&lt;type&gt;.all;</text>
 <text x="64" y="832" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">              each with parameters, preconditions, effects, deletes, invariants, and a horizon</text>
 <text x="64" y="848" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">Layer 4   53 checkpoint policies from the MS-HAB download, each bound to the contract of its type;</text>
-<text x="64" y="864" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">              task_families=('tidy_house',) binds the 21 TidyHouse checkpoints for the rollout;</text>
+<text x="64" y="864" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">              task_families=('set_table',) binds the 11 SetTable checkpoints for the rollout;</text>
 <text x="64" y="880" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">              one SymbolicPolicy per contract for the symbolic environment</text>
 <text x="64" y="896" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">a proposer only ever names a contract and its arguments; which policy runs is the library's choice</text>
 <rect x="810" y="770" width="700" height="170" rx="10" fill="#ffffff" stroke="#3484c5" stroke-width="2"/>
 <text x="824" y="794" font-size="14" font-weight="700" fill="#3484c5" text-anchor="start">Gold graphs and measurement · stages 2, 5  (higher_layers/, evaluate.py)</text>
 <text x="824" y="816" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">gold graphs: hand-authored, validated, committed as JSON + SVG under granularity/graphs/</text>
-<text x="824" y="832" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">    tidy_house_coarse  5 sub-goals / 20 nodes · tidy_house_fine  20 / 20 · set_table_generic  8 / 16</text>
+<text x="824" y="832" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">    set_table_coarse  2 sub-goals / 16 nodes · set_table_fine  16 / 16</text>
 <text x="824" y="848" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">the ScriptedProposer answers from them; a model's decomposition and subgraphs are compared with them</text>
 <text x="824" y="864" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">    (exact match, order similarity, predicate precision / recall, node and edge Jaccard, role P / R)</text>
-<text x="824" y="880" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">scenarios with injected failures, identical for every proposer: nominal, pick_fails_once,</text>
-<text x="824" y="896" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">    pick_exhausted, object_dropped, object_already_delivered, set_table_nominal</text>
+<text x="824" y="880" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">scenarios with injected failures, identical for every proposer: nominal, pick_fails_once, pick_exhausted,</text>
+<text x="824" y="896" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">    object_dropped, object_already_delivered, storage_already_open, object_elsewhere</text>
 <path d="M 640 770 V 684" fill="none" stroke="#c6531a" stroke-width="1.8" marker-end="url(#arrow-c6531a)"/>
 <text x="648" y="726" font-size="10" font-weight="400" fill="#c6531a" text-anchor="start">contracts, policies</text>
 <path d="M 175 770 V 720 H 40 V 240 H 48" fill="none" stroke="#c6531a" stroke-width="1.8" marker-end="url(#arrow-c6531a)" stroke-dasharray="6 5"/>

@@ -143,11 +143,11 @@ class YourPolicyExecutor(PolicyExecutor):
         )
 ```
 
-`mshab/experiments/rollout/` implements this contract for TidyHouse: a fact
-extractor over the environment's own checkers, a `PolicyExecutor` that loads
-the SAC and PPO checkpoints, and an environment subclass whose subtask pointer
-the runtime controls. A SetTable extractor and vectorized (many-environment)
-extraction are not written.
+`mshab/experiments/rollout/` implements this contract for SetTable: a fact
+extractor over the environment's own checkers (grasp, place, navigation, and
+the articulation joints), a `PolicyExecutor` that loads the SAC and PPO
+checkpoints, and an environment subclass whose subtask pointer the runtime
+controls. Vectorized (many-environment) extraction is not written.
 
 ## Layer 4: policies
 

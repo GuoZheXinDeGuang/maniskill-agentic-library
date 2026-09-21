@@ -19,7 +19,7 @@ are silent, because a contract can only retract predicates it names:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, Iterable, Mapping, Optional, Set, Tuple
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Set, Tuple
 
 from mshab.experiments.planning.documents import EntityDescription
 from mshab.skills import schema
@@ -80,8 +80,12 @@ class ScriptedFailure:
     Keyed by contract type and grounded target rather than by node id, so a
     scenario also applies to graphs whose node ids a proposer chose.
     ``attempts`` lists the 1-based attempt numbers that fail; ``None`` means
-    every attempt.  ``add``/``remove`` are the facts the failed attempt
-    changes anyway, for example a dropped object.
+    every attempt.  ``unless`` are facts that suspend the failure: an attempt
+    made while every one of them holds succeeds normally.  That is how a
+    scenario states a physical truth the proposer is not told, for example
+    that an object inside a closed drawer cannot be picked until the drawer
+    is open.  ``add``/``remove`` are the facts the failed attempt changes
+    anyway, for example a dropped object.
     """
 
     contract_type: str
@@ -90,6 +94,7 @@ class ScriptedFailure:
     failure_mode: str = "scripted_failure"
     add: Tuple[str, ...] = ()
     remove: Tuple[str, ...] = ()
+    unless: Tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.contract_type or not self.target or not self.failure_mode:
@@ -104,13 +109,25 @@ class ScriptedFailure:
             object.__setattr__(self, "attempts", attempts)
         object.__setattr__(self, "add", tuple(self.add))
         object.__setattr__(self, "remove", tuple(self.remove))
+        unless = tuple(self.unless)
+        if any(not isinstance(fact, str) or not fact for fact in unless):
+            raise ValueError("unless facts must be non-empty strings")
+        object.__setattr__(self, "unless", unless)
 
     @property
     def key(self) -> Tuple[str, str]:
         return (self.contract_type, self.target)
 
-    def applies(self, attempt: int) -> bool:
-        return self.attempts is None or attempt in self.attempts
+    def applies(self, attempt: int, facts: Iterable[str] = ()) -> bool:
+        """Whether this attempt fails: listed (or every attempt) and not suspended."""
+
+        if self.attempts is not None and attempt not in self.attempts:
+            return False
+        if self.unless:
+            held = set(facts)
+            if all(fact in held for fact in self.unless):
+                return False
+        return True
 
     def as_dict(self) -> Dict[str, Any]:
         return {
@@ -120,6 +137,7 @@ class ScriptedFailure:
             "failure_mode": self.failure_mode,
             "add": list(self.add),
             "remove": list(self.remove),
+            "unless": list(self.unless),
         }
 
     @classmethod
@@ -130,7 +148,7 @@ class ScriptedFailure:
             payload,
             where=where,
             required=("contract_type", "target"),
-            optional=("attempts", "failure_mode", "add", "remove"),
+            optional=("attempts", "failure_mode", "add", "remove", "unless"),
         )
         attempts = payload.get("attempts", [1])
         if attempts is not None:
@@ -146,6 +164,7 @@ class ScriptedFailure:
             ),
             add=schema.require_str_tuple(payload, "add", where=where),
             remove=schema.require_str_tuple(payload, "remove", where=where),
+            unless=schema.require_str_tuple(payload, "unless", where=where),
         )
 
 
@@ -267,16 +286,19 @@ class SymbolicEnvironmentAdapter(EnvironmentAdapter):
 
 
 class SymbolicPolicyExecutor(PolicyExecutor):
-    """Execute a grounding by applying its effects, or a scripted failure instead."""
+    """Execute a grounding by applying its effects, or a scripted failure instead.
+
+    Several failures may address the same grounding; the first one that
+    applies to the attempt, in the order given, is what happens.  A scenario
+    lists a standing physical truth (``unless=...``) before a one-off mishap.
+    """
 
     def __init__(self, failures: Iterable[ScriptedFailure] = ()) -> None:
-        self._failures: Dict[Tuple[str, str], ScriptedFailure] = {}
+        self._failures: Dict[Tuple[str, str], List[ScriptedFailure]] = {}
         for failure in failures:
-            if failure.key in self._failures:
-                raise ValueError(
-                    "two scripted failures for the same grounding {}".format(failure.key)
-                )
-            self._failures[failure.key] = failure
+            if not isinstance(failure, ScriptedFailure):
+                raise TypeError("scripted failures must be ScriptedFailure instances")
+            self._failures.setdefault(failure.key, []).append(failure)
         self.attempts: Dict[Tuple[str, str], int] = {}
 
     def execute(
@@ -289,8 +311,12 @@ class SymbolicPolicyExecutor(PolicyExecutor):
         key = grounding_key(grounded)
         attempt = self.attempts.get(key, 0) + 1
         self.attempts[key] = attempt
-        failure = self._failures.get(key)
-        if failure is not None and failure.applies(attempt):
+        facts = environment.snapshot().facts
+        failure = next(
+            (item for item in self._failures.get(key, ()) if item.applies(attempt, facts)),
+            None,
+        )
+        if failure is not None:
             snapshot = environment.step({"add": failure.add, "remove": failure.remove})
             monitor(snapshot)
             return PolicyExecution(

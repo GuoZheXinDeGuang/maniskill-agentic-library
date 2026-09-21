@@ -1,4 +1,4 @@
-"""MS-HAB behind the environment boundary: one TidyHouse episode on ``SkillRollout-v0``.
+"""MS-HAB behind the environment boundary: one SetTable episode on ``SkillRollout-v0``.
 
 This module imports torch and ManiSkill; the controller never does.  It wraps
 the official ``make_env`` chain (depth observations, frame stacking, video,
@@ -16,7 +16,7 @@ import torch
 
 from mshab.envs.make import EnvConfig, make_env
 from mshab.envs.skill_rollout import SkillRolloutEnv
-from mshab.experiments.rollout.episode import SceneMeasurements, TidyHouseEpisode
+from mshab.experiments.rollout.episode import SceneMeasurements, SetTableEpisode
 from mshab.skills.environment import EnvironmentSnapshot, MSHabEnvironmentAdapter
 from mshab.skills.library import ContractLibrary
 
@@ -75,7 +75,7 @@ class RolloutEnvironmentAdapter(MSHabEnvironmentAdapter):
 
     The entities are the episode's, the facts come from
     :meth:`SkillRolloutEnv.scene_measurements` through
-    :meth:`TidyHouseEpisode.facts`, and the compatible contract environments
+    :meth:`SetTableEpisode.facts`, and the compatible contract environments
     are those of the library's contracts, as in the symbolic adapter.  The
     seed is fixed at construction because the controller calls ``reset()``
     without arguments; the first reset also reconfigures the scene.
@@ -84,7 +84,7 @@ class RolloutEnvironmentAdapter(MSHabEnvironmentAdapter):
     def __init__(
         self,
         env,
-        episode: TidyHouseEpisode,
+        episode: SetTableEpisode,
         library: ContractLibrary,
         task: str,
         *,
@@ -148,6 +148,8 @@ class RolloutEnvironmentAdapter(MSHabEnvironmentAdapter):
             grasped={index: values[0] for index, values in raw["grasped"].items()},
             at_goal={index: values[0] for index, values in raw["at_goal"].items()},
             near={index: values[0] for index, values in raw["near"].items()},
+            opened={index: values[0] for index, values in raw.get("opened", {}).items()},
+            closed={index: values[0] for index, values in raw.get("closed", {}).items()},
             collision_safe=raw["collision_safe"][0],
         )
 

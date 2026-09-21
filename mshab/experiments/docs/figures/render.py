@@ -8,7 +8,7 @@ Three kinds of figure, all deterministic SVG next to this module:
 - ``pipeline.svg``: the whole pipeline, from the request through the two
   proposer calls, the validator, and the controller loop to the trace.
 - ``subgoal_chains.svg``: the Layer-1 chains side by side: the two gold
-  TidyHouse decompositions and every DeepSeek decomposition in ``extracts/``.
+  SetTable decompositions and every DeepSeek decomposition in ``extracts/``.
 - one ``deepseek_<granularity>_static.svg`` per static proposal, drawn by the
   gold-graph renderer with the nodes that have no gold counterpart flagged,
   and one ``deepseek_<scenario>_<granularity>_replans.svg`` per scenario run,
@@ -28,17 +28,14 @@ import json
 import textwrap
 from collections import Counter
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
 
 from mshab.experiments.granularity.higher_layers.gold import GoldGraph, build_gold_graph
 from mshab.experiments.granularity.higher_layers.render import (
     graph_caption,
     skill_graph_svg,
 )
-from mshab.experiments.granularity.higher_layers.scenarios import (
-    SCENARIOS,
-    tidy_house_goal_facts,
-)
+from mshab.experiments.granularity.higher_layers.scenarios import SCENARIOS
 from mshab.experiments.granularity.lower_layers.library import (
     EXPERIMENT_TASK,
     split_contract_id,
@@ -341,7 +338,9 @@ def flag_extra_nodes(
 
 
 def reference_for(granularity: str) -> Optional[str]:
-    return {"coarse": "tidy_house_coarse", "fine": "tidy_house_fine"}.get(granularity)
+    """The gold graph a proposal at ``granularity`` is drawn against; none for ``free``."""
+
+    return {"coarse": "set_table_coarse", "fine": "set_table_fine"}.get(granularity)
 
 
 # -- figure 1: the pipeline -------------------------------------------------------------
@@ -380,8 +379,8 @@ def pipeline_svg() -> str:
         [
             "DecompositionRequest / SubgraphRequest",
             "goal text",
-            "entities: objects, receptacles",
-            "facts: present(...), gripper_empty(), ...",
+            "entities: objects, storages, receptacle",
+            "facts: present(...), closed(...), gripper_empty(), ...",
             "contracts: 5 × Contract.as_dict()",
             "granularity: free | coarse | fine",
             "history + failure   (on a replan)",
@@ -398,7 +397,7 @@ def pipeline_svg() -> str:
     body.extend(_lines(354, 306, [
         "DeepSeekProposer: one chat completion per call, JSON",
         "ScriptedProposer: tables cut from the gold graphs",
-        "TidyHouseRuleProposer: rules, for the MS-HAB rollout",
+        "SetTableRuleProposer: rules, for the MS-HAB rollout",
     ], size=11, step=14, fill=_MUTED))
     body.extend(_card(
         710, 160, 200, 134, "assemble_patch",
@@ -459,14 +458,14 @@ def pipeline_svg() -> str:
     body.extend(_card(
         50, 460, 400, 222, "TaskController",
         [
-            "1  absorb facts: the next sub-goal whose predicate",
+            "1  absorb facts: an untouched sub-goal whose predicate",
             "    already holds is achieved, its nodes are skipped",
-            "2  SkillPlanner.decide(completed, failed) → one node",
+            "2  SkillPlanner.decide(completed, failed) → one node:",
+            "    prerequisites, the achiever, then its follow-ups",
             "3  SkillRuntime.execute_node: admission (preconditions,",
             "    invariants) → policy run → verify the effects",
             "4  success → completed · failure → retry, ≤ 2 attempts",
-            "5  NoViableCandidate → Failure(sub-goal, node, mode,",
-            "    missing effects / preconditions) → replan",
+            "5  NoViableCandidate → Failure(sub-goal, node, mode) → replan",
         ],
         stroke=_ENV, title_fill=_ENV, size=11,
     ))
@@ -531,7 +530,7 @@ def pipeline_svg() -> str:
             "Layer 3   five generic contracts: navigate · pick · place · open · close, ids mshab.granularity.<type>.all;",
             "              each with parameters, preconditions, effects, deletes, invariants, and a horizon",
             "Layer 4   53 checkpoint policies from the MS-HAB download, each bound to the contract of its type;",
-            "              task_families=('tidy_house',) binds the 21 TidyHouse checkpoints for the rollout;",
+            "              task_families=('set_table',) binds the 11 SetTable checkpoints for the rollout;",
             "              one SymbolicPolicy per contract for the symbolic environment",
             "a proposer only ever names a contract and its arguments; which policy runs is the library's choice",
         ],
@@ -541,11 +540,11 @@ def pipeline_svg() -> str:
         810, 770, 700, 170, "Gold graphs and measurement · stages 2, 5  (higher_layers/, evaluate.py)",
         [
             "gold graphs: hand-authored, validated, committed as JSON + SVG under granularity/graphs/",
-            "    tidy_house_coarse  5 sub-goals / 20 nodes · tidy_house_fine  20 / 20 · set_table_generic  8 / 16",
+            "    set_table_coarse  2 sub-goals / 16 nodes · set_table_fine  16 / 16",
             "the ScriptedProposer answers from them; a model's decomposition and subgraphs are compared with them",
             "    (exact match, order similarity, predicate precision / recall, node and edge Jaccard, role P / R)",
-            "scenarios with injected failures, identical for every proposer: nominal, pick_fails_once,",
-            "    pick_exhausted, object_dropped, object_already_delivered, set_table_nominal",
+            "scenarios with injected failures, identical for every proposer: nominal, pick_fails_once, pick_exhausted,",
+            "    object_dropped, object_already_delivered, storage_already_open, object_elsewhere",
         ],
         stroke=_L1, title_fill=_L1, size=11,
     ))
@@ -579,6 +578,8 @@ def _predicate_style(predicate: str) -> Tuple[str, str]:
         "at": (_CONTRACT_FILL, _CONTRACT),
         "holding": (_L2_FILL, _L2),
         "reachable": (_L1_FILL, _L1),
+        "open": (_ENV_FILL, _ENV),
+        "closed": (_ENV_FILL, _ENV),
     }.get(name, ("#ffffff", _GREY))
 
 
@@ -625,27 +626,39 @@ def _proposal_subgoals(proposal: Mapping[str, Any]) -> List[Tuple[str, str, int]
 
 
 def _entity_order_note(entities: Sequence[str]) -> str:
-    return "entities alphabetical" if list(entities) == sorted(entities) else "entities in transfer order"
+    return "entities alphabetical" if list(entities) == sorted(entities) else "entities in plan order"
 
 
 def _agreement_note(record: Mapping[str, Any]) -> str:
-    """``coarse: exact · fine: order 0.25``, from the sweep's decomposition agreement."""
+    """``coarse: exact · fine: order 0.12``, from the sweep's decomposition agreement."""
 
     agreement = record.get("evaluation", {}).get("decomposition", {}).get("agreement", {})
     parts = []
-    for name in ("tidy_house_coarse", "tidy_house_fine"):
+    for granularity in ("coarse", "fine"):
+        name = reference_for(granularity)
         if name in agreement:
             item = agreement[name]
             parts.append("{}: {}".format(
-                name.split("_")[-1],
+                granularity,
                 "exact" if item["exact"] else "order {:.2f}".format(item["order_similarity"]),
             ))
     return "agreement " + " · ".join(parts) if parts else ""
 
 
-def _wrong_destinations(subgoals: Sequence[Tuple[str, str, int]], goal_facts: Sequence[str]) -> Tuple[int, int]:
-    placements = [predicate for _, predicate, _ in subgoals if predicate.startswith("at(")]
-    return sum(1 for predicate in placements if predicate not in goal_facts), len(placements)
+def gold_predicates() -> Set[str]:
+    """Every sub-goal predicate of the two gold graphs: the vocabulary a chain is checked against."""
+
+    return {
+        subgoal.predicate
+        for granularity in ("coarse", "fine")
+        for subgoal in build_gold_graph(reference_for(granularity)).subgoal_graph.subgoals.values()
+    }
+
+
+def _off_gold(subgoals: Sequence[Tuple[str, str, int]], vocabulary: Set[str]) -> Tuple[int, int]:
+    """How many of a column's predicates fall outside the gold vocabulary, and how many there are."""
+
+    return sum(1 for _, predicate, _ in subgoals if predicate not in vocabulary), len(subgoals)
 
 
 def _static_column(record: Mapping[str, Any]) -> ChainColumn:
@@ -659,16 +672,16 @@ def _static_column(record: Mapping[str, Any]) -> ChainColumn:
     )
 
 
-def _scenario_column(record: Mapping[str, Any], goal_facts: Sequence[str]) -> ChainColumn:
+def _scenario_column(record: Mapping[str, Any], vocabulary: Set[str]) -> ChainColumn:
     proposal = record["proposals"][0]
     subgoals = _proposal_subgoals(proposal)
-    wrong, total = _wrong_destinations(subgoals, goal_facts)
+    off, total = _off_gold(subgoals, vocabulary)
     return ChainColumn(
         "DeepSeek · {}".format(record["granularity"]),
         "initial proposal of the {} run".format(record["scenario"]),
         "run {}".format(record["run"]),
-        "{}; {} of {} destinations differ from the goal facts".format(
-            _entity_order_note(proposal["entities"]), wrong, total
+        "{}; {} of {} predicates outside the gold vocabulary".format(
+            _entity_order_note(proposal["entities"]), off, total
         ),
         subgoals,
     )
@@ -676,88 +689,91 @@ def _scenario_column(record: Mapping[str, Any], goal_facts: Sequence[str]) -> Ch
 
 def subgoal_chains_svg(statics: Sequence[Mapping[str, Any]],
                        scenarios: Sequence[Mapping[str, Any]]) -> str:
-    """Every Layer-1 chain as a column; a coarse sub-goal spans its four fine ones."""
+    """Every Layer-1 chain as a column, one row per skill node: a sub-goal spans its subgraph."""
 
-    goal_facts = tuple(tidy_house_goal_facts())
-    gold_fine = build_gold_graph("tidy_house_fine")
-    fine_predicates = {subgoal.predicate for subgoal in gold_fine.subgoal_graph.subgoals.values()}
-    columns = [_gold_column("tidy_house_coarse"), _gold_column("tidy_house_fine")]
+    coarse = build_gold_graph(reference_for("coarse"))
+    vocabulary = gold_predicates()
+    columns = [_gold_column(reference_for("coarse")), _gold_column(reference_for("fine"))]
     columns += [_static_column(record) for record in statics]
     scenario_columns = [
-        _scenario_column(record, goal_facts)
+        _scenario_column(record, vocabulary)
         for record in scenarios
         if record["proposals"] and record["proposals"][0].get("accepted")
     ]
     columns += scenario_columns
-    wrong = sum(_wrong_destinations(column.subgoals, goal_facts)[0] for column in scenario_columns)
-    total = sum(_wrong_destinations(column.subgoals, goal_facts)[1] for column in scenario_columns)
+    off = sum(_off_gold(column.subgoals, vocabulary)[0] for column in scenario_columns + [
+        _static_column(record) for record in statics
+    ])
+    total = sum(_off_gold(column.subgoals, vocabulary)[1] for column in scenario_columns + [
+        _static_column(record) for record in statics
+    ])
 
-    rows = max(len(column.subgoals) for column in columns)
+    rows = max(sum(nodes for _, _, nodes in column.subgoals) for column in columns)
     LEFT, LABEL_W, COL_W, COL_GAP = 30, 250, 238, 18
     HEADER, ROW_H, FOOTER = 204, 34, 70
-    width = LEFT * 2 + LABEL_W + len(columns) * (COL_W + COL_GAP)
+    # Wide enough for the header and legend lines even with the two gold columns alone.
+    width = max(1460, LEFT * 2 + LABEL_W + len(columns) * (COL_W + COL_GAP))
     height = HEADER + rows * ROW_H + FOOTER
-    transfers = [predicate[3:-1].split(",") for predicate in goal_facts]
 
     body: List[str] = [
         text(LEFT, 40, "Layer-1 sub-goal chains: gold references and DeepSeek decompositions", size=26, weight=700, fill="#6842cb"),
-        text(LEFT, 66, "TidyHouse, five transfers · each column is one decomposition, top to bottom in execution order · "
-             "a coarse sub-goal spans the four fine sub-goals of the same transfer", size=14, fill=_MUTED),
-        text(LEFT, 88, "the goal text names no object–receptacle pairing: the static requests list the receptacles in transfer order and the model "
-             "pairs by position;", size=13, fill=_MUTED),
-        text(LEFT, 106, "the scenario runs list them alphabetically and the model guesses ({} of {} destinations differ from the goal facts)".format(wrong, total),
+        text(LEFT, 66, "SetTable, two objects out of two storages · each column is one decomposition, top to bottom in execution order · "
+             "a sub-goal spans one row per skill node of its subgraph", size=14, fill=_MUTED),
+        text(LEFT, 88, "the goal does not say which storage holds which object; the gold graphs assume the official episode "
+             "(bowl in the kitchen counter drawer, apple in the fridge);", size=13, fill=_MUTED),
+        text(LEFT, 106, "a dashed red box is a predicate outside the gold vocabulary ({} of {} in the DeepSeek columns)".format(off, total),
              size=13, fill=_MUTED),
     ]
 
-    # Transfer bands and labels.
-    per_transfer = rows // len(transfers) if rows % len(transfers) == 0 else None
-    if per_transfer:
-        for index, (obj, receptacle) in enumerate(transfers):
-            y = HEADER + index * per_transfer * ROW_H
-            body.append(_rect(LEFT, y, width - 2 * LEFT, per_transfer * ROW_H, fill=_GREY_FILL if index % 2 else "#ffffff", stroke="none", rx=0))
-            body.append(text(LEFT + 12, y + per_transfer * ROW_H / 2 - 4, "transfer {}".format(index + 1), size=13, weight=700))
-            body.append(text(LEFT + 12, y + per_transfer * ROW_H / 2 + 14, "{} → {}".format(obj, receptacle), size=11, fill=_MUTED))
+    # Segment bands: the gold coarse sub-goals, one band each, as many rows as nodes.
+    y = HEADER
+    for index, subgoal_id in enumerate(coarse.subgoal_graph.execution_order()):
+        nodes = len(coarse.skill_graph.subgraph_for_subgoal(subgoal_id).nodes)
+        band_h = nodes * ROW_H
+        body.append(_rect(LEFT, y, width - 2 * LEFT, band_h, fill=_GREY_FILL if index % 2 else "#ffffff", stroke="none", rx=0))
+        body.append(text(LEFT + 12, y + band_h / 2 - 4, subgoal_id, size=13, weight=700))
+        body.append(text(LEFT + 12, y + band_h / 2 + 14, coarse.subgoal_graph.subgoals[subgoal_id].predicate, size=11, fill=_MUTED))
+        y += band_h
 
     for column_index, column in enumerate(columns):
         x = LEFT + LABEL_W + column_index * (COL_W + COL_GAP)
         body.append(text(x, HEADER - 74, column.title, size=13, weight=700))
         body.append(text(x, HEADER - 58, column.subtitle, size=11, weight=700, fill=_MUTED))
         body.extend(_lines(x, HEADER - 43, _wrap(column.source, 42, 1) + _wrap(column.note, 42, 2), size=10, step=13, fill=_MUTED))
-        count = len(column.subgoals)
-        span = rows // count if count and rows % count == 0 else 1
-        for index, (subgoal_id, predicate, nodes) in enumerate(column.subgoals):
-            y = HEADER + index * span * ROW_H + 3
+        y = HEADER
+        for subgoal_id, predicate, nodes in column.subgoals:
+            span = max(nodes, 1)
             h = span * ROW_H - 6
             fill, stroke = _predicate_style(predicate)
-            matched = predicate in goal_facts if predicate.startswith("at(") else predicate in fine_predicates
-            body.append(_rect(x, y, COL_W, h, fill=fill, stroke=stroke if matched else _FLAG, width=1.4 if matched else 2, rx=8, dashed=not matched))
+            matched = predicate in vocabulary
+            body.append(_rect(x, y + 3, COL_W, h, fill=fill, stroke=stroke if matched else _FLAG, width=1.4 if matched else 2, rx=8, dashed=not matched))
             if span >= 3:
-                body.append(text(x + 10, y + 22, subgoal_id, size=12, weight=700))
-                body.append(text(x + 10, y + 40, predicate, size=11, fill=_TEXT))
-                body.append(text(x + 10, y + 58, "{} skill node{}".format(nodes, "" if nodes == 1 else "s"), size=10, fill=_MUTED))
+                body.append(text(x + 10, y + 25, subgoal_id, size=12, weight=700))
+                body.append(text(x + 10, y + 43, predicate, size=11, fill=_TEXT))
+                body.append(text(x + 10, y + 61, "{} skill node{}".format(nodes, "" if nodes == 1 else "s"), size=10, fill=_MUTED))
             else:
-                body.append(text(x + 10, y + h / 2 + 4, predicate, size=11, fill=_TEXT))
+                body.append(text(x + 10, y + 3 + h / 2 + 4, predicate, size=11, fill=_TEXT))
                 if nodes != 1:
-                    body.append(text(x + COL_W - 8, y + h / 2 + 4, "n={}".format(nodes), size=10, weight=700, fill=_L2, anchor="end"))
+                    body.append(text(x + COL_W - 8, y + 3 + h / 2 + 4, "n={}".format(nodes), size=10, weight=700, fill=_L2, anchor="end"))
             if not matched:
-                body.append(text(x + COL_W - 8, y + 14, "≠ goal", size=10, weight=700, fill=_FLAG, anchor="end"))
+                body.append(text(x + COL_W - 8, y + 17, "≠ gold", size=10, weight=700, fill=_FLAG, anchor="end"))
+            y += span * ROW_H
 
     body.append(text(
         LEFT, height - 38,
-        "box = one sub-goal (Layer 1) · fill: orange at(object, receptacle), purple holding(object), blue reachable(x) · "
-        "n = skill nodes in the sub-goal's subgraph when not one",
+        "box = one sub-goal (Layer 1) · fill: orange at(object, receptacle), purple holding(object), blue reachable(x), green open(x) / closed(x) · "
+        "rows = skill nodes in the sub-goal's subgraph",
         size=12, fill=_MUTED,
     ))
     body.append(text(
         LEFT, height - 20,
-        "dashed red = a predicate that is not among the gold goal facts (at) or the gold fine predicates (reachable, holding); "
-        "the sub-goal ids are the proposer's own",
+        "dashed red = a predicate that is in neither gold graph; the sub-goal ids are the proposer's own",
         size=12, fill=_MUTED,
     ))
     return _document(
         width, height,
         "Layer-1 sub-goal chains",
-        "Gold TidyHouse decompositions next to every DeepSeek decomposition, aligned by transfer.",
+        "Gold SetTable decompositions next to every DeepSeek decomposition, one row per skill node.",
         body,
     )
 
@@ -837,7 +853,7 @@ def _subgoal_state(node_ids: Sequence[str], achievers: Sequence[str],
     if not touched:
         return "not reached", "#ffffff", _GREY
     if any(item["outcome"] == "skipped" for item in touched):
-        return "skipped: already held", "#eeeeee", _GREY
+        return "skipped: already true", "#eeeeee", _GREY
     if any(item["outcome"] == "success" for node_id in achievers for item in decisions.get(node_id, [])):
         return "achieved", "#dff4df", _ENV
     if any(item["outcome"] in ("failed", "admission_failed") for item in touched):
@@ -947,9 +963,11 @@ def scenario_replans_svg(record: Mapping[str, Any]) -> str:
                     detail = _short_failure(failed[-1]["failure_mode"]) if failed else "step {}".format(taken[-1]["step"])
                 body.append(text(nx + strip_w / 2, box_y + 73, detail, size=8.5, fill=_MUTED, anchor="middle"))
 
-    final_at = [fact for fact in record["final_facts"] if fact.startswith("at(")]
+    final_state = [
+        fact for fact in record["final_facts"] if fact.startswith(("at(", "open(", "closed("))
+    ]
     body.append(text(LEFT, height - 60, "goal facts:  " + " · ".join(goal_facts), size=11, fill=_MUTED))
-    body.append(text(LEFT, height - 44, "final facts: " + (" · ".join(final_at) or "no object delivered"), size=11, fill=_MUTED))
+    body.append(text(LEFT, height - 44, "final facts: " + (" · ".join(final_state) or "no object delivered"), size=11, fill=_MUTED))
     body.append(text(
         LEFT, height - 20,
         "box = one sub-goal of that proposal, in order · small boxes = its skill nodes with the controller's last outcome: "
@@ -973,9 +991,10 @@ def write_figures(directory: Path = FIGURE_DIR, data_dir: Path = DATA_DIR) -> Li
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
     statics, scenarios = load_data(data_dir)
-    outputs: List[Tuple[str, str]] = [("pipeline.svg", pipeline_svg())]
-    if statics or scenarios:
-        outputs.append(("subgoal_chains.svg", subgoal_chains_svg(statics, scenarios)))
+    outputs: List[Tuple[str, str]] = [
+        ("pipeline.svg", pipeline_svg()),
+        ("subgoal_chains.svg", subgoal_chains_svg(statics, scenarios)),
+    ]
     for record in statics:
         outputs.append(("deepseek_{}_static.svg".format(record["granularity"]), static_proposal_svg(record)))
     for record in scenarios:

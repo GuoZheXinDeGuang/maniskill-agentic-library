@@ -1,8 +1,11 @@
-# TidyHouse granularity experiment
+# TidyHouse granularity experiment (design note)
 
-TidyHouse is the recommended next experiment for Layer-1/2 granularity. The
-downloaded official sequential plans contain five object transfers and 20
-atomic subtasks per episode:
+A TidyHouse variant of the Layer-1/2 granularity experiment. The experiment
+under `mshab/experiments/` implemented this design until 2026-09-21 and then
+moved to SetTable (two objects out of two storages, 16 atomic subtasks, the
+storage closed again inside the object's sub-goal); this note keeps the
+TidyHouse design for a later variant. The downloaded official sequential
+plans contain five object transfers and 20 atomic subtasks per episode:
 
 ```text
 (NavigateToObject -> Pick -> NavigateToDestination -> Place) x 5
@@ -52,9 +55,11 @@ at(object_i, destination_i)
 ```
 
 For a five-object episode this produces 20 sub-goals and 20 skill subgraphs.
-The gold graphs in `mshab/experiments/granularity/graphs/` implement both
-variants over the five generic contracts, so every role has exactly one node
-and both variants hold the same 20 nodes; only sub-goal ownership differs.
+The gold graphs in `mshab/experiments/granularity/graphs/` implement the same
+two variants for SetTable over the five generic contracts (every role has
+exactly one node, both variants hold the same nodes, only sub-goal ownership
+differs); a TidyHouse builder would take a `transfers` context in place of
+SetTable's `segments`.
 
 ## Required measurements
 
@@ -68,6 +73,8 @@ A valid granularity result needs a fact-aware controller that marks sub-goals
 from live predicates and re-decides after each node; otherwise coarse and
 fine are only two serializations of the same fixed 20-subtask plan. That
 controller is `TaskController` in `mshab/experiments/planning/`, and
-`mshab/experiments/rollout/` runs it on MS-HAB for one official TidyHouse
-episode with the RL checkpoints, recording the metrics above per run.
+`mshab/experiments/rollout/` runs it on MS-HAB for one official episode with
+the RL checkpoints, recording the metrics above per run; a TidyHouse episode
+reader (`navigate, pick, navigate, place` per transfer, receptacles named
+from the episode config) would replace the SetTable one there.
 

@@ -25,7 +25,7 @@ _VOCABULARY = """## Vocabulary
 - goal: the task text.
 - sub-goal: one symbolic milestone of the goal, written as a predicate such as holding(024_bowl). A sub-goal is achieved the moment its predicate holds in the environment facts while it is next in line; a sub-goal whose predicate already holds when its turn comes is skipped together with its skill nodes.
 - skill node: one call of one contract with concrete arguments, which is one atomic robot subtask (navigate, pick, place, open, close).
-- skill subgraph: the skill nodes and edges that implement one sub-goal. The achiever is the node whose contract effect is the sub-goal predicate; every other node is instrumental and only prepares the achiever.
+- skill subgraph: the skill nodes and edges that implement one sub-goal. The achiever is the node whose contract effect is the sub-goal predicate. Every other node either prepares the achiever (instrumental, before it) or follows it (follow-up, after it): work that belongs to the sub-goal but comes once its predicate holds, such as closing the storage an object was just taken from. The sub-goal counts as done when the achiever and every follow-up have run.
 - contract: what a skill node asks for: typed parameters, preconditions (facts that must hold before it starts), invariants (facts that must hold throughout), effects (facts it makes true), deletes (facts it retracts). Predicate templates use {parameter} placeholders.
 - policy: the low-level controller that executes a contract. Never your concern."""
 
@@ -70,8 +70,8 @@ The user message is one JSON object with these fields:
 5. On a replan (`failure` is not null): what `history.achieved_subgoals` secured stays achieved, so start from the current `facts` and plan the rest of the goal. Read `failure`: missing_preconditions means the node could not even start (for example the object was dropped and must be picked up again); a node that failed with the same failure_mode on every attempt will most likely fail again, so consider giving that object up or reaching the result another way.
 
 ## Granularity
-- coarse: one sub-goal per result the goal asks for, for example one at(object,receptacle) per object to move, plus open(x) or closed(x) only where the goal needs an articulation in that state. Each sub-goal will own a subgraph of several skill nodes.
-- fine: one sub-goal per verifiable state transition, one skill node each: reachable(object), holding(object), reachable(receptacle), at(object,receptacle) for a transfer; reachable(x), open(x) to open something.
+- coarse: one sub-goal per object the goal asks to move, at(object,receptacle). Everything that object needs belongs to that one sub-goal's subgraph: opening its storage and fetching it before the place, closing the storage again after it. Do not add sub-goals for reachable, holding, open, or closed.
+- fine: one sub-goal per verifiable state transition, one skill node each: reachable(storage), open(storage), reachable(object), holding(object), reachable(receptacle), at(object,receptacle), reachable(storage), closed(storage) for an object taken out of a storage.
 - free: choose the decomposition you judge best for reliable execution and recovery.
 
 ## Response
@@ -109,11 +109,11 @@ The user message is one JSON object with these fields:
 {world_model}
 
 ## How the subgraph is executed
-The controller runs one node at a time in the order the edges imply. A node is admitted only when every precondition and invariant of its contract holds in the current facts; when it succeeds, its effects are added and its deletes retracted. The nodes of earlier sub-goals have already run, so plan only what this sub-goal still needs: instrumental nodes exist to make the achiever admissible, for example navigate to the object before pick, or navigate to the receptacle before place, never to redo an earlier sub-goal.
+The controller runs one node at a time in the order the edges imply. A node is admitted only when every precondition and invariant of its contract holds in the current facts; when it succeeds, its effects are added and its deletes retracted. The nodes of earlier sub-goals have already run, so plan only what this sub-goal still needs: instrumental nodes exist to make the achiever admissible, for example navigate to the object before pick, or navigate to the receptacle before place, never to redo an earlier sub-goal. Follow-up nodes come after the achiever, reached from it by enables edges, and run before the next sub-goal starts: for example navigate back to the storage and close it after the place. A sub-goal whose predicate already holds when its turn comes is skipped whole, follow-ups included, so put a follow-up only into the sub-goal whose result it belongs to.
 
 ## Rules
 1. Every node names a contract_id from `contracts` exactly as written there and gives exactly that contract's parameters as `arguments`, with entity names from `entities` as values.
-2. Exactly one node achieves the sub-goal: its `achieves` is ["<the sub-goal id>"] and the sub-goal predicate is one of its grounded effects. Every other node has `achieves: []`. Two achievers are allowed only as a fallback_to chain; with this inventory one achiever is enough.
+2. Exactly one node achieves the sub-goal: its `achieves` is ["<the sub-goal id>"] and the sub-goal predicate is one of its grounded effects. Every other node, instrumental or follow-up, has `achieves: []`. Two achievers are allowed only as a fallback_to chain; with this inventory one achiever is enough.
 3. Node ids are unique across the whole plan, not only inside this subgraph, so prefix them with the sub-goal id, for example bowl_on_table.navigate_to_bowl. An id {identifiers}.
 4. Edges connect two nodes of this subgraph. Relations:
    - enables (source -> target): finishing the source makes the target the logical next step. This is the ordering edge to use.

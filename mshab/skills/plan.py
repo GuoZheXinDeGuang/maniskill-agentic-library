@@ -92,7 +92,9 @@ class SkillPlanner:
     sub-goal subgraph the achiever that is the *source* of a ``FALLBACK_TO`` chain
     is the primary, and each ``FALLBACK_TO`` target is the next candidate to try
     once its predecessor is reported failed.  Instrumental prerequisites follow
-    the same rule along their own chains.
+    the same rule along their own chains, and so do the achiever's follow-ups:
+    the nodes it enables inside its own subgraph, which run after it before
+    the next sub-goal starts.
     """
 
     def __init__(
@@ -220,6 +222,30 @@ class SkillPlanner:
             )
         return tuple(achievers[node_id] for node_id in chains[0])
 
+    def remaining(
+        self,
+        subgoal_id: str,
+        completed: Iterable[str] = (),
+        failed: Iterable[str] = (),
+    ) -> Tuple[str, ...]:
+        """The wanted nodes of one sub-goal that have not completed, in subgraph order.
+
+        Empty once the sub-goal's work is done: its achiever ran and so did
+        every follow-up.  Raises :class:`NoViableCandidate` when the sub-goal
+        can no longer be completed from this graph.
+        """
+
+        completed_ids = self._known(completed, "completed")
+        failed_ids = self._known(failed, "failed")
+        subgraph = self.graph.subgraph_for_subgoal(subgoal_id)
+        selected = self.select_achiever(subgraph, failed_ids)
+        wanted = self._wanted(subgraph, selected.id, completed_ids, failed_ids)
+        return tuple(
+            node_id
+            for node_id in subgraph.execution_order()
+            if node_id in wanted and node_id not in completed_ids
+        )
+
     @staticmethod
     def _wanted(
         subgraph: SkillSubgraph,
@@ -227,23 +253,63 @@ class SkillPlanner:
         completed: Set[str],
         failed: Set[str],
     ) -> Set[str]:
-        """The achiever plus one runnable member of every prerequisite chain.
+        """The achiever, its prerequisites, and its follow-ups, one runnable member per chain.
 
         Prerequisites arrive as fallback chains.  The member to run is one that
         already completed, else the first member that has not failed; when
         every member failed the sub-goal as a whole has failed.
+
+        A *follow-up* is a non-achiever node that the achiever causally
+        precedes, directly or through other follow-ups: work that belongs to
+        the sub-goal but comes after its predicate holds, such as closing the
+        storage an object was just taken from.  Follow-ups are resolved along
+        their own fallback chains the same way and bring their own
+        prerequisites.  A node that merely shares a prerequisite with the
+        achiever, such as the preparation of an alternative candidate, is not a
+        follow-up and is left alone.
         """
 
-        wanted = {achiever_id}
+        achievers = {node.id for node in subgraph.achievers}
+        wanted: Set[str] = set()
+        SkillPlanner._want_with_prerequisites(subgraph, achiever_id, wanted, completed, failed)
         frontier = [achiever_id]
         while frontier:
             current = frontier.pop()
-            for group in subgraph.prerequisite_groups(current):
-                chosen = SkillPlanner._resolve(subgraph, group, completed, failed)
+            for node_id in subgraph.execution_order():
+                if node_id in achievers or node_id in wanted:
+                    continue
+                if not any(
+                    current in group for group in subgraph.prerequisite_groups(node_id)
+                ):
+                    continue
+                chosen = SkillPlanner._resolve(
+                    subgraph, frozenset(subgraph.fallback_chain_of(node_id)), completed, failed
+                )
                 if chosen not in wanted:
-                    wanted.add(chosen)
+                    SkillPlanner._want_with_prerequisites(
+                        subgraph, chosen, wanted, completed, failed
+                    )
                     frontier.append(chosen)
         return wanted
+
+    @staticmethod
+    def _want_with_prerequisites(
+        subgraph: SkillSubgraph,
+        node_id: str,
+        wanted: Set[str],
+        completed: Set[str],
+        failed: Set[str],
+    ) -> None:
+        """Add ``node_id`` and one runnable member of every prerequisite chain, transitively."""
+
+        frontier = [node_id]
+        while frontier:
+            current = frontier.pop()
+            if current in wanted:
+                continue
+            wanted.add(current)
+            for group in subgraph.prerequisite_groups(current):
+                frontier.append(SkillPlanner._resolve(subgraph, group, completed, failed))
 
     @staticmethod
     def _resolve(

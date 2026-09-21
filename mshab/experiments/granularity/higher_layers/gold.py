@@ -14,9 +14,7 @@ from typing import Any, Dict, Mapping, Optional, Tuple
 
 from mshab.experiments.granularity.higher_layers.builders import (
     SET_TABLE_GOAL,
-    TIDY_HOUSE_GOAL,
-    SetTableGenericGraphBuilder,
-    TidyHouseGraphBuilder,
+    SetTableGraphBuilder,
 )
 from mshab.experiments.granularity.lower_layers.library import EXPERIMENT_TASK
 from mshab.experiments.granularity.paths import DEFAULT_GRAPH_DIR
@@ -46,16 +44,12 @@ class GoldGraphSpec:
 
 GOLD_GRAPH_SPECS: Tuple[GoldGraphSpec, ...] = (
     GoldGraphSpec(
-        "tidy_house_coarse", "tidy_house", "coarse", TIDY_HOUSE_GOAL,
-        TidyHouseGraphBuilder("coarse"),
+        "set_table_coarse", "set_table", "coarse", SET_TABLE_GOAL,
+        SetTableGraphBuilder("coarse"),
     ),
     GoldGraphSpec(
-        "tidy_house_fine", "tidy_house", "fine", TIDY_HOUSE_GOAL,
-        TidyHouseGraphBuilder("fine"),
-    ),
-    GoldGraphSpec(
-        "set_table_generic", "set_table", None, SET_TABLE_GOAL,
-        SetTableGenericGraphBuilder(),
+        "set_table_fine", "set_table", "fine", SET_TABLE_GOAL,
+        SetTableGraphBuilder("fine"),
     ),
 )
 GOLD_GRAPHS: Mapping[str, GoldGraphSpec] = {spec.name: spec for spec in GOLD_GRAPH_SPECS}

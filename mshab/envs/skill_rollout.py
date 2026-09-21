@@ -14,13 +14,14 @@ per-subtask checkers, and changes three things:
 - the pointer moves only through :meth:`point_at`;
 - :meth:`evaluate` reports the pointed subtask's checkers as
   ``subtask_success`` and never advances or ends anything;
-- :meth:`scene_measurements` checks every object and goal of the plan, not
-  only the pointed one, so an adapter can state the whole scene as facts.
+- :meth:`scene_measurements` checks every object, goal, and articulation of
+  the plan, not only the pointed one, so an adapter can state the whole scene
+  as facts.
 """
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 import torch
 
@@ -115,15 +116,39 @@ class SkillRolloutEnv(SequentialTaskEnv):
         rotation = torch.sign(unit[..., 1]) * torch.arccos(unit[..., 0])
         return torch.abs(rotation) <= self.navigate_cfg.navigated_successfully_rot
 
+    def _articulation_state(
+        self, index: int, subtask, env_idx: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """``(open, closed)`` of the articulation an open or close subtask acts on.
+
+        The joint terms of the parent's open and close checkers, without the
+        arm terms: the handle joint beyond the open threshold of its
+        articulation type, or within the closed threshold.  Neither holds for
+        a half-open drawer.
+        """
+
+        articulation = self.subtask_articulations[index]
+        joint = subtask.articulation_handle_active_joint_idx
+        qpos = articulation.qpos[env_idx, joint]
+        qmin = articulation.qlimits[env_idx, joint, 0]
+        qmax = articulation.qlimits[env_idx, joint, 1]
+        open_frac = self.open_cfg.joint_qpos_open_thresh_frac
+        frac = open_frac.get(subtask.articulation_type, open_frac["default"])
+        opened = qpos > (qmax - qmin) * frac + qmin
+        closed = qpos < (qmax - qmin) * self.close_cfg.joint_qpos_close_thresh_frac + qmin
+        return opened, closed
+
     def scene_measurements(self) -> Dict[str, Any]:
         """The checkers of every subtask, keyed by subtask index, per environment.
 
         ``grasped[i]`` for every pick subtask, ``at_goal[i]`` for every place
         subtask (the parent's place check without the arm and grasp terms),
         ``near[i]`` for every navigate subtask (close to and facing its
-        goal), and ``collision_safe`` against the pointed subtask's force
-        limit.  Values are Python lists with one boolean per environment; one
-        device synchronisation for the whole scene.
+        goal), ``opened[i]`` and ``closed[i]`` for every open and close
+        subtask (the joint terms of the parent's checkers), and
+        ``collision_safe`` against the pointed subtask's force limit.  Values
+        are Python lists with one boolean per environment; one device
+        synchronisation for the whole scene.
         """
 
         with torch.device(self.device):
@@ -131,7 +156,13 @@ class SkillRolloutEnv(SequentialTaskEnv):
             keys: List[tuple] = []
             values: List[torch.Tensor] = []
             for index, subtask in enumerate(self.task_plan):
-                if isinstance(subtask, PickSubtask):
+                if isinstance(subtask, (OpenSubtask, CloseSubtask)):
+                    opened, closed = self._articulation_state(index, subtask, env_idx)
+                    keys.append(("opened", index))
+                    values.append(opened)
+                    keys.append(("closed", index))
+                    values.append(closed)
+                elif isinstance(subtask, PickSubtask):
                     keys.append(("grasped", index))
                     values.append(
                         self.agent.is_grasping(self.subtask_objs[index], max_angle=30)
@@ -164,7 +195,9 @@ class SkillRolloutEnv(SequentialTaskEnv):
                 self.robot_cumulative_force < self.task_force_limits[self.subtask_pointer]
             )
             table = torch.stack(values).cpu().tolist()
-        result: Dict[str, Any] = {"grasped": {}, "at_goal": {}, "near": {}}
+        result: Dict[str, Any] = {
+            "grasped": {}, "at_goal": {}, "near": {}, "opened": {}, "closed": {}
+        }
         for (group, index), row in zip(keys, table):
             if group == "collision_safe":
                 result["collision_safe"] = [bool(item) for item in row]

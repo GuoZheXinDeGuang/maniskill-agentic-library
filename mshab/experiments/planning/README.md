@@ -61,9 +61,11 @@ decomposition and `(task, sub-goal id, predicate)` for a subgraph. An unknown
 fingerprint raises `UnscriptedRequest` instead of answering with a default; a
 retry keeps its fingerprint and gets the same answer.
 `gold_proposer(names, library)` in the granularity experiment cuts the tables
-out of the committed gold graphs and `scenario_proposer()` adds a scenario's
-replan answers; `as_dict()`/`from_dict()` and `save()`/`load()` move tables
-through JSON.
+out of the committed gold graphs, and `scenario_proposer()` returns a
+`ScenarioProposer`, a subclass whose scripted replan answers install their
+own subgraphs when the replan's decomposition is served, so a sub-goal kept
+across a replan is answered with the subgraph the new facts call for;
+`as_dict()`/`from_dict()` and `save()`/`load()` move tables through JSON.
 
 `ProposerUnavailable` is the one error that is not an answer: a transport or
 credential failure. The validator lets it propagate instead of recording a
@@ -113,7 +115,7 @@ entries and all rounds:
 | Stage | What failed |
 | --- | --- |
 | `decomposition` | the proposer errored, returned the wrong type, or the sequence is not a Layer-1 chain |
-| `subgraph` | per sub-goal: wrong owner, no achiever, a node that does not ground (unknown contract, bad arguments), a node id another sub-goal already uses, an achiever whose grounded effects do not contain the sub-goal predicate; all sub-goals are checked before the round stops |
+| `subgraph` | per sub-goal: wrong owner, no achiever, a node that does not ground (unknown contract, bad arguments), a node id another sub-goal already uses, an achiever whose grounded effects do not contain the sub-goal predicate; all sub-goals are checked before the round stops. Nodes after the achiever (its follow-ups, such as closing a storage after the place) are allowed and run after it |
 | `assembly` | subgraphs do not match the sub-goal sequence |
 | `graph` | `SkillGraphPatch.apply` or `SkillGraph.validate` refused the whole |
 | `plan` | a sub-goal's achievers have no primary (two achievers, no `FALLBACK_TO` order; attributed to the sub-goal), or `SkillPlanner` cannot plan the whole |

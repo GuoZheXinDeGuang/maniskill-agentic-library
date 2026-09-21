@@ -1,0 +1,318 @@
+{
+  "context": {},
+  "goal": "Set the table with the bowl and apple, then close their storage.",
+  "granularity": "coarse",
+  "name": "set_table_coarse",
+  "nominal_plan": {
+    "order": [
+      "navigate_to_bowl_source",
+      "open_bowl_source",
+      "navigate_to_bowl",
+      "pick_bowl",
+      "navigate_bowl_to_destination",
+      "place_bowl",
+      "navigate_back_to_bowl_source",
+      "close_bowl_source",
+      "navigate_to_apple_source",
+      "open_apple_source",
+      "navigate_to_apple",
+      "pick_apple",
+      "navigate_apple_to_destination",
+      "place_apple",
+      "navigate_back_to_apple_source",
+      "close_apple_source"
+    ],
+    "selections": {
+      "apple_delivered": "place_apple",
+      "bowl_delivered": "place_bowl"
+    }
+  },
+  "patch": {
+    "cross_edges": [
+      {
+        "relation": "enables",
+        "source_node": null,
+        "source_subgoal": "bowl_delivered",
+        "target_node": "navigate_to_apple_source",
+        "target_subgoal": "apple_delivered"
+      }
+    ],
+    "schema_version": "mshab.skill-graph.v1",
+    "skill_subgraphs": [
+      {
+        "achiever_nodes": [
+          "place_bowl"
+        ],
+        "edges": [
+          {
+            "relation": "enables",
+            "source": "navigate_to_bowl_source",
+            "target": "open_bowl_source"
+          },
+          {
+            "relation": "enables",
+            "source": "open_bowl_source",
+            "target": "navigate_to_bowl"
+          },
+          {
+            "relation": "enables",
+            "source": "navigate_to_bowl",
+            "target": "pick_bowl"
+          },
+          {
+            "relation": "enables",
+            "source": "pick_bowl",
+            "target": "navigate_bowl_to_destination"
+          },
+          {
+            "relation": "enables",
+            "source": "navigate_bowl_to_destination",
+            "target": "place_bowl"
+          },
+          {
+            "relation": "enables",
+            "source": "place_bowl",
+            "target": "navigate_back_to_bowl_source"
+          },
+          {
+            "relation": "enables",
+            "source": "navigate_back_to_bowl_source",
+            "target": "close_bowl_source"
+          }
+        ],
+        "execution_order": [
+          "navigate_to_bowl_source",
+          "open_bowl_source",
+          "navigate_to_bowl",
+          "pick_bowl",
+          "navigate_bowl_to_destination",
+          "place_bowl",
+          "navigate_back_to_bowl_source",
+          "close_bowl_source"
+        ],
+        "nodes": [
+          {
+            "achieves": [],
+            "arguments": {
+              "articulation": "kitchen_counter"
+            },
+            "contract_id": "mshab.granularity.close.all",
+            "id": "close_bowl_source"
+          },
+          {
+            "achieves": [],
+            "arguments": {
+              "target": "kitchen_counter"
+            },
+            "contract_id": "mshab.granularity.navigate.all",
+            "id": "navigate_back_to_bowl_source"
+          },
+          {
+            "achieves": [],
+            "arguments": {
+              "target": "dining_table"
+            },
+            "contract_id": "mshab.granularity.navigate.all",
+            "id": "navigate_bowl_to_destination"
+          },
+          {
+            "achieves": [],
+            "arguments": {
+              "target": "024_bowl"
+            },
+            "contract_id": "mshab.granularity.navigate.all",
+            "id": "navigate_to_bowl"
+          },
+          {
+            "achieves": [],
+            "arguments": {
+              "target": "kitchen_counter"
+            },
+            "contract_id": "mshab.granularity.navigate.all",
+            "id": "navigate_to_bowl_source"
+          },
+          {
+            "achieves": [],
+            "arguments": {
+              "articulation": "kitchen_counter"
+            },
+            "contract_id": "mshab.granularity.open.all",
+            "id": "open_bowl_source"
+          },
+          {
+            "achieves": [],
+            "arguments": {
+              "object": "024_bowl"
+            },
+            "contract_id": "mshab.granularity.pick.all",
+            "id": "pick_bowl"
+          },
+          {
+            "achieves": [
+              "bowl_delivered"
+            ],
+            "arguments": {
+              "destination": "dining_table",
+              "object": "024_bowl"
+            },
+            "contract_id": "mshab.granularity.place.all",
+            "id": "place_bowl"
+          }
+        ],
+        "subgoal_id": "bowl_delivered"
+      },
+      {
+        "achiever_nodes": [
+          "place_apple"
+        ],
+        "edges": [
+          {
+            "relation": "enables",
+            "source": "navigate_to_apple_source",
+            "target": "open_apple_source"
+          },
+          {
+            "relation": "enables",
+            "source": "open_apple_source",
+            "target": "navigate_to_apple"
+          },
+          {
+            "relation": "enables",
+            "source": "navigate_to_apple",
+            "target": "pick_apple"
+          },
+          {
+            "relation": "enables",
+            "source": "pick_apple",
+            "target": "navigate_apple_to_destination"
+          },
+          {
+            "relation": "enables",
+            "source": "navigate_apple_to_destination",
+            "target": "place_apple"
+          },
+          {
+            "relation": "enables",
+            "source": "place_apple",
+            "target": "navigate_back_to_apple_source"
+          },
+          {
+            "relation": "enables",
+            "source": "navigate_back_to_apple_source",
+            "target": "close_apple_source"
+          }
+        ],
+        "execution_order": [
+          "navigate_to_apple_source",
+          "open_apple_source",
+          "navigate_to_apple",
+          "pick_apple",
+          "navigate_apple_to_destination",
+          "place_apple",
+          "navigate_back_to_apple_source",
+          "close_apple_source"
+        ],
+        "nodes": [
+          {
+            "achieves": [],
+            "arguments": {
+              "articulation": "fridge"
+            },
+            "contract_id": "mshab.granularity.close.all",
+            "id": "close_apple_source"
+          },
+          {
+            "achieves": [],
+            "arguments": {
+              "target": "dining_table"
+            },
+            "contract_id": "mshab.granularity.navigate.all",
+            "id": "navigate_apple_to_destination"
+          },
+          {
+            "achieves": [],
+            "arguments": {
+              "target": "fridge"
+            },
+            "contract_id": "mshab.granularity.navigate.all",
+            "id": "navigate_back_to_apple_source"
+          },
+          {
+            "achieves": [],
+            "arguments": {
+              "target": "013_apple"
+            },
+            "contract_id": "mshab.granularity.navigate.all",
+            "id": "navigate_to_apple"
+          },
+          {
+            "achieves": [],
+            "arguments": {
+              "target": "fridge"
+            },
+            "contract_id": "mshab.granularity.navigate.all",
+            "id": "navigate_to_apple_source"
+          },
+          {
+            "achieves": [],
+            "arguments": {
+              "articulation": "fridge"
+            },
+            "contract_id": "mshab.granularity.open.all",
+            "id": "open_apple_source"
+          },
+          {
+            "achieves": [],
+            "arguments": {
+              "object": "013_apple"
+            },
+            "contract_id": "mshab.granularity.pick.all",
+            "id": "pick_apple"
+          },
+          {
+            "achieves": [
+              "apple_delivered"
+            ],
+            "arguments": {
+              "destination": "dining_table",
+              "object": "013_apple"
+            },
+            "contract_id": "mshab.granularity.place.all",
+            "id": "place_apple"
+          }
+        ],
+        "subgoal_id": "apple_delivered"
+      }
+    ],
+    "subgoal_dependencies": [
+      {
+        "source": "bowl_delivered",
+        "target": "apple_delivered"
+      }
+    ],
+    "subgoals": [
+      {
+        "description": "",
+        "id": "bowl_delivered",
+        "predicate": "at(024_bowl,dining_table)"
+      },
+      {
+        "description": "",
+        "id": "apple_delivered",
+        "predicate": "at(013_apple,dining_table)"
+      }
+    ],
+    "subgraph_extensions": []
+  },
+  "schema_version": "mshab.granularity-gold-graph.v1",
+  "source_task": "set_table",
+  "summary": {
+    "cross_edges": 1,
+    "internal_edges": 14,
+    "mean_nodes_per_subgraph": 8.0,
+    "nodes": 16,
+    "subgoals": 2,
+    "subgraphs": 2
+  },
+  "task": "granularity"
+}

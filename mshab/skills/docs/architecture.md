@@ -61,7 +61,7 @@ SubGoalGraph
 
 SkillGraph (Layer 2 aggregate root)
 ├── SkillSubgraph[subgoal_id] (exactly one per implemented sub-goal)
-│   ├── SkillNode (instrumental or sub-goal-achieving candidate)
+│   ├── SkillNode (instrumental, sub-goal-achieving, or follow-up candidate)
 │   └── SkillEdge (relations inside this sub-goal implementation)
 └── CrossSubgraphEdge (relations between two sub-goal subgraphs)
 ```

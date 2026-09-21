@@ -79,23 +79,23 @@ class DocumentTests(_Base):
             PlanningContext(context.contracts, attempt=-1)
 
         replanned = context.replan(
-            Failure("object_2_delivered", "pick_object_2", "execution_timeout", ("holding(003_cracker_box)",)),
-            History(("object_1_delivered",), ("navigate_to_object_1",), ("pick_object_2",)),
+            Failure("apple_delivered", "pick_apple", "execution_timeout", ("holding(013_apple)",)),
+            History(("bowl_delivered",), ("navigate_to_bowl",), ("pick_apple",)),
             ("gripper_empty()",),
         )
         self.assertEqual(replanned.attempt, 1)
-        self.assertEqual(replanned.failure.subgoal_id, "object_2_delivered")
+        self.assertEqual(replanned.failure.subgoal_id, "apple_delivered")
         self.assertEqual(replanned.granularity, "coarse")
         self.assertEqual(replanned.contracts, context.contracts)
 
     def test_all_four_documents_round_trip_strictly(self):
         context = self.context("fine").replan(
-            Failure("object_2_delivered", None, None, ()),
+            Failure("apple_delivered", None, None, ()),
             History(),
             FACTS,
         )
-        request = DecompositionRequest(TASK, "Tidy up", context)
-        self.assertEqual(request.fingerprint(), (TASK, "Tidy up", "fine", 1, "object_2_delivered"))
+        request = DecompositionRequest(TASK, "Set the table", context)
+        self.assertEqual(request.fingerprint(), (TASK, "Set the table", "fine", 1, "apple_delivered"))
         restored = DecompositionRequest.from_dict(json.loads(json.dumps(request.as_dict())))
         self.assertEqual(restored.as_dict(), request.as_dict())
         self.assertEqual(restored.fingerprint(), request.fingerprint())
@@ -111,7 +111,7 @@ class DocumentTests(_Base):
             DecompositionResponse(())
 
         subgraph_request = SubgraphRequest(
-            TASK, "Tidy up", SubGoal("b", "at(024_bowl,dining_table)"),
+            TASK, "Set the table", SubGoal("b", "at(024_bowl,dining_table)"),
             context.contracts, context.entities, FACTS, Neighbours("holding(024_bowl)", None),
         )
         self.assertEqual(subgraph_request.fingerprint(), (TASK, "b", "at(024_bowl,dining_table)"))
@@ -149,27 +149,27 @@ class DocumentTests(_Base):
         with self.assertRaisesRegex(ValueError, "images must be"):
             PlanningContext(context.contracts, images=("",))
         rejections = (
-            Rejection("subgraph", "object_2_delivered", "unknown contract 'x'"),
+            Rejection("subgraph", "apple_delivered", "unknown contract 'x'"),
             Rejection("plan", None, "two achievers"),
         )
-        request = DecompositionRequest(TASK, "Tidy up", context).with_rejections(rejections)
+        request = DecompositionRequest(TASK, "Set the table", context).with_rejections(rejections)
         self.assertEqual(request.rejections, rejections)
-        self.assertEqual(request.fingerprint(), DecompositionRequest(TASK, "Tidy up", context).fingerprint())
+        self.assertEqual(request.fingerprint(), DecompositionRequest(TASK, "Set the table", context).fingerprint())
         restored = DecompositionRequest.from_dict(json.loads(json.dumps(request.as_dict())))
         self.assertEqual(restored.rejections, rejections)
         self.assertEqual(restored.as_dict(), request.as_dict())
         with self.assertRaisesRegex(SchemaError, "rejection.stage"):
             Rejection.from_dict({"stage": "typing", "subgoal_id": None, "message": "x"})
         with self.assertRaisesRegex(TypeError, "Rejection instances"):
-            DecompositionRequest(TASK, "Tidy up", context, rejections=({"stage": "plan"},))
+            DecompositionRequest(TASK, "Set the table", context, rejections=({"stage": "plan"},))
 
         subgraph_request = SubgraphRequest(
-            TASK, "Tidy up", SubGoal("b", "at(024_bowl,dining_table)"), context.contracts,
+            TASK, "Set the table", SubGoal("b", "at(024_bowl,dining_table)"), context.contracts,
             images=("frame_0.png",), rejections=rejections[:1],
         )
         document = json.loads(json.dumps(subgraph_request.as_dict()))
         self.assertEqual(document["images"], ["frame_0.png"])
-        self.assertEqual(document["rejections"][0]["subgoal_id"], "object_2_delivered")
+        self.assertEqual(document["rejections"][0]["subgoal_id"], "apple_delivered")
         restored = SubgraphRequest.from_dict(document)
         self.assertEqual(restored.as_dict(), document)
         self.assertEqual(restored.fingerprint(), subgraph_request.fingerprint())
@@ -203,12 +203,12 @@ class ScriptedProposerTests(_Base):
             json.dumps(trace)
 
     def test_coarse_and_fine_are_different_scripted_answers_to_the_same_goal(self):
-        coarse = build_gold_graph("tidy_house_coarse", self.library)
+        coarse = build_gold_graph("set_table_coarse", self.library)
         fine = self.validator.plan(self.proposer, coarse.spec.goal, self.context("fine"))
-        self.assertEqual(len(fine.subgoal_graph.subgoals), 20)
+        self.assertEqual(len(fine.subgoal_graph.subgoals), 16)
         self.assertEqual(
             len(self.validator.plan(self.proposer, coarse.spec.goal, self.context("coarse")).subgoal_graph.subgoals),
-            5,
+            2,
         )
         with self.assertRaises(ProposalRejected) as raised:
             self.validator.plan(self.proposer, coarse.spec.goal, self.context("free"))
@@ -218,12 +218,12 @@ class ScriptedProposerTests(_Base):
     def test_unscripted_requests_raise_instead_of_defaulting(self):
         with self.assertRaisesRegex(UnscriptedRequest, "no scripted decomposition"):
             self.proposer.decompose(DecompositionRequest(TASK, "Make coffee", self.context()))
-        request = SubgraphRequest(TASK, "g", SubGoal("object_9_delivered", "at(x,y)"), ())
+        request = SubgraphRequest(TASK, "g", SubGoal("cup_delivered", "at(x,y)"), ())
         with self.assertRaisesRegex(UnscriptedRequest, "no scripted subgraph"):
             self.proposer.plan_subgraph(request)
 
     def test_proposer_is_a_skill_graph_builder(self):
-        gold = build_gold_graph("set_table_generic", self.library)
+        gold = build_gold_graph("set_table_fine", self.library)
         subgoals, graph = self.proposer.build(
             gold.spec.goal, TASK, context=self.gold_context(gold).as_dict(), library=self.library
         )
@@ -232,11 +232,11 @@ class ScriptedProposerTests(_Base):
 
     def test_script_round_trips_through_json(self):
         document = json.loads(json.dumps(self.proposer.as_dict()))
-        self.assertEqual(len(document["decompositions"]), 3)
-        self.assertEqual(len(document["subgraphs"]), 5 + 20 + 8)
+        self.assertEqual(len(document["decompositions"]), 2)
+        self.assertEqual(len(document["subgraphs"]), 2 + 16)
         restored = ScriptedProposer.from_dict(document)
         self.assertEqual(restored.as_dict(), document)
-        gold = build_gold_graph("tidy_house_fine", self.library)
+        gold = build_gold_graph("set_table_fine", self.library)
         validated = self.validator.plan(restored, gold.spec.goal, self.gold_context(gold))
         self.assertEqual(validated.skill_graph.as_dict(), gold.skill_graph.as_dict())
         with TemporaryDirectory() as tmp:
@@ -248,8 +248,8 @@ class ScriptedProposerTests(_Base):
 class PlanValidatorTests(_Base):
     def setUp(self):
         super().setUp()
-        self.proposer = gold_proposer(["tidy_house_coarse"], self.library)
-        self.gold = build_gold_graph("tidy_house_coarse", self.library)
+        self.proposer = gold_proposer(["set_table_coarse"], self.library)
+        self.gold = build_gold_graph("set_table_coarse", self.library)
         self.goal = self.gold.spec.goal
 
     def _override(self, subgoal_id, predicate, subgraph):
@@ -259,25 +259,25 @@ class PlanValidatorTests(_Base):
         accepted = self.validator.plan(self.proposer, self.goal, self.context("coarse"))
         before = (accepted.subgoal_graph.as_dict(), accepted.skill_graph.as_dict())
 
-        unknown_contract = SkillSubgraph("object_2_delivered", TASK)
+        unknown_contract = SkillSubgraph("bowl_delivered", TASK)
         unknown_contract.add_node(
-            SkillNode("fly_2", "mshab.granularity.fly.all", {"target": "x"}, ("object_2_delivered",))
+            SkillNode("fly_bowl", "mshab.granularity.fly.all", {"target": "x"}, ("bowl_delivered",))
         )
-        self._override("object_2_delivered", "at(003_cracker_box,dining_table)", unknown_contract)
-        wrong_argument = SkillSubgraph("object_4_delivered", TASK)
+        self._override("bowl_delivered", "at(024_bowl,dining_table)", unknown_contract)
+        wrong_argument = SkillSubgraph("apple_delivered", TASK)
         wrong_argument.add_node(
-            SkillNode("place_object_4", contract_id("place"), {"item": "005_tomato_soup_can"}, ("object_4_delivered",))
+            SkillNode("place_apple_wrong", contract_id("place"), {"item": "013_apple"}, ("apple_delivered",))
         )
-        self._override("object_4_delivered", "at(005_tomato_soup_can,tv_stand)", wrong_argument)
+        self._override("apple_delivered", "at(013_apple,dining_table)", wrong_argument)
 
         with self.assertRaises(ProposalRejected) as raised:
             self.validator.plan(self.proposer, self.goal, self.context("coarse"))
         rejections = raised.exception.rejections
         self.assertEqual([item.stage for item in rejections], ["subgraph", "subgraph"])
-        self.assertEqual([item.subgoal_id for item in rejections], ["object_2_delivered", "object_4_delivered"])
+        self.assertEqual([item.subgoal_id for item in rejections], ["bowl_delivered", "apple_delivered"])
         self.assertIn("unknown contract 'mshab.granularity.fly.all'", rejections[0].message)
         self.assertIn("invalid contract arguments", rejections[1].message)
-        self.assertEqual(raised.exception.as_dict()[0]["subgoal_id"], "object_2_delivered")
+        self.assertEqual(raised.exception.as_dict()[0]["subgoal_id"], "bowl_delivered")
         self.assertEqual((accepted.subgoal_graph.as_dict(), accepted.skill_graph.as_dict()), before)
 
     def test_structural_mistakes_are_attributed(self):
@@ -293,30 +293,30 @@ class PlanValidatorTests(_Base):
                 return scripted.decompose(request)
 
             def plan_subgraph(self, request):
-                if request.subgoal.id == "object_3_delivered":
+                if request.subgoal.id == "apple_delivered":
                     return SubgraphResponse(other)
                 return scripted.plan_subgraph(request)
 
         with self.assertRaises(ProposalRejected) as raised:
             self.validator.plan(WrongOwner(), self.goal, self.context("coarse"))
-        self.assertEqual(raised.exception.rejections[0].subgoal_id, "object_3_delivered")
+        self.assertEqual(raised.exception.rejections[0].subgoal_id, "apple_delivered")
         self.assertIn("is for sub-goal 'somewhere_else'", raised.exception.rejections[0].message)
         with self.assertRaisesRegex(ValueError, "is owned by 'somewhere_else'"):
-            self._override("object_3_delivered", "at(004_sugar_box,coffee_table)", other)
+            self._override("apple_delivered", "at(013_apple,dining_table)", other)
 
         # A node id that another sub-goal already uses.
-        reused = SkillSubgraph("object_3_delivered", TASK)
-        reused.add_node(SkillNode("pick_object_1", contract_id("pick"), {"object": "004_sugar_box"}, ("object_3_delivered",)))
-        self._override("object_3_delivered", "at(004_sugar_box,coffee_table)", reused)
+        reused = SkillSubgraph("apple_delivered", TASK)
+        reused.add_node(SkillNode("pick_bowl", contract_id("pick"), {"object": "013_apple"}, ("apple_delivered",)))
+        self._override("apple_delivered", "at(013_apple,dining_table)", reused)
         with self.assertRaises(ProposalRejected) as raised:
             self.validator.plan(self.proposer, self.goal, self.context("coarse"))
-        self.assertEqual(raised.exception.rejections[0].subgoal_id, "object_3_delivered")
-        self.assertIn("already used by sub-goal 'object_1_delivered'", raised.exception.rejections[0].message)
+        self.assertEqual(raised.exception.rejections[0].subgoal_id, "apple_delivered")
+        self.assertIn("already used by sub-goal 'bowl_delivered'", raised.exception.rejections[0].message)
 
         # No achiever at all.
-        empty = SkillSubgraph("object_3_delivered", TASK)
-        empty.add_node(SkillNode("nav_3", contract_id("navigate"), {"target": "004_sugar_box"}))
-        self._override("object_3_delivered", "at(004_sugar_box,coffee_table)", empty)
+        empty = SkillSubgraph("apple_delivered", TASK)
+        empty.add_node(SkillNode("nav_apple", contract_id("navigate"), {"target": "013_apple"}))
+        self._override("apple_delivered", "at(013_apple,dining_table)", empty)
         with self.assertRaises(ProposalRejected) as raised:
             self.validator.plan(self.proposer, self.goal, self.context("coarse"))
         self.assertIn("has no achiever", raised.exception.rejections[0].message)
@@ -325,35 +325,35 @@ class PlanValidatorTests(_Base):
         # Two achievers without a FALLBACK_TO order pass subgraph validation but
         # cannot be planned: the one-node decision has no primary.  The
         # rejection is attributed to the sub-goal, so a retry repeats its call.
-        ambiguous = SkillSubgraph("object_3_delivered", TASK)
+        ambiguous = SkillSubgraph("apple_delivered", TASK)
         for node_id in ("place_a", "place_b"):
             ambiguous.add_node(
-                SkillNode(node_id, contract_id("place"), {"object": "004_sugar_box", "destination": "coffee_table"}, ("object_3_delivered",))
+                SkillNode(node_id, contract_id("place"), {"object": "013_apple", "destination": "dining_table"}, ("apple_delivered",))
             )
-        self._override("object_3_delivered", "at(004_sugar_box,coffee_table)", ambiguous)
+        self._override("apple_delivered", "at(013_apple,dining_table)", ambiguous)
         with self.assertRaises(ProposalRejected) as raised:
             self.validator.plan(self.proposer, self.goal, self.context("coarse"))
         self.assertEqual(raised.exception.rejections[0].stage, "plan")
-        self.assertEqual(raised.exception.rejections[0].subgoal_id, "object_3_delivered")
+        self.assertEqual(raised.exception.rejections[0].subgoal_id, "apple_delivered")
         self.assertIn("no FALLBACK_TO order", raised.exception.rejections[0].message)
         self.assertEqual(len(raised.exception.rounds), 1)
-        self.assertEqual([call.call for call in raised.exception.rounds[0].calls], ["decompose"] + ["plan_subgraph"] * 5)
+        self.assertEqual([call.call for call in raised.exception.rounds[0].calls], ["decompose"] + ["plan_subgraph"] * 2)
 
     def test_an_achiever_must_establish_the_sub_goal_predicate(self):
         # The place goes to the wrong receptacle: the graph is well formed, but
         # the sub-goal predicate is not among the achiever's grounded effects,
         # so the environment could never verify it.
-        elsewhere = SkillSubgraph("object_3_delivered", TASK)
+        elsewhere = SkillSubgraph("apple_delivered", TASK)
         elsewhere.add_node(
-            SkillNode("place_3", contract_id("place"), {"object": "004_sugar_box", "destination": "tv_stand"}, ("object_3_delivered",))
+            SkillNode("place_elsewhere", contract_id("place"), {"object": "013_apple", "destination": "kitchen_counter"}, ("apple_delivered",))
         )
-        self._override("object_3_delivered", "at(004_sugar_box,coffee_table)", elsewhere)
+        self._override("apple_delivered", "at(013_apple,dining_table)", elsewhere)
         with self.assertRaises(ProposalRejected) as raised:
             self.validator.plan(self.proposer, self.goal, self.context("coarse"))
         rejection = raised.exception.rejections[0]
-        self.assertEqual((rejection.stage, rejection.subgoal_id), ("subgraph", "object_3_delivered"))
-        self.assertIn("does not establish the sub-goal predicate 'at(004_sugar_box,coffee_table)'", rejection.message)
-        self.assertIn("at(004_sugar_box,tv_stand)", rejection.message)
+        self.assertEqual((rejection.stage, rejection.subgoal_id), ("subgraph", "apple_delivered"))
+        self.assertIn("does not establish the sub-goal predicate 'at(013_apple,dining_table)'", rejection.message)
+        self.assertIn("at(013_apple,kitchen_counter)", rejection.message)
 
     def test_assembler_enables_every_root_of_the_next_subgraph(self):
         first = SkillSubgraph("bowl_held", TASK)
