@@ -1,0 +1,555 @@
+{
+  "evaluation": {
+    "decomposition": {
+      "agreement": {
+        "tidy_house_coarse": {
+          "exact": true,
+          "gold_subgoals": 5,
+          "order_similarity": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "subgoals": 5
+        },
+        "tidy_house_fine": {
+          "exact": false,
+          "gold_subgoals": 20,
+          "order_similarity": 0.25,
+          "precision": 1.0,
+          "recall": 0.25,
+          "subgoals": 5
+        }
+      },
+      "predicates": [
+        "at(002_master_chef_can,kitchen_counter)",
+        "at(003_cracker_box,dining_table)",
+        "at(004_sugar_box,coffee_table)",
+        "at(005_tomato_soup_can,tv_stand)",
+        "at(007_tuna_fish_can,bedside_table)"
+      ],
+      "subgoals": 5,
+      "vocabulary": {
+        "at": 5
+      }
+    },
+    "subgraphs": {
+      "tidy_house_coarse": {
+        "edge_jaccard": 1.0,
+        "edges_match_rate": 1.0,
+        "graph_role_precision": 1.0,
+        "graph_role_recall": 1.0,
+        "matched": 5,
+        "missing_predicates": [],
+        "node_jaccard": 1.0,
+        "nodes_match_rate": 1.0,
+        "per_subgoal": [
+          {
+            "edge_jaccard": 1.0,
+            "edges_match": true,
+            "gold_nodes": 4,
+            "node_jaccard": 1.0,
+            "nodes": 4,
+            "nodes_match": true,
+            "predicate": "at(002_master_chef_can,kitchen_counter)"
+          },
+          {
+            "edge_jaccard": 1.0,
+            "edges_match": true,
+            "gold_nodes": 4,
+            "node_jaccard": 1.0,
+            "nodes": 4,
+            "nodes_match": true,
+            "predicate": "at(003_cracker_box,dining_table)"
+          },
+          {
+            "edge_jaccard": 1.0,
+            "edges_match": true,
+            "gold_nodes": 4,
+            "node_jaccard": 1.0,
+            "nodes": 4,
+            "nodes_match": true,
+            "predicate": "at(004_sugar_box,coffee_table)"
+          },
+          {
+            "edge_jaccard": 1.0,
+            "edges_match": true,
+            "gold_nodes": 4,
+            "node_jaccard": 1.0,
+            "nodes": 4,
+            "nodes_match": true,
+            "predicate": "at(005_tomato_soup_can,tv_stand)"
+          },
+          {
+            "edge_jaccard": 1.0,
+            "edges_match": true,
+            "gold_nodes": 4,
+            "node_jaccard": 1.0,
+            "nodes": 4,
+            "nodes_match": true,
+            "predicate": "at(007_tuna_fish_can,bedside_table)"
+          }
+        ],
+        "unmatched_predicates": []
+      },
+      "tidy_house_fine": {
+        "edge_jaccard": 0.0,
+        "edges_match_rate": 0.0,
+        "graph_role_precision": 1.0,
+        "graph_role_recall": 1.0,
+        "matched": 5,
+        "missing_predicates": [
+          "reachable(002_master_chef_can)",
+          "holding(002_master_chef_can)",
+          "reachable(kitchen_counter)",
+          "reachable(003_cracker_box)",
+          "holding(003_cracker_box)",
+          "reachable(dining_table)",
+          "reachable(004_sugar_box)",
+          "holding(004_sugar_box)",
+          "reachable(coffee_table)",
+          "reachable(005_tomato_soup_can)",
+          "holding(005_tomato_soup_can)",
+          "reachable(tv_stand)",
+          "reachable(007_tuna_fish_can)",
+          "holding(007_tuna_fish_can)",
+          "reachable(bedside_table)"
+        ],
+        "node_jaccard": 0.25,
+        "nodes_match_rate": 0.0,
+        "per_subgoal": [
+          {
+            "edge_jaccard": 0.0,
+            "edges_match": false,
+            "gold_nodes": 1,
+            "node_jaccard": 0.25,
+            "nodes": 4,
+            "nodes_match": false,
+            "predicate": "at(002_master_chef_can,kitchen_counter)"
+          },
+          {
+            "edge_jaccard": 0.0,
+            "edges_match": false,
+            "gold_nodes": 1,
+            "node_jaccard": 0.25,
+            "nodes": 4,
+            "nodes_match": false,
+            "predicate": "at(003_cracker_box,dining_table)"
+          },
+          {
+            "edge_jaccard": 0.0,
+            "edges_match": false,
+            "gold_nodes": 1,
+            "node_jaccard": 0.25,
+            "nodes": 4,
+            "nodes_match": false,
+            "predicate": "at(004_sugar_box,coffee_table)"
+          },
+          {
+            "edge_jaccard": 0.0,
+            "edges_match": false,
+            "gold_nodes": 1,
+            "node_jaccard": 0.25,
+            "nodes": 4,
+            "nodes_match": false,
+            "predicate": "at(005_tomato_soup_can,tv_stand)"
+          },
+          {
+            "edge_jaccard": 0.0,
+            "edges_match": false,
+            "gold_nodes": 1,
+            "node_jaccard": 0.25,
+            "nodes": 4,
+            "nodes_match": false,
+            "predicate": "at(007_tuna_fish_can,bedside_table)"
+          }
+        ],
+        "unmatched_predicates": []
+      }
+    }
+  },
+  "goal": "Tidy the house: move every object to its target receptacle.",
+  "granularity": "free",
+  "kind": "static",
+  "model": "deepseek-chat",
+  "proposal": {
+    "accepted": true,
+    "attempt": 0,
+    "decomposition": {
+      "rationale": "The goal is to tidy every object onto its target receptacle, so I emit one at(object,receptacle) sub-goal per object; each will be implemented by navigate/pick/place skill nodes.",
+      "schema_version": "mshab.planning.v1",
+      "subgoals": [
+        {
+          "description": "",
+          "id": "master_chef_can_on_kitchen_counter",
+          "predicate": "at(002_master_chef_can,kitchen_counter)"
+        },
+        {
+          "description": "",
+          "id": "cracker_box_on_dining_table",
+          "predicate": "at(003_cracker_box,dining_table)"
+        },
+        {
+          "description": "",
+          "id": "sugar_box_on_coffee_table",
+          "predicate": "at(004_sugar_box,coffee_table)"
+        },
+        {
+          "description": "",
+          "id": "tomato_soup_can_on_tv_stand",
+          "predicate": "at(005_tomato_soup_can,tv_stand)"
+        },
+        {
+          "description": "",
+          "id": "tuna_fish_can_on_bedside_table",
+          "predicate": "at(007_tuna_fish_can,bedside_table)"
+        }
+      ]
+    },
+    "entities": [
+      "002_master_chef_can",
+      "003_cracker_box",
+      "004_sugar_box",
+      "005_tomato_soup_can",
+      "007_tuna_fish_can",
+      "kitchen_counter",
+      "dining_table",
+      "coffee_table",
+      "tv_stand",
+      "bedside_table"
+    ],
+    "facts": [
+      "collision_safe()",
+      "gripper_empty()",
+      "present(002_master_chef_can)",
+      "present(003_cracker_box)",
+      "present(004_sugar_box)",
+      "present(005_tomato_soup_can)",
+      "present(007_tuna_fish_can)",
+      "present(bedside_table)",
+      "present(coffee_table)",
+      "present(dining_table)",
+      "present(kitchen_counter)",
+      "present(tv_stand)"
+    ],
+    "failure": null,
+    "history": {
+      "achieved_subgoals": [],
+      "completed_nodes": [],
+      "failed_nodes": []
+    },
+    "rounds": 1,
+    "subgraphs": [
+      {
+        "rationale": "Navigate to the master chef can, pick it up, then navigate to the kitchen counter and place the can there to achieve at(002_master_chef_can,kitchen_counter).",
+        "schema_version": "mshab.planning.v1",
+        "subgraph": {
+          "edges": [
+            {
+              "relation": "enables",
+              "source": "master_chef_can_on_kitchen_counter.navigate_to_can",
+              "target": "master_chef_can_on_kitchen_counter.pick_can"
+            },
+            {
+              "relation": "enables",
+              "source": "master_chef_can_on_kitchen_counter.pick_can",
+              "target": "master_chef_can_on_kitchen_counter.navigate_to_counter"
+            },
+            {
+              "relation": "enables",
+              "source": "master_chef_can_on_kitchen_counter.navigate_to_counter",
+              "target": "master_chef_can_on_kitchen_counter.place_can"
+            }
+          ],
+          "nodes": [
+            {
+              "achieves": [],
+              "arguments": {
+                "target": "002_master_chef_can"
+              },
+              "contract_id": "mshab.granularity.navigate.all",
+              "id": "master_chef_can_on_kitchen_counter.navigate_to_can"
+            },
+            {
+              "achieves": [],
+              "arguments": {
+                "target": "kitchen_counter"
+              },
+              "contract_id": "mshab.granularity.navigate.all",
+              "id": "master_chef_can_on_kitchen_counter.navigate_to_counter"
+            },
+            {
+              "achieves": [],
+              "arguments": {
+                "object": "002_master_chef_can"
+              },
+              "contract_id": "mshab.granularity.pick.all",
+              "id": "master_chef_can_on_kitchen_counter.pick_can"
+            },
+            {
+              "achieves": [
+                "master_chef_can_on_kitchen_counter"
+              ],
+              "arguments": {
+                "destination": "kitchen_counter",
+                "object": "002_master_chef_can"
+              },
+              "contract_id": "mshab.granularity.place.all",
+              "id": "master_chef_can_on_kitchen_counter.place_can"
+            }
+          ],
+          "subgoal_id": "master_chef_can_on_kitchen_counter"
+        }
+      },
+      {
+        "rationale": "The cracker box is present in the scene but not yet held; the robot navigates to it, picks it up, then moves to the dining table and places it there, which achieves at(003_cracker_box,dining_table).",
+        "schema_version": "mshab.planning.v1",
+        "subgraph": {
+          "edges": [
+            {
+              "relation": "enables",
+              "source": "cracker_box_on_dining_table.navigate_to_cracker_box",
+              "target": "cracker_box_on_dining_table.pick_cracker_box"
+            },
+            {
+              "relation": "enables",
+              "source": "cracker_box_on_dining_table.pick_cracker_box",
+              "target": "cracker_box_on_dining_table.navigate_to_dining_table"
+            },
+            {
+              "relation": "enables",
+              "source": "cracker_box_on_dining_table.navigate_to_dining_table",
+              "target": "cracker_box_on_dining_table.place_cracker_box"
+            }
+          ],
+          "nodes": [
+            {
+              "achieves": [],
+              "arguments": {
+                "target": "003_cracker_box"
+              },
+              "contract_id": "mshab.granularity.navigate.all",
+              "id": "cracker_box_on_dining_table.navigate_to_cracker_box"
+            },
+            {
+              "achieves": [],
+              "arguments": {
+                "target": "dining_table"
+              },
+              "contract_id": "mshab.granularity.navigate.all",
+              "id": "cracker_box_on_dining_table.navigate_to_dining_table"
+            },
+            {
+              "achieves": [],
+              "arguments": {
+                "object": "003_cracker_box"
+              },
+              "contract_id": "mshab.granularity.pick.all",
+              "id": "cracker_box_on_dining_table.pick_cracker_box"
+            },
+            {
+              "achieves": [
+                "cracker_box_on_dining_table"
+              ],
+              "arguments": {
+                "destination": "dining_table",
+                "object": "003_cracker_box"
+              },
+              "contract_id": "mshab.granularity.place.all",
+              "id": "cracker_box_on_dining_table.place_cracker_box"
+            }
+          ],
+          "subgoal_id": "cracker_box_on_dining_table"
+        }
+      },
+      {
+        "rationale": "Navigate to the sugar box, pick it, move to the coffee table, then place it there to achieve at(004_sugar_box,coffee_table).",
+        "schema_version": "mshab.planning.v1",
+        "subgraph": {
+          "edges": [
+            {
+              "relation": "enables",
+              "source": "sugar_box_on_coffee_table.navigate_to_sugar_box",
+              "target": "sugar_box_on_coffee_table.pick_sugar_box"
+            },
+            {
+              "relation": "enables",
+              "source": "sugar_box_on_coffee_table.pick_sugar_box",
+              "target": "sugar_box_on_coffee_table.navigate_to_coffee_table"
+            },
+            {
+              "relation": "enables",
+              "source": "sugar_box_on_coffee_table.navigate_to_coffee_table",
+              "target": "sugar_box_on_coffee_table.place_sugar_box"
+            }
+          ],
+          "nodes": [
+            {
+              "achieves": [],
+              "arguments": {
+                "target": "coffee_table"
+              },
+              "contract_id": "mshab.granularity.navigate.all",
+              "id": "sugar_box_on_coffee_table.navigate_to_coffee_table"
+            },
+            {
+              "achieves": [],
+              "arguments": {
+                "target": "004_sugar_box"
+              },
+              "contract_id": "mshab.granularity.navigate.all",
+              "id": "sugar_box_on_coffee_table.navigate_to_sugar_box"
+            },
+            {
+              "achieves": [],
+              "arguments": {
+                "object": "004_sugar_box"
+              },
+              "contract_id": "mshab.granularity.pick.all",
+              "id": "sugar_box_on_coffee_table.pick_sugar_box"
+            },
+            {
+              "achieves": [
+                "sugar_box_on_coffee_table"
+              ],
+              "arguments": {
+                "destination": "coffee_table",
+                "object": "004_sugar_box"
+              },
+              "contract_id": "mshab.granularity.place.all",
+              "id": "sugar_box_on_coffee_table.place_sugar_box"
+            }
+          ],
+          "subgoal_id": "sugar_box_on_coffee_table"
+        }
+      },
+      {
+        "rationale": "Navigate to the tomato soup can, pick it up, carry it to the tv stand, and place it there to achieve at(005_tomato_soup_can,tv_stand).",
+        "schema_version": "mshab.planning.v1",
+        "subgraph": {
+          "edges": [
+            {
+              "relation": "enables",
+              "source": "tomato_soup_can_on_tv_stand.navigate_to_tomato_soup_can",
+              "target": "tomato_soup_can_on_tv_stand.pick_tomato_soup_can"
+            },
+            {
+              "relation": "enables",
+              "source": "tomato_soup_can_on_tv_stand.pick_tomato_soup_can",
+              "target": "tomato_soup_can_on_tv_stand.navigate_to_tv_stand"
+            },
+            {
+              "relation": "enables",
+              "source": "tomato_soup_can_on_tv_stand.navigate_to_tv_stand",
+              "target": "tomato_soup_can_on_tv_stand.place_tomato_soup_can"
+            }
+          ],
+          "nodes": [
+            {
+              "achieves": [],
+              "arguments": {
+                "target": "005_tomato_soup_can"
+              },
+              "contract_id": "mshab.granularity.navigate.all",
+              "id": "tomato_soup_can_on_tv_stand.navigate_to_tomato_soup_can"
+            },
+            {
+              "achieves": [],
+              "arguments": {
+                "target": "tv_stand"
+              },
+              "contract_id": "mshab.granularity.navigate.all",
+              "id": "tomato_soup_can_on_tv_stand.navigate_to_tv_stand"
+            },
+            {
+              "achieves": [],
+              "arguments": {
+                "object": "005_tomato_soup_can"
+              },
+              "contract_id": "mshab.granularity.pick.all",
+              "id": "tomato_soup_can_on_tv_stand.pick_tomato_soup_can"
+            },
+            {
+              "achieves": [
+                "tomato_soup_can_on_tv_stand"
+              ],
+              "arguments": {
+                "destination": "tv_stand",
+                "object": "005_tomato_soup_can"
+              },
+              "contract_id": "mshab.granularity.place.all",
+              "id": "tomato_soup_can_on_tv_stand.place_tomato_soup_can"
+            }
+          ],
+          "subgoal_id": "tomato_soup_can_on_tv_stand"
+        }
+      },
+      {
+        "rationale": "Navigate to the tuna fish can, pick it, then navigate to the bedside table and place it there to achieve at(007_tuna_fish_can,bedside_table).",
+        "schema_version": "mshab.planning.v1",
+        "subgraph": {
+          "edges": [
+            {
+              "relation": "enables",
+              "source": "tuna_fish_can_on_bedside_table.navigate_to_tuna_fish_can",
+              "target": "tuna_fish_can_on_bedside_table.pick_tuna_fish_can"
+            },
+            {
+              "relation": "enables",
+              "source": "tuna_fish_can_on_bedside_table.pick_tuna_fish_can",
+              "target": "tuna_fish_can_on_bedside_table.navigate_to_bedside_table"
+            },
+            {
+              "relation": "enables",
+              "source": "tuna_fish_can_on_bedside_table.navigate_to_bedside_table",
+              "target": "tuna_fish_can_on_bedside_table.place_tuna_fish_can"
+            }
+          ],
+          "nodes": [
+            {
+              "achieves": [],
+              "arguments": {
+                "target": "bedside_table"
+              },
+              "contract_id": "mshab.granularity.navigate.all",
+              "id": "tuna_fish_can_on_bedside_table.navigate_to_bedside_table"
+            },
+            {
+              "achieves": [],
+              "arguments": {
+                "target": "007_tuna_fish_can"
+              },
+              "contract_id": "mshab.granularity.navigate.all",
+              "id": "tuna_fish_can_on_bedside_table.navigate_to_tuna_fish_can"
+            },
+            {
+              "achieves": [],
+              "arguments": {
+                "object": "007_tuna_fish_can"
+              },
+              "contract_id": "mshab.granularity.pick.all",
+              "id": "tuna_fish_can_on_bedside_table.pick_tuna_fish_can"
+            },
+            {
+              "achieves": [
+                "tuna_fish_can_on_bedside_table"
+              ],
+              "arguments": {
+                "destination": "bedside_table",
+                "object": "007_tuna_fish_can"
+              },
+              "contract_id": "mshab.granularity.place.all",
+              "id": "tuna_fish_can_on_bedside_table.place_tuna_fish_can"
+            }
+          ],
+          "subgoal_id": "tuna_fish_can_on_bedside_table"
+        }
+      }
+    ]
+  },
+  "run": "smoke-fine-free",
+  "schema_version": "mshab.experiment-figure-data.v1",
+  "served_models": [
+    "deepseek-flash"
+  ],
+  "source": "mshab_exps/planning/smoke-fine-free/tidy_house/free/sample_00/static.json",
+  "task": "granularity"
+}

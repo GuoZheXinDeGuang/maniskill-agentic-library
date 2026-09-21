@@ -51,10 +51,12 @@ Two consequences worth knowing:
 | `mshab/experiments/granularity/artifacts/contract_policy_layers.svg` | same command | Rendering of those two layers |
 | `mshab/experiments/granularity/graphs/<name>.json` | same command | One gold graph each: the `SkillGraphPatch` that builds it, metadata, a structural summary, and the nominal plan; `load_gold_graph()` rebuilds and revalidates Layers 1 and 2 from the patch |
 | `mshab/experiments/granularity/graphs/<name>.svg` | same command | Rendering of that gold graph, one row per sub-goal |
+| `mshab/experiments/docs/figures/data/*.json` | `python -m mshab.experiments.docs.figures.render --extract <run dir>` | Compact extracts of DeepSeek evaluation traces: the accepted responses, the request's entities and facts, the controller's decisions and replans, the agreement numbers |
+| `mshab/experiments/docs/figures/*.svg` | `python -m mshab.experiments.docs.figures.render` | The pipeline, the Layer-1 chains side by side, and every extracted proposal drawn by the gold-graph renderer |
 
-Both generators are deterministic and exclude machine-local state: checkpoint
-`ready/missing/partial` status and absolute paths never enter an artifact, so
-the files regenerate identically on a clean clone.
+All three generators are deterministic and exclude machine-local state:
+checkpoint `ready/missing/partial` status and absolute paths never enter an
+artifact, so the files regenerate identically on a clean clone.
 
 ## What a SetTable run reads and writes
 

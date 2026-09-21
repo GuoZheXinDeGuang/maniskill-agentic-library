@@ -9,6 +9,8 @@ how the *granularity* of the VLM's decomposition affects task outcome.
 Companion to the [skill-library guide](../../skills/README.md) and the
 [granularity experiment](../granularity/README.md). Vocabulary follows the
 guide exactly: *goal*, *sub-goal*, *skill node*, *contract*, *policy*.
+[`figures/`](figures/README.md) draws the pipeline, the gold graphs, and the
+first DeepSeek proposals.
 
 ## Research question
 

@@ -227,7 +227,9 @@ This generates:
 - `graphs/<name>.json` and `graphs/<name>.svg` for every gold graph.
 
 All of them exclude absolute checkpoint paths and local readiness state,
-making them stable across machines.
+making them stable across machines. The figures under
+[`../docs/figures/`](../docs/figures/README.md) draw a proposer's accepted
+graphs with the same renderer, next to these gold graphs.
 
 ## Python usage
 

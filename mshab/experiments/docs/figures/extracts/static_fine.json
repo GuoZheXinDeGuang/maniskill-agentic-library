@@ -1,0 +1,992 @@
+{
+  "evaluation": {
+    "decomposition": {
+      "agreement": {
+        "tidy_house_fine": {
+          "exact": true,
+          "gold_subgoals": 20,
+          "order_similarity": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "subgoals": 20
+        }
+      },
+      "predicates": [
+        "reachable(002_master_chef_can)",
+        "holding(002_master_chef_can)",
+        "reachable(kitchen_counter)",
+        "at(002_master_chef_can,kitchen_counter)",
+        "reachable(003_cracker_box)",
+        "holding(003_cracker_box)",
+        "reachable(dining_table)",
+        "at(003_cracker_box,dining_table)",
+        "reachable(004_sugar_box)",
+        "holding(004_sugar_box)",
+        "reachable(coffee_table)",
+        "at(004_sugar_box,coffee_table)",
+        "reachable(005_tomato_soup_can)",
+        "holding(005_tomato_soup_can)",
+        "reachable(tv_stand)",
+        "at(005_tomato_soup_can,tv_stand)",
+        "reachable(007_tuna_fish_can)",
+        "holding(007_tuna_fish_can)",
+        "reachable(bedside_table)",
+        "at(007_tuna_fish_can,bedside_table)"
+      ],
+      "subgoals": 20,
+      "vocabulary": {
+        "at": 5,
+        "holding": 5,
+        "reachable": 10
+      }
+    },
+    "subgraphs": {
+      "tidy_house_fine": {
+        "edge_jaccard": 0.5,
+        "edges_match_rate": 0.5,
+        "graph_role_precision": 1.0,
+        "graph_role_recall": 1.0,
+        "matched": 20,
+        "missing_predicates": [],
+        "node_jaccard": 0.725,
+        "nodes_match_rate": 0.5,
+        "per_subgoal": [
+          {
+            "edge_jaccard": 1.0,
+            "edges_match": true,
+            "gold_nodes": 1,
+            "node_jaccard": 1.0,
+            "nodes": 1,
+            "nodes_match": true,
+            "predicate": "reachable(002_master_chef_can)"
+          },
+          {
+            "edge_jaccard": 0.0,
+            "edges_match": false,
+            "gold_nodes": 1,
+            "node_jaccard": 0.5,
+            "nodes": 2,
+            "nodes_match": false,
+            "predicate": "holding(002_master_chef_can)"
+          },
+          {
+            "edge_jaccard": 1.0,
+            "edges_match": true,
+            "gold_nodes": 1,
+            "node_jaccard": 1.0,
+            "nodes": 1,
+            "nodes_match": true,
+            "predicate": "reachable(kitchen_counter)"
+          },
+          {
+            "edge_jaccard": 0.0,
+            "edges_match": false,
+            "gold_nodes": 1,
+            "node_jaccard": 0.5,
+            "nodes": 2,
+            "nodes_match": false,
+            "predicate": "at(002_master_chef_can,kitchen_counter)"
+          },
+          {
+            "edge_jaccard": 1.0,
+            "edges_match": true,
+            "gold_nodes": 1,
+            "node_jaccard": 1.0,
+            "nodes": 1,
+            "nodes_match": true,
+            "predicate": "reachable(003_cracker_box)"
+          },
+          {
+            "edge_jaccard": 0.0,
+            "edges_match": false,
+            "gold_nodes": 1,
+            "node_jaccard": 0.5,
+            "nodes": 2,
+            "nodes_match": false,
+            "predicate": "holding(003_cracker_box)"
+          },
+          {
+            "edge_jaccard": 1.0,
+            "edges_match": true,
+            "gold_nodes": 1,
+            "node_jaccard": 1.0,
+            "nodes": 1,
+            "nodes_match": true,
+            "predicate": "reachable(dining_table)"
+          },
+          {
+            "edge_jaccard": 0.0,
+            "edges_match": false,
+            "gold_nodes": 1,
+            "node_jaccard": 0.25,
+            "nodes": 4,
+            "nodes_match": false,
+            "predicate": "at(003_cracker_box,dining_table)"
+          },
+          {
+            "edge_jaccard": 1.0,
+            "edges_match": true,
+            "gold_nodes": 1,
+            "node_jaccard": 1.0,
+            "nodes": 1,
+            "nodes_match": true,
+            "predicate": "reachable(004_sugar_box)"
+          },
+          {
+            "edge_jaccard": 0.0,
+            "edges_match": false,
+            "gold_nodes": 1,
+            "node_jaccard": 0.5,
+            "nodes": 2,
+            "nodes_match": false,
+            "predicate": "holding(004_sugar_box)"
+          },
+          {
+            "edge_jaccard": 1.0,
+            "edges_match": true,
+            "gold_nodes": 1,
+            "node_jaccard": 1.0,
+            "nodes": 1,
+            "nodes_match": true,
+            "predicate": "reachable(coffee_table)"
+          },
+          {
+            "edge_jaccard": 0.0,
+            "edges_match": false,
+            "gold_nodes": 1,
+            "node_jaccard": 0.5,
+            "nodes": 2,
+            "nodes_match": false,
+            "predicate": "at(004_sugar_box,coffee_table)"
+          },
+          {
+            "edge_jaccard": 1.0,
+            "edges_match": true,
+            "gold_nodes": 1,
+            "node_jaccard": 1.0,
+            "nodes": 1,
+            "nodes_match": true,
+            "predicate": "reachable(005_tomato_soup_can)"
+          },
+          {
+            "edge_jaccard": 0.0,
+            "edges_match": false,
+            "gold_nodes": 1,
+            "node_jaccard": 0.5,
+            "nodes": 2,
+            "nodes_match": false,
+            "predicate": "holding(005_tomato_soup_can)"
+          },
+          {
+            "edge_jaccard": 1.0,
+            "edges_match": true,
+            "gold_nodes": 1,
+            "node_jaccard": 1.0,
+            "nodes": 1,
+            "nodes_match": true,
+            "predicate": "reachable(tv_stand)"
+          },
+          {
+            "edge_jaccard": 0.0,
+            "edges_match": false,
+            "gold_nodes": 1,
+            "node_jaccard": 0.5,
+            "nodes": 2,
+            "nodes_match": false,
+            "predicate": "at(005_tomato_soup_can,tv_stand)"
+          },
+          {
+            "edge_jaccard": 1.0,
+            "edges_match": true,
+            "gold_nodes": 1,
+            "node_jaccard": 1.0,
+            "nodes": 1,
+            "nodes_match": true,
+            "predicate": "reachable(007_tuna_fish_can)"
+          },
+          {
+            "edge_jaccard": 0.0,
+            "edges_match": false,
+            "gold_nodes": 1,
+            "node_jaccard": 0.5,
+            "nodes": 2,
+            "nodes_match": false,
+            "predicate": "holding(007_tuna_fish_can)"
+          },
+          {
+            "edge_jaccard": 1.0,
+            "edges_match": true,
+            "gold_nodes": 1,
+            "node_jaccard": 1.0,
+            "nodes": 1,
+            "nodes_match": true,
+            "predicate": "reachable(bedside_table)"
+          },
+          {
+            "edge_jaccard": 0.0,
+            "edges_match": false,
+            "gold_nodes": 1,
+            "node_jaccard": 0.25,
+            "nodes": 4,
+            "nodes_match": false,
+            "predicate": "at(007_tuna_fish_can,bedside_table)"
+          }
+        ],
+        "unmatched_predicates": []
+      }
+    }
+  },
+  "goal": "Tidy the house: move every object to its target receptacle.",
+  "granularity": "fine",
+  "kind": "static",
+  "model": "deepseek-chat",
+  "proposal": {
+    "accepted": true,
+    "attempt": 0,
+    "decomposition": {
+      "rationale": "Fine granularity: each object transfer is one reachable(object), holding(object), reachable(receptacle), at(object,receptacle) chain. Objects are moved to distinct receptacles (can to kitchen_counter, cracker box to dining_table, sugar box to coffee_table, soup can to tv_stand, tuna can to bedside_table) so every object ends on its own target receptacle, tidying the house.",
+      "schema_version": "mshab.planning.v1",
+      "subgoals": [
+        {
+          "description": "",
+          "id": "reach_002_master_chef_can",
+          "predicate": "reachable(002_master_chef_can)"
+        },
+        {
+          "description": "",
+          "id": "hold_002_master_chef_can",
+          "predicate": "holding(002_master_chef_can)"
+        },
+        {
+          "description": "",
+          "id": "reach_kitchen_counter",
+          "predicate": "reachable(kitchen_counter)"
+        },
+        {
+          "description": "",
+          "id": "place_002_master_chef_can",
+          "predicate": "at(002_master_chef_can,kitchen_counter)"
+        },
+        {
+          "description": "",
+          "id": "reach_003_cracker_box",
+          "predicate": "reachable(003_cracker_box)"
+        },
+        {
+          "description": "",
+          "id": "hold_003_cracker_box",
+          "predicate": "holding(003_cracker_box)"
+        },
+        {
+          "description": "",
+          "id": "reach_dining_table",
+          "predicate": "reachable(dining_table)"
+        },
+        {
+          "description": "",
+          "id": "place_003_cracker_box",
+          "predicate": "at(003_cracker_box,dining_table)"
+        },
+        {
+          "description": "",
+          "id": "reach_004_sugar_box",
+          "predicate": "reachable(004_sugar_box)"
+        },
+        {
+          "description": "",
+          "id": "hold_004_sugar_box",
+          "predicate": "holding(004_sugar_box)"
+        },
+        {
+          "description": "",
+          "id": "reach_coffee_table",
+          "predicate": "reachable(coffee_table)"
+        },
+        {
+          "description": "",
+          "id": "place_004_sugar_box",
+          "predicate": "at(004_sugar_box,coffee_table)"
+        },
+        {
+          "description": "",
+          "id": "reach_005_tomato_soup_can",
+          "predicate": "reachable(005_tomato_soup_can)"
+        },
+        {
+          "description": "",
+          "id": "hold_005_tomato_soup_can",
+          "predicate": "holding(005_tomato_soup_can)"
+        },
+        {
+          "description": "",
+          "id": "reach_tv_stand",
+          "predicate": "reachable(tv_stand)"
+        },
+        {
+          "description": "",
+          "id": "place_005_tomato_soup_can",
+          "predicate": "at(005_tomato_soup_can,tv_stand)"
+        },
+        {
+          "description": "",
+          "id": "reach_007_tuna_fish_can",
+          "predicate": "reachable(007_tuna_fish_can)"
+        },
+        {
+          "description": "",
+          "id": "hold_007_tuna_fish_can",
+          "predicate": "holding(007_tuna_fish_can)"
+        },
+        {
+          "description": "",
+          "id": "reach_bedside_table",
+          "predicate": "reachable(bedside_table)"
+        },
+        {
+          "description": "",
+          "id": "place_007_tuna_fish_can",
+          "predicate": "at(007_tuna_fish_can,bedside_table)"
+        }
+      ]
+    },
+    "entities": [
+      "002_master_chef_can",
+      "003_cracker_box",
+      "004_sugar_box",
+      "005_tomato_soup_can",
+      "007_tuna_fish_can",
+      "kitchen_counter",
+      "dining_table",
+      "coffee_table",
+      "tv_stand",
+      "bedside_table"
+    ],
+    "facts": [
+      "collision_safe()",
+      "gripper_empty()",
+      "present(002_master_chef_can)",
+      "present(003_cracker_box)",
+      "present(004_sugar_box)",
+      "present(005_tomato_soup_can)",
+      "present(007_tuna_fish_can)",
+      "present(bedside_table)",
+      "present(coffee_table)",
+      "present(dining_table)",
+      "present(kitchen_counter)",
+      "present(tv_stand)"
+    ],
+    "failure": null,
+    "history": {
+      "achieved_subgoals": [],
+      "completed_nodes": [],
+      "failed_nodes": []
+    },
+    "rounds": 1,
+    "subgraphs": [
+      {
+        "rationale": "Navigating to the master chef can makes it reachable, directly achieving the sub-goal.",
+        "schema_version": "mshab.planning.v1",
+        "subgraph": {
+          "edges": [],
+          "nodes": [
+            {
+              "achieves": [
+                "reach_002_master_chef_can"
+              ],
+              "arguments": {
+                "target": "002_master_chef_can"
+              },
+              "contract_id": "mshab.granularity.navigate.all",
+              "id": "reach_002_master_chef_can.navigate_to_can"
+            }
+          ],
+          "subgoal_id": "reach_002_master_chef_can"
+        }
+      },
+      {
+        "rationale": "The previous sub-goal already made 002_master_chef_can reachable, so navigating again is redundant; but the pick contract needs reachable(002_master_chef_can) while the robot is currently at the kitchen_counter from the prior sub-goal, so re-navigate to the can to restore reachability before picking it.",
+        "schema_version": "mshab.planning.v1",
+        "subgraph": {
+          "edges": [
+            {
+              "relation": "enables",
+              "source": "hold_002_master_chef_can.navigate_to_can",
+              "target": "hold_002_master_chef_can.pick_can"
+            }
+          ],
+          "nodes": [
+            {
+              "achieves": [],
+              "arguments": {
+                "target": "002_master_chef_can"
+              },
+              "contract_id": "mshab.granularity.navigate.all",
+              "id": "hold_002_master_chef_can.navigate_to_can"
+            },
+            {
+              "achieves": [
+                "hold_002_master_chef_can"
+              ],
+              "arguments": {
+                "object": "002_master_chef_can"
+              },
+              "contract_id": "mshab.granularity.pick.all",
+              "id": "hold_002_master_chef_can.pick_can"
+            }
+          ],
+          "subgoal_id": "hold_002_master_chef_can"
+        }
+      },
+      {
+        "rationale": "The robot is already holding 002_master_chef_can, so it only needs to navigate to the kitchen_counter to make it reachable before placing the can there.",
+        "schema_version": "mshab.planning.v1",
+        "subgraph": {
+          "edges": [],
+          "nodes": [
+            {
+              "achieves": [
+                "reach_kitchen_counter"
+              ],
+              "arguments": {
+                "target": "kitchen_counter"
+              },
+              "contract_id": "mshab.granularity.navigate.all",
+              "id": "reach_kitchen_counter.navigate_to_counter"
+            }
+          ],
+          "subgoal_id": "reach_kitchen_counter"
+        }
+      },
+      {
+        "rationale": "The object is already held from the previous sub-goal, so only navigating to the kitchen_counter (the destination) is needed before placing the can there to achieve at(002_master_chef_can,kitchen_counter).",
+        "schema_version": "mshab.planning.v1",
+        "subgraph": {
+          "edges": [
+            {
+              "relation": "enables",
+              "source": "place_002_master_chef_can.navigate_to_kitchen_counter",
+              "target": "place_002_master_chef_can.place_can"
+            }
+          ],
+          "nodes": [
+            {
+              "achieves": [],
+              "arguments": {
+                "target": "kitchen_counter"
+              },
+              "contract_id": "mshab.granularity.navigate.all",
+              "id": "place_002_master_chef_can.navigate_to_kitchen_counter"
+            },
+            {
+              "achieves": [
+                "place_002_master_chef_can"
+              ],
+              "arguments": {
+                "destination": "kitchen_counter",
+                "object": "002_master_chef_can"
+              },
+              "contract_id": "mshab.granularity.place.all",
+              "id": "place_002_master_chef_can.place_can"
+            }
+          ],
+          "subgoal_id": "place_002_master_chef_can"
+        }
+      },
+      {
+        "rationale": "The sub-goal is exactly the effect of navigating to the cracker box, so a single navigate node suffices.",
+        "schema_version": "mshab.planning.v1",
+        "subgraph": {
+          "edges": [],
+          "nodes": [
+            {
+              "achieves": [
+                "reach_003_cracker_box"
+              ],
+              "arguments": {
+                "target": "003_cracker_box"
+              },
+              "contract_id": "mshab.granularity.navigate.all",
+              "id": "reach_003_cracker_box.navigate_to_cracker_box"
+            }
+          ],
+          "subgoal_id": "reach_003_cracker_box"
+        }
+      },
+      {
+        "rationale": "The previous sub-goal already placed the robot where it can reach the cracker box, so the pick is admissible; navigating first ensures reachable(003_cracker_box) holds, which the pick requires and the gripper is empty.",
+        "schema_version": "mshab.planning.v1",
+        "subgraph": {
+          "edges": [
+            {
+              "relation": "enables",
+              "source": "hold_003_cracker_box.navigate_to_cracker_box",
+              "target": "hold_003_cracker_box.pick_cracker_box"
+            }
+          ],
+          "nodes": [
+            {
+              "achieves": [],
+              "arguments": {
+                "target": "003_cracker_box"
+              },
+              "contract_id": "mshab.granularity.navigate.all",
+              "id": "hold_003_cracker_box.navigate_to_cracker_box"
+            },
+            {
+              "achieves": [
+                "hold_003_cracker_box"
+              ],
+              "arguments": {
+                "object": "003_cracker_box"
+              },
+              "contract_id": "mshab.granularity.pick.all",
+              "id": "hold_003_cracker_box.pick_cracker_box"
+            }
+          ],
+          "subgoal_id": "hold_003_cracker_box"
+        }
+      },
+      {
+        "rationale": "The sub-goal is exactly the effect of navigating to the dining table, and the table is already present, so a single navigate node achieves it.",
+        "schema_version": "mshab.planning.v1",
+        "subgraph": {
+          "edges": [],
+          "nodes": [
+            {
+              "achieves": [
+                "reach_dining_table"
+              ],
+              "arguments": {
+                "target": "dining_table"
+              },
+              "contract_id": "mshab.granularity.navigate.all",
+              "id": "reach_dining_table.navigate_to_dining_table"
+            }
+          ],
+          "subgoal_id": "reach_dining_table"
+        }
+      },
+      {
+        "rationale": "The cracker box must be grasped and carried to the dining table; navigate to the object, pick it, navigate to the destination, then place it there, which achieves at(003_cracker_box,dining_table).",
+        "schema_version": "mshab.planning.v1",
+        "subgraph": {
+          "edges": [
+            {
+              "relation": "enables",
+              "source": "place_003_cracker_box.navigate_to_cracker_box",
+              "target": "place_003_cracker_box.pick_cracker_box"
+            },
+            {
+              "relation": "enables",
+              "source": "place_003_cracker_box.pick_cracker_box",
+              "target": "place_003_cracker_box.navigate_to_dining_table"
+            },
+            {
+              "relation": "enables",
+              "source": "place_003_cracker_box.navigate_to_dining_table",
+              "target": "place_003_cracker_box.place_cracker_box"
+            }
+          ],
+          "nodes": [
+            {
+              "achieves": [],
+              "arguments": {
+                "target": "003_cracker_box"
+              },
+              "contract_id": "mshab.granularity.navigate.all",
+              "id": "place_003_cracker_box.navigate_to_cracker_box"
+            },
+            {
+              "achieves": [],
+              "arguments": {
+                "target": "dining_table"
+              },
+              "contract_id": "mshab.granularity.navigate.all",
+              "id": "place_003_cracker_box.navigate_to_dining_table"
+            },
+            {
+              "achieves": [],
+              "arguments": {
+                "object": "003_cracker_box"
+              },
+              "contract_id": "mshab.granularity.pick.all",
+              "id": "place_003_cracker_box.pick_cracker_box"
+            },
+            {
+              "achieves": [
+                "place_003_cracker_box"
+              ],
+              "arguments": {
+                "destination": "dining_table",
+                "object": "003_cracker_box"
+              },
+              "contract_id": "mshab.granularity.place.all",
+              "id": "place_003_cracker_box.place_cracker_box"
+            }
+          ],
+          "subgoal_id": "place_003_cracker_box"
+        }
+      },
+      {
+        "rationale": "The sub-goal reachable(004_sugar_box) is exactly the effect of navigate to the sugar box, so a single navigate node achieves it; no other skill is needed.",
+        "schema_version": "mshab.planning.v1",
+        "subgraph": {
+          "edges": [],
+          "nodes": [
+            {
+              "achieves": [
+                "reach_004_sugar_box"
+              ],
+              "arguments": {
+                "target": "004_sugar_box"
+              },
+              "contract_id": "mshab.granularity.navigate.all",
+              "id": "reach_004_sugar_box.navigate_to_sugar_box"
+            }
+          ],
+          "subgoal_id": "reach_004_sugar_box"
+        }
+      },
+      {
+        "rationale": "The previous sub-goal already left the robot reaching the sugar box, but the pick contract needs reachable(004_sugar_box) and gripper_empty() to hold; navigating re-establishes the reachability fact explicitly before the pick that makes holding(004_sugar_box) true.",
+        "schema_version": "mshab.planning.v1",
+        "subgraph": {
+          "edges": [
+            {
+              "relation": "enables",
+              "source": "hold_004_sugar_box.navigate_to_004_sugar_box",
+              "target": "hold_004_sugar_box.pick_004_sugar_box"
+            }
+          ],
+          "nodes": [
+            {
+              "achieves": [],
+              "arguments": {
+                "target": "004_sugar_box"
+              },
+              "contract_id": "mshab.granularity.navigate.all",
+              "id": "hold_004_sugar_box.navigate_to_004_sugar_box"
+            },
+            {
+              "achieves": [
+                "hold_004_sugar_box"
+              ],
+              "arguments": {
+                "object": "004_sugar_box"
+              },
+              "contract_id": "mshab.granularity.pick.all",
+              "id": "hold_004_sugar_box.pick_004_sugar_box"
+            }
+          ],
+          "subgoal_id": "hold_004_sugar_box"
+        }
+      },
+      {
+        "rationale": "The sub-goal reachable(coffee_table) is exactly the effect of navigating to coffee_table, so a single navigate node achieves it.",
+        "schema_version": "mshab.planning.v1",
+        "subgraph": {
+          "edges": [],
+          "nodes": [
+            {
+              "achieves": [
+                "reach_coffee_table"
+              ],
+              "arguments": {
+                "target": "coffee_table"
+              },
+              "contract_id": "mshab.granularity.navigate.all",
+              "id": "reach_coffee_table.navigate_to_coffee_table"
+            }
+          ],
+          "subgoal_id": "reach_coffee_table"
+        }
+      },
+      {
+        "rationale": "The sugar box is already held from the previous sub-goal; navigate to the coffee table so the destination is reachable, then place the object there to achieve at(004_sugar_box,coffee_table).",
+        "schema_version": "mshab.planning.v1",
+        "subgraph": {
+          "edges": [
+            {
+              "relation": "enables",
+              "source": "place_004_sugar_box.navigate_to_coffee_table",
+              "target": "place_004_sugar_box.place_sugar_box"
+            }
+          ],
+          "nodes": [
+            {
+              "achieves": [],
+              "arguments": {
+                "target": "coffee_table"
+              },
+              "contract_id": "mshab.granularity.navigate.all",
+              "id": "place_004_sugar_box.navigate_to_coffee_table"
+            },
+            {
+              "achieves": [
+                "place_004_sugar_box"
+              ],
+              "arguments": {
+                "destination": "coffee_table",
+                "object": "004_sugar_box"
+              },
+              "contract_id": "mshab.granularity.place.all",
+              "id": "place_004_sugar_box.place_sugar_box"
+            }
+          ],
+          "subgoal_id": "place_004_sugar_box"
+        }
+      },
+      {
+        "rationale": "Navigate to the tomato soup can so it becomes reachable, which is exactly the sub-goal predicate and also prepares the following holding(...) sub-goal.",
+        "schema_version": "mshab.planning.v1",
+        "subgraph": {
+          "edges": [],
+          "nodes": [
+            {
+              "achieves": [
+                "reach_005_tomato_soup_can"
+              ],
+              "arguments": {
+                "target": "005_tomato_soup_can"
+              },
+              "contract_id": "mshab.granularity.navigate.all",
+              "id": "reach_005_tomato_soup_can.navigate_to_005_tomato_soup_can"
+            }
+          ],
+          "subgoal_id": "reach_005_tomato_soup_can"
+        }
+      },
+      {
+        "rationale": "Navigate to the tomato soup can so it becomes reachable, then pick it to achieve holding(005_tomato_soup_can).",
+        "schema_version": "mshab.planning.v1",
+        "subgraph": {
+          "edges": [
+            {
+              "relation": "enables",
+              "source": "hold_005_tomato_soup_can.navigate_to_tomato_soup_can",
+              "target": "hold_005_tomato_soup_can.pick_tomato_soup_can"
+            }
+          ],
+          "nodes": [
+            {
+              "achieves": [],
+              "arguments": {
+                "target": "005_tomato_soup_can"
+              },
+              "contract_id": "mshab.granularity.navigate.all",
+              "id": "hold_005_tomato_soup_can.navigate_to_tomato_soup_can"
+            },
+            {
+              "achieves": [
+                "hold_005_tomato_soup_can"
+              ],
+              "arguments": {
+                "object": "005_tomato_soup_can"
+              },
+              "contract_id": "mshab.granularity.pick.all",
+              "id": "hold_005_tomato_soup_can.pick_tomato_soup_can"
+            }
+          ],
+          "subgoal_id": "hold_005_tomato_soup_can"
+        }
+      },
+      {
+        "rationale": "The sub-goal reachable(tv_stand) is directly achieved by navigating to the tv_stand, which is already present and carries the held tomato soup can to be placed there next.",
+        "schema_version": "mshab.planning.v1",
+        "subgraph": {
+          "edges": [],
+          "nodes": [
+            {
+              "achieves": [
+                "reach_tv_stand"
+              ],
+              "arguments": {
+                "target": "tv_stand"
+              },
+              "contract_id": "mshab.granularity.navigate.all",
+              "id": "reach_tv_stand.navigate_to_tv_stand"
+            }
+          ],
+          "subgoal_id": "reach_tv_stand"
+        }
+      },
+      {
+        "rationale": "The object is already held from the previous sub-goal, so only navigation to the tv_stand is needed to make the place admissible, which achieves at(005_tomato_soup_can,tv_stand).",
+        "schema_version": "mshab.planning.v1",
+        "subgraph": {
+          "edges": [
+            {
+              "relation": "enables",
+              "source": "place_005_tomato_soup_can.navigate_to_tv_stand",
+              "target": "place_005_tomato_soup_can.place_tomato_soup_can"
+            }
+          ],
+          "nodes": [
+            {
+              "achieves": [],
+              "arguments": {
+                "target": "tv_stand"
+              },
+              "contract_id": "mshab.granularity.navigate.all",
+              "id": "place_005_tomato_soup_can.navigate_to_tv_stand"
+            },
+            {
+              "achieves": [
+                "place_005_tomato_soup_can"
+              ],
+              "arguments": {
+                "destination": "tv_stand",
+                "object": "005_tomato_soup_can"
+              },
+              "contract_id": "mshab.granularity.place.all",
+              "id": "place_005_tomato_soup_can.place_tomato_soup_can"
+            }
+          ],
+          "subgoal_id": "place_005_tomato_soup_can"
+        }
+      },
+      {
+        "rationale": "Navigating to the tuna fish can makes it reachable, which is exactly the sub-goal predicate.",
+        "schema_version": "mshab.planning.v1",
+        "subgraph": {
+          "edges": [],
+          "nodes": [
+            {
+              "achieves": [
+                "reach_007_tuna_fish_can"
+              ],
+              "arguments": {
+                "target": "007_tuna_fish_can"
+              },
+              "contract_id": "mshab.granularity.navigate.all",
+              "id": "reach_007_tuna_fish_can.navigate_to_tuna"
+            }
+          ],
+          "subgoal_id": "reach_007_tuna_fish_can"
+        }
+      },
+      {
+        "rationale": "Navigate to the tuna fish can so it is reachable, then pick it to hold it, achieving the sub-goal.",
+        "schema_version": "mshab.planning.v1",
+        "subgraph": {
+          "edges": [
+            {
+              "relation": "enables",
+              "source": "hold_007_tuna_fish_can.navigate_to_tuna",
+              "target": "hold_007_tuna_fish_can.pick_tuna"
+            }
+          ],
+          "nodes": [
+            {
+              "achieves": [],
+              "arguments": {
+                "target": "007_tuna_fish_can"
+              },
+              "contract_id": "mshab.granularity.navigate.all",
+              "id": "hold_007_tuna_fish_can.navigate_to_tuna"
+            },
+            {
+              "achieves": [
+                "hold_007_tuna_fish_can"
+              ],
+              "arguments": {
+                "object": "007_tuna_fish_can"
+              },
+              "contract_id": "mshab.granularity.pick.all",
+              "id": "hold_007_tuna_fish_can.pick_tuna"
+            }
+          ],
+          "subgoal_id": "hold_007_tuna_fish_can"
+        }
+      },
+      {
+        "rationale": "The robot already holds 007_tuna_fish_can, so the only step needed is to navigate to the bedside_table to make it reachable for the subsequent place.",
+        "schema_version": "mshab.planning.v1",
+        "subgraph": {
+          "edges": [],
+          "nodes": [
+            {
+              "achieves": [
+                "reach_bedside_table"
+              ],
+              "arguments": {
+                "target": "bedside_table"
+              },
+              "contract_id": "mshab.granularity.navigate.all",
+              "id": "reach_bedside_table.navigate_to_bedside_table"
+            }
+          ],
+          "subgoal_id": "reach_bedside_table"
+        }
+      },
+      {
+        "rationale": "Navigate to the tuna can, pick it up, then move to the bedside table and place it there so at(007_tuna_fish_can,bedside_table) holds.",
+        "schema_version": "mshab.planning.v1",
+        "subgraph": {
+          "edges": [
+            {
+              "relation": "enables",
+              "source": "place_007_tuna_fish_can.navigate_to_tuna",
+              "target": "place_007_tuna_fish_can.pick_tuna"
+            },
+            {
+              "relation": "enables",
+              "source": "place_007_tuna_fish_can.pick_tuna",
+              "target": "place_007_tuna_fish_can.navigate_to_bedside_table"
+            },
+            {
+              "relation": "enables",
+              "source": "place_007_tuna_fish_can.navigate_to_bedside_table",
+              "target": "place_007_tuna_fish_can.place_tuna"
+            }
+          ],
+          "nodes": [
+            {
+              "achieves": [],
+              "arguments": {
+                "target": "bedside_table"
+              },
+              "contract_id": "mshab.granularity.navigate.all",
+              "id": "place_007_tuna_fish_can.navigate_to_bedside_table"
+            },
+            {
+              "achieves": [],
+              "arguments": {
+                "target": "007_tuna_fish_can"
+              },
+              "contract_id": "mshab.granularity.navigate.all",
+              "id": "place_007_tuna_fish_can.navigate_to_tuna"
+            },
+            {
+              "achieves": [],
+              "arguments": {
+                "object": "007_tuna_fish_can"
+              },
+              "contract_id": "mshab.granularity.pick.all",
+              "id": "place_007_tuna_fish_can.pick_tuna"
+            },
+            {
+              "achieves": [
+                "place_007_tuna_fish_can"
+              ],
+              "arguments": {
+                "destination": "bedside_table",
+                "object": "007_tuna_fish_can"
+              },
+              "contract_id": "mshab.granularity.place.all",
+              "id": "place_007_tuna_fish_can.place_tuna"
+            }
+          ],
+          "subgoal_id": "place_007_tuna_fish_can"
+        }
+      }
+    ]
+  },
+  "run": "smoke-fine-free",
+  "schema_version": "mshab.experiment-figure-data.v1",
+  "served_models": [
+    "deepseek-flash"
+  ],
+  "source": "mshab_exps/planning/smoke-fine-free/tidy_house/fine/sample_00/static.json",
+  "task": "granularity"
+}

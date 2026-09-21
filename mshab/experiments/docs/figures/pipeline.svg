@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1560" height="1010" viewBox="0 0 1560 1010" role="img" aria-labelledby="title description">
+<title id="title">Higher-layers experiment: the pipeline</title>
+<desc id="description">From the request through the proposer, the validator, and the controller loop to the trace.</desc>
+<defs><marker id="arrow-2f3a4d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#2f3a4d"/></marker><marker id="arrow-3484c5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#3484c5"/></marker><marker id="arrow-399447" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#399447"/></marker><marker id="arrow-c6531a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#c6531a"/></marker></defs>
+<rect width="1560" height="1010" fill="#ffffff"/>
+<text x="30" y="40" font-size="26" font-weight="700" fill="#6842cb" text-anchor="start">Higher-layers experiment: the pipeline</text>
+<text x="30" y="66" font-size="14" font-weight="400" fill="#71809b" text-anchor="start">request → proposer (two calls) → validator → controller loop over an environment → trace and metrics · the lower layers and the gold graphs stay fixed · stages 1–6 of higher-layers-plan.md</text>
+<rect x="30" y="90" width="1500" height="290" rx="18" fill="#eef4fb" stroke="#3484c5" stroke-width="1.5"/>
+<text x="48" y="114" font-size="15" font-weight="700" fill="#3484c5" text-anchor="start">Layers 1–2 · proposal</text>
+<text x="240" y="114" font-size="12" font-weight="400" fill="#71809b" text-anchor="start">simulator-independent · mshab/experiments/planning/</text>
+<rect x="50" y="130" width="250" height="220" rx="10" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
+<text x="64" y="154" font-size="14" font-weight="700" fill="#2f3a4d" text-anchor="start">Request</text>
+<text x="64" y="176" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">DecompositionRequest / SubgraphRequest</text>
+<text x="64" y="193" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">goal text</text>
+<text x="64" y="210" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">entities: objects, receptacles</text>
+<text x="64" y="227" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">facts: present(...), gripper_empty(), ...</text>
+<text x="64" y="244" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">contracts: 5 × Contract.as_dict()</text>
+<text x="64" y="261" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">granularity: free | coarse | fine</text>
+<text x="64" y="278" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">history + failure   (on a replan)</text>
+<text x="64" y="295" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">rejections            (on a retry)</text>
+<rect x="340" y="130" width="330" height="220" rx="10" fill="#ffffff" stroke="#7552d6" stroke-width="2"/>
+<text x="354" y="154" font-size="14" font-weight="700" fill="#7552d6" text-anchor="start">Proposer  (GraphProposer) · stages 3, 5, 6</text>
+<rect x="354" y="168" width="302" height="54" rx="8" fill="#f6f3fc" stroke="#7552d6" stroke-width="1.2"/>
+<text x="366" y="189" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">call 1  decompose(request)</text>
+<text x="366" y="205" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">→ ordered sub-goals, one predicate each (Layer 1)</text>
+<rect x="354" y="232" width="302" height="54" rx="8" fill="#f6f3fc" stroke="#7552d6" stroke-width="1.2"/>
+<text x="366" y="253" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">call 2  plan_subgraph(sub-goal), once per sub-goal</text>
+<text x="366" y="269" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">→ one SkillSubgraph of contract calls (Layer 2)</text>
+<text x="354" y="306" font-size="11" font-weight="400" fill="#71809b" text-anchor="start">DeepSeekProposer: one chat completion per call, JSON</text>
+<text x="354" y="320" font-size="11" font-weight="400" fill="#71809b" text-anchor="start">ScriptedProposer: tables cut from the gold graphs</text>
+<text x="354" y="334" font-size="11" font-weight="400" fill="#71809b" text-anchor="start">TidyHouseRuleProposer: rules, for the MS-HAB rollout</text>
+<rect x="710" y="160" width="200" height="134" rx="10" fill="#ffffff" stroke="#7552d6" stroke-width="2"/>
+<text x="724" y="184" font-size="14" font-weight="700" fill="#7552d6" text-anchor="start">assemble_patch</text>
+<text x="724" y="206" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">Layer 1: the sequence with</text>
+<text x="724" y="222" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">consecutive dependencies</text>
+<text x="724" y="238" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">Layer 2: the subgraphs + one</text>
+<text x="724" y="254" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">ENABLES cross edge into each</text>
+<text x="724" y="270" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">root of the next sub-goal</text>
+<text x="724" y="286" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">→ one SkillGraphPatch</text>
+<rect x="950" y="130" width="300" height="220" rx="10" fill="#ffffff" stroke="#c6531a" stroke-width="2"/>
+<text x="964" y="154" font-size="14" font-weight="700" fill="#c6531a" text-anchor="start">ProposalValidator · retries = 2</text>
+<text x="964" y="176" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">strict from_dict of every answer</text>
+<text x="964" y="193" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">ground every node against the library</text>
+<text x="964" y="210" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">apply the patch to fresh graphs, validate</text>
+<text x="964" y="227" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">achiever effects ⊇ sub-goal predicate</text>
+<text x="964" y="244" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">SkillPlanner.plan() over the whole graph</text>
+<text x="964" y="261" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">accepted → ValidatedProposal (+ rounds)</text>
+<text x="964" y="278" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">rejected → Rejection(stage, sub-goal, msg)</text>
+<rect x="1290" y="130" width="220" height="220" rx="10" fill="#ffffff" stroke="#3484c5" stroke-width="2"/>
+<text x="1304" y="154" font-size="14" font-weight="700" fill="#3484c5" text-anchor="start">Accepted graphs</text>
+<text x="1304" y="176" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">Layer 1  SubGoalGraph</text>
+<text x="1304" y="193" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">  ordered chain of sub-goals</text>
+<text x="1304" y="210" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">Layer 2  SkillGraph</text>
+<text x="1304" y="227" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">  one subgraph per sub-goal,</text>
+<text x="1304" y="244" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">  each node = one contract call</text>
+<text x="1304" y="261" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">nominal plan (SkillPlanner)</text>
+<text x="1304" y="278" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">every request, response, and</text>
+<text x="1304" y="295" font-size="12" font-weight="400" fill="#2f3a4d" text-anchor="start">rejection, verbatim</text>
+<path d="M 300 240 H 338" fill="none" stroke="#2f3a4d" stroke-width="1.8" marker-end="url(#arrow-2f3a4d)"/>
+<path d="M 670 227 H 708" fill="none" stroke="#2f3a4d" stroke-width="1.8" marker-end="url(#arrow-2f3a4d)"/>
+<path d="M 910 227 H 948" fill="none" stroke="#2f3a4d" stroke-width="1.8" marker-end="url(#arrow-2f3a4d)"/>
+<path d="M 1250 240 H 1288" fill="none" stroke="#2f3a4d" stroke-width="1.8" marker-end="url(#arrow-2f3a4d)"/>
+<path d="M 1100 350 V 368 H 505 V 352" fill="none" stroke="#c6531a" stroke-width="1.8" marker-end="url(#arrow-c6531a)" stroke-dasharray="6 5"/>
+<text x="802" y="364" font-size="11" font-weight="400" fill="#c6531a" text-anchor="middle">rejections: the same request asked again (≤ 2 retries); a sub-goal rejection repeats only that subgraph call</text>
+<path d="M 1400 350 V 406 H 400 V 458" fill="none" stroke="#3484c5" stroke-width="1.8" marker-end="url(#arrow-3484c5)"/>
+<text x="900" y="402" font-size="11" font-weight="400" fill="#3484c5" text-anchor="middle">accepted proposal: both layers and the plan</text>
+<path d="M 120 420 V 394 H 320 V 240 H 338" fill="none" stroke="#399447" stroke-width="1.8" marker-end="url(#arrow-399447)" stroke-dasharray="6 5"/>
+<text x="126" y="389" font-size="11" font-weight="400" fill="#399447" text-anchor="start">Layer-1 replan (≤ 2 per run)</text>
+<rect x="30" y="420" width="1500" height="290" rx="18" fill="#eefaf0" stroke="#399447" stroke-width="1.5"/>
+<text x="48" y="444" font-size="15" font-weight="700" fill="#399447" text-anchor="start">controller loop · execute → observe → re-decide</text>
+<text x="470" y="444" font-size="12" font-weight="400" fill="#71809b" text-anchor="start">stage 4 on the symbolic environment, stage 6 on MS-HAB · the loop itself never changes</text>
+<rect x="50" y="460" width="400" height="222" rx="10" fill="#ffffff" stroke="#399447" stroke-width="2"/>
+<text x="64" y="484" font-size="14" font-weight="700" fill="#399447" text-anchor="start">TaskController</text>
+<text x="64" y="506" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">1  absorb facts: the next sub-goal whose predicate</text>
+<text x="64" y="522" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">    already holds is achieved, its nodes are skipped</text>
+<text x="64" y="538" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">2  SkillPlanner.decide(completed, failed) → one node</text>
+<text x="64" y="554" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">3  SkillRuntime.execute_node: admission (preconditions,</text>
+<text x="64" y="570" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">    invariants) → policy run → verify the effects</text>
+<text x="64" y="586" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">4  success → completed · failure → retry, ≤ 2 attempts</text>
+<text x="64" y="602" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">5  NoViableCandidate → Failure(sub-goal, node, mode,</text>
+<text x="64" y="618" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">    missing effects / preconditions) → replan</text>
+<rect x="490" y="460" width="310" height="222" rx="10" fill="#ffffff" stroke="#7552d6" stroke-width="2"/>
+<text x="504" y="484" font-size="14" font-weight="700" fill="#7552d6" text-anchor="start">SkillRuntime + PolicyExecutor</text>
+<text x="504" y="506" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">select_policy(contract, grounded arguments):</text>
+<text x="504" y="522" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">  the target's own checkpoint first, then all</text>
+<text x="504" y="538" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">SymbolicPolicyExecutor  (stages 4–5)</text>
+<text x="504" y="554" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">  add the effects, retract the deletes, or a</text>
+<text x="504" y="570" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">  ScriptedFailure keyed by type and target</text>
+<text x="504" y="586" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">CheckpointPolicyExecutor  (stage 6)</text>
+<text x="504" y="602" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">  point_at(plan subtask), run SAC / PPO until</text>
+<text x="504" y="618" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">  MS-HAB's subtask checker passes</text>
+<rect x="840" y="460" width="330" height="222" rx="10" fill="#ffffff" stroke="#399447" stroke-width="2"/>
+<text x="854" y="484" font-size="14" font-weight="700" fill="#399447" text-anchor="start">EnvironmentAdapter</text>
+<text x="854" y="506" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">SymbolicEnvironmentAdapter  (stages 4–5)</text>
+<text x="854" y="522" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">  a set of predicates + two world rules:</text>
+<text x="854" y="538" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">  holding(x) retracts gripper_empty() and at(x,·);</text>
+<text x="854" y="554" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">  reaching y retracts every other reachable(·)</text>
+<text x="854" y="570" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">RolloutEnvironmentAdapter / SkillRollout-v0  (stage 6)</text>
+<text x="854" y="586" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">  facts = MS-HAB's own checkers: holding = grasp,</text>
+<text x="854" y="602" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">  at = inside the goal, reachable = navigation</text>
+<text x="854" y="618" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">  success, collision_safe = force limit</text>
+<rect x="1210" y="460" width="300" height="222" rx="10" fill="#ffffff" stroke="#94a3b8" stroke-width="2"/>
+<text x="1224" y="484" font-size="14" font-weight="700" fill="#2f3a4d" text-anchor="start">RunResult trace</text>
+<text x="1224" y="506" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">proposals: every round verbatim</text>
+<text x="1224" y="522" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">decisions: node, attempt, outcome,</text>
+<text x="1224" y="538" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">  facts added and removed</text>
+<text x="1224" y="554" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">replans: the failure that caused each</text>
+<text x="1224" y="570" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">metrics: executions, retries, skipped,</text>
+<text x="1224" y="586" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">  redundant, replanning_span,</text>
+<text x="1224" y="602" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">  goal_facts_achieved, recovery_success</text>
+<text x="1224" y="618" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">status: success · goal_not_reached ·</text>
+<text x="1224" y="634" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">  proposal_rejected · replans_exhausted</text>
+<path d="M 450 545 H 488" fill="none" stroke="#2f3a4d" stroke-width="1.8" marker-end="url(#arrow-2f3a4d)"/>
+<text x="469" y="536" font-size="10" font-weight="400" fill="#71809b" text-anchor="middle">execute</text>
+<path d="M 800 545 H 838" fill="none" stroke="#2f3a4d" stroke-width="1.8" marker-end="url(#arrow-2f3a4d)"/>
+<text x="819" y="536" font-size="10" font-weight="400" fill="#71809b" text-anchor="middle">step</text>
+<path d="M 1005 682 V 700 H 250 V 684" fill="none" stroke="#399447" stroke-width="1.8" marker-end="url(#arrow-399447)"/>
+<text x="628" y="696" font-size="10" font-weight="400" fill="#399447" text-anchor="middle">snapshot: the current facts</text>
+<path d="M 1170 600 H 1208" fill="none" stroke="#2f3a4d" stroke-width="1.8" marker-end="url(#arrow-2f3a4d)"/>
+<text x="1189" y="591" font-size="10" font-weight="400" fill="#71809b" text-anchor="middle">record</text>
+<rect x="30" y="730" width="1500" height="230" rx="18" fill="#f5f6f8" stroke="#94a3b8" stroke-width="1.5"/>
+<text x="48" y="754" font-size="15" font-weight="700" fill="#2f3a4d" text-anchor="start">fixed: Layers 3–4 and the references</text>
+<rect x="50" y="770" width="720" height="170" rx="10" fill="#ffffff" stroke="#c6531a" stroke-width="2"/>
+<text x="64" y="794" font-size="14" font-weight="700" fill="#c6531a" text-anchor="start">ContractLibrary · stage 1  (mshab/experiments/granularity/lower_layers/)</text>
+<text x="64" y="816" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">Layer 3   five generic contracts: navigate · pick · place · open · close, ids mshab.granularity.&lt;type&gt;.all;</text>
+<text x="64" y="832" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">              each with parameters, preconditions, effects, deletes, invariants, and a horizon</text>
+<text x="64" y="848" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">Layer 4   53 checkpoint policies from the MS-HAB download, each bound to the contract of its type;</text>
+<text x="64" y="864" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">              task_families=('tidy_house',) binds the 21 TidyHouse checkpoints for the rollout;</text>
+<text x="64" y="880" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">              one SymbolicPolicy per contract for the symbolic environment</text>
+<text x="64" y="896" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">a proposer only ever names a contract and its arguments; which policy runs is the library's choice</text>
+<rect x="810" y="770" width="700" height="170" rx="10" fill="#ffffff" stroke="#3484c5" stroke-width="2"/>
+<text x="824" y="794" font-size="14" font-weight="700" fill="#3484c5" text-anchor="start">Gold graphs and measurement · stages 2, 5  (higher_layers/, evaluate.py)</text>
+<text x="824" y="816" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">gold graphs: hand-authored, validated, committed as JSON + SVG under granularity/graphs/</text>
+<text x="824" y="832" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">    tidy_house_coarse  5 sub-goals / 20 nodes · tidy_house_fine  20 / 20 · set_table_generic  8 / 16</text>
+<text x="824" y="848" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">the ScriptedProposer answers from them; a model's decomposition and subgraphs are compared with them</text>
+<text x="824" y="864" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">    (exact match, order similarity, predicate precision / recall, node and edge Jaccard, role P / R)</text>
+<text x="824" y="880" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">scenarios with injected failures, identical for every proposer: nominal, pick_fails_once,</text>
+<text x="824" y="896" font-size="11" font-weight="400" fill="#2f3a4d" text-anchor="start">    pick_exhausted, object_dropped, object_already_delivered, set_table_nominal</text>
+<path d="M 640 770 V 684" fill="none" stroke="#c6531a" stroke-width="1.8" marker-end="url(#arrow-c6531a)"/>
+<text x="648" y="726" font-size="10" font-weight="400" fill="#c6531a" text-anchor="start">contracts, policies</text>
+<path d="M 175 770 V 720 H 40 V 240 H 48" fill="none" stroke="#c6531a" stroke-width="1.8" marker-end="url(#arrow-c6531a)" stroke-dasharray="6 5"/>
+<text x="185" y="726" font-size="10" font-weight="400" fill="#c6531a" text-anchor="start">Contract.as_dict() records on every request</text>
+<text x="30" y="988" font-size="12" font-weight="400" fill="#71809b" text-anchor="start">blue = proposal (simulator-independent) · green = execution · grey = fixed lower layers and references · solid arrow = data flow · dashed arrow = a loop back (retry, replan) · every stage is exercised on CPU by the test suite; only stage 6 needs the simulator</text>
+</svg>
