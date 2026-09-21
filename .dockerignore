@@ -25,3 +25,7 @@ dist
 .ipynb_checkpoints
 .venv
 venv
+
+# secrets: the DeepSeek key is passed through by docker-compose, never copied into the image
+.env
+.env.*

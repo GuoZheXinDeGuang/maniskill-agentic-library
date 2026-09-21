@@ -5,3 +5,4 @@ from .pick import PickSubtaskTrainEnv
 from .place import PlaceSubtaskTrainEnv
 from .planner import plan_data_from_file
 from .sequential_task import SequentialTaskEnv
+from .skill_rollout import SkillRolloutEnv

@@ -89,6 +89,21 @@ class GranularityLibraryTests(TestCase):
             ArtifactStatus.MISSING,
         )
 
+    def test_task_families_restrict_layer_four_only(self):
+        library = build_granularity_library(self.checkpoint_root, task_families=("tidy_house",))
+        self.assertEqual(len(library.find(task=EXPERIMENT_TASK)), 5)
+        self.assertEqual(len(library.policies), 21)
+        self.assertTrue(all(policy.id.startswith("rl.tidy_house.") for policy in library.policies))
+        self.assertEqual(len(library.policies_for(contract_id("open"))), 0)
+        self.assertEqual(
+            [policy.id for policy in library.applicable_policies(contract_id("pick"), {"object": "024_bowl"})],
+            ["rl.tidy_house.pick.024_bowl", "rl.tidy_house.pick.all"],
+        )
+        both = build_granularity_library(self.checkpoint_root, task_families=["set_table", "tidy_house"])
+        self.assertEqual(len(both.policies), 21 + 11)
+        with self.assertRaisesRegex(ValueError, "unknown task families"):
+            build_granularity_library(self.checkpoint_root, task_families=("kitchen",))
+
     def test_generic_contracts_ground_the_symbolic_interface(self):
         pick = self.library.get(contract_id("pick")).bind({"object": "024_bowl"})
         self.assertEqual(

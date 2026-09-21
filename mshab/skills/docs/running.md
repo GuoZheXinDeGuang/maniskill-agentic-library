@@ -96,3 +96,20 @@ task plan through a hard-coded `<repo>/../mshab-assets/...` path instead of
 `MS_ASSET_DIR`, so they skip inside the container even though the plan is
 present in the assets volume.
 
+## Run the controller on MS-HAB
+
+The stage-6 rollout (`mshab/experiments/rollout/`) executes a proposer's plan
+for one official TidyHouse episode with the RL checkpoints, replanning
+through the proposer when a sub-goal fails. It needs the GPU, the ReplicaCAD
+assets, and the TidyHouse checkpoints (`rl/tidy_house/**`, 21 policies):
+
+```bash
+docker compose run --rm mshab python -m mshab.experiments.rollout --granularity coarse
+docker compose run --rm mshab python -m mshab.experiments.rollout --proposer deepseek --granularity free
+```
+
+Runs land under `./mshab_exps/rollout/` with the trace, the executions, the
+plan the environment loaded, and a video. `--dry-run` validates the proposal
+and maps its nodes to plan subtasks without a simulator, so it also works
+outside the container. See the [rollout README](../../experiments/rollout/README.md).
+

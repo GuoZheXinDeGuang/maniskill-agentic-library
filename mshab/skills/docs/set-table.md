@@ -87,12 +87,13 @@ docker compose run --rm mshab \
 ```
 
 This first-stage runner executes a path already selected from the graph. It
-does not yet observe a policy failure mid-episode and call the planner again;
+does not observe a policy failure mid-episode and call the planner again;
 that online `execute -> observe -> re-decide` loop exists as `TaskController`
-in `mshab/experiments/planning/` on a symbolic environment and reaches MS-HAB
-in stage 6 of the higher-layers plan. A 16-step episode can therefore end on the first subtask
-whose policy fails; `subtask_fail_counts.json` in the run directory records
-which index that was.
+in `mshab/experiments/planning/` and runs on MS-HAB for TidyHouse through
+`mshab/experiments/rollout/` (stage 6 of the higher-layers plan). A 16-step
+SetTable episode here can therefore end on the first subtask whose policy
+fails; `subtask_fail_counts.json` in the run directory records which index
+that was.
 
 Because a single rollout can die on one unlucky spawn, `ATTEMPTS` (or an
 explicit `SEEDS` list) runs several independent rollouts concurrently, each on

@@ -92,7 +92,10 @@ library.select_policy("mshab.granularity.pick.all", arguments={"object": "024_bo
 
 `SkillRuntime` passes the grounded arguments through automatically. Fallback
 and alternative relations belong to Layer 2; there are none in Layer 4 or in
-the bindings.
+the bindings. `build_granularity_library(root, task_families=("tidy_house",))`
+binds only that task's checkpoints (21 policies); the MS-HAB rollout uses it,
+because with every family bound the PrepareGroceries checkpoint of the same
+object sorts first.
 
 ## Gold graphs
 
@@ -117,7 +120,9 @@ chains (the packaged SetTable graph keeps covering Layer-2 fallback).
 The two TidyHouse variants hold the same node ids, contracts, arguments, and
 nominal execution order; only sub-goal ownership differs.
 `TidyHouseGraphBuilder` takes `context={"transfers": ((object, receptacle),
-...)}` for other episodes. PrepareGroceries is not built yet.
+...)}` for other episodes, and `"transfer_indices"` to keep the transfers'
+original numbers in the ids when a replan covers a subset. PrepareGroceries
+is not built yet.
 
 ![tidy_house_coarse](graphs/tidy_house_coarse.svg)
 
@@ -240,4 +245,6 @@ library.select_policy(pick.id, arguments=grounded.arguments)  # first ready of t
 ```
 
 The proposer boundary whose scripted implementation answers with these gold
-graphs lives in [`../planning/`](../planning/README.md).
+graphs lives in [`../planning/`](../planning/README.md); the rollout of a
+proposer's plan on MS-HAB, over these contracts and one official TidyHouse
+episode, in [`../rollout/`](../rollout/README.md).

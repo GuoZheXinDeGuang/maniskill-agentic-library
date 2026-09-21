@@ -208,7 +208,10 @@ facts; and `metrics`:
 
 The scenarios that exercise the loop, the helper that runs one, and the
 evaluation that sweeps a proposer over goals and granularities live in
-[`../granularity/`](../granularity/README.md).
+[`../granularity/`](../granularity/README.md). The same controller runs on
+MS-HAB through the adapter and executor of
+[`../rollout/`](../rollout/README.md) (stage 6): only the environment and
+the executor arguments of `run()` change.
 
 ```python
 from pathlib import Path

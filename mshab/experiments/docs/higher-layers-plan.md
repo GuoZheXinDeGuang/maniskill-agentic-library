@@ -43,7 +43,7 @@ stage 2  gold graphs          hand-authored L1/L2 over those contracts, coarse a
 stage 3  proposer boundary     Decomposition/Subgraph request and response documents + ScriptedProposer
 stage 4  online loop          execute -> observe -> re-decide, symbolic environment, replan hook
 stage 5  real model           DeepSeek API behind the same boundary, granularity sweep
-stage 6  MS-HAB               GPU rollout of a VLM-planned graph (existing follow-up items)
+stage 6  MS-HAB               the same controller on the simulator: TidyHouse adapter, checkpoint executor, GPU runner
 ```
 
 ## What the upper layers already provide
@@ -65,7 +65,7 @@ composition rather than new abstractions:
 ## What was missing
 
 The gaps this plan set out to close, each with the stage that closed it.
-Stages 1 to 5 are implemented; the per-stage sections below record how.
+All six stages are implemented; the per-stage sections below record how.
 
 1. **The granularity lower layers were not a `ContractLibrary`** (stage 1).
    `ConnectedLayers` was its own storage; `SkillGrounder` and `SkillRuntime`
@@ -95,6 +95,12 @@ Stages 1 to 5 are implemented; the per-stage sections below record how.
    (stage 5). The scripted proposer answers from gold graphs and cannot
    revise; a model needs the validator's reasons back and a second chance.
    `DeepSeekProposer` and the validator's retry rounds closed both.
+8. **Nothing executed a skill node on MS-HAB** (stage 6). `MSHabEnvironmentAdapter`
+   had no fact extractor and `PolicyExecutor` no implementation, and the
+   official environment is a state machine over its own plan that advances
+   and terminates by itself. `mshab/experiments/rollout/` supplies the
+   TidyHouse episode (entities, facts, node -> plan subtask), an environment
+   subclass whose pointer the runtime controls, and the checkpoint executor.
 
 ## Stage 1: align the granularity lower layers with `mshab.skills`
 
@@ -380,12 +386,76 @@ proposer; that offline dry run is what the tests exercise.
 
 ## Stage 6: MS-HAB rollout
 
-Not part of this plan's deliverables but the direction it points at. It
-needs the items already listed as simulator-specific follow-ups in the
-guide: a TidyHouse entity/fact extractor for `MSHabEnvironmentAdapter`, a
-`PolicyExecutor` that loads the RL checkpoints, and the target-aware policy
-selection from stage 1. The stage-4 controller is reused unchanged; only the
-adapter and executor change.
+Package: `mshab/experiments/rollout/` (episode, rule proposer, runner, and
+the torch-dependent adapter and executor) plus `mshab/envs/skill_rollout.py`
+(`SkillRollout-v0`). `TaskController`, `ProposalValidator`, `SkillRuntime`,
+and the granularity library are reused unchanged, as the plan required; the
+stage swaps in an adapter and an executor. See the package README for the
+details; the decisions were:
+
+- **One official episode is the scene.** A TidyHouse sequential plan (20
+  subtasks: navigate, pick, navigate, place per transfer) is read as plain
+  JSON. Objects are named by category so `pick(024_bowl)` grounds to the
+  bowl checkpoint (a second instance is `024_bowl_2`); receptacles take their
+  scene names from the episode config's `goal_receptacles`
+  (`frl_apartment_table_01`, ...), checked against the plan's objects first,
+  else `receptacle_<k>` by distinct goal rectangle. The goal text pairs every
+  object with its receptacle, which the stage-5 smoke test showed a model
+  needs. `TidyHouseEpisode` is standard library only and tested on CPU.
+- **The policies observe the pointed subtask, so executing a node means
+  pointing the environment at its plan subtask.** `TidyHouseEpisode.
+  subtask_for` maps a grounding to a subtask index: the transfer's own for
+  pick and place (a place to another receptacle than the plan's is
+  `UnsupportedGrounding`, reported as the failure mode `no_matching_subtask`),
+  the navigation before it for `navigate(object)` and `navigate(receptacle)`
+  (a shared receptacle resolves to the transfer whose object is held). The
+  official `SequentialTask-v0` advances the pointer and ends the episode by
+  itself, so `SkillRollout-v0` subclasses it: the pointer moves only through
+  `point_at`, `evaluate()` reports the pointed subtask's checkers as
+  `subtask_success` and never advances, and `scene_measurements()` runs the
+  grasp, place, and navigation checks for every object and goal of the plan
+  so the whole scene becomes facts.
+- **Facts are MS-HAB's own checkers.** `holding(x)` is the grasp check,
+  `at(x,r)` the object inside its goal and not grasped, `reachable(x)`
+  navigation success for that target without the arm terms,
+  `gripper_empty()` when nothing is grasped, `collision_safe()` the pointed
+  subtask's cumulative-force limit. Nothing is re-implemented: admission,
+  invariant monitoring, and effect verification run in `SkillRuntime` on
+  these facts, exactly as on the symbolic environment.
+- **Two checks decide a node.** MS-HAB's subtask checker ends the policy run
+  (arm at rest, robot still, object grasped or placed), then the runtime
+  verifies the contract's effects on the facts. The horizon is the
+  contract's, which the data-pipeline note said would replace the scripts'
+  constants once execution went through the runtime. When the invariant
+  monitor stops a skill for the force limit, the executor clears the force
+  count and refreshes the facts before re-raising, so a retry is admitted
+  with the clean slate an MS-HAB subtask starts with.
+- **Layer 4 is the library's choice, restricted to the task.**
+  `build_granularity_library(root, task_families=("tidy_house",))` binds the
+  21 TidyHouse checkpoints; without the filter the PrepareGroceries
+  checkpoint of the same object sorts first and would be selected.
+  `CheckpointPolicyExecutor` loads SAC and PPO as `mshab.evaluate` does.
+- **A rule-based pseudo model plays the scripted proposer's role.** The
+  scripted tables cannot answer a replan they were not given, and a real
+  episode's entities are in no table. `TidyHouseRuleProposer` decomposes the
+  undelivered transfers (a held one first) through `TidyHouseGraphBuilder`
+  with the transfers' original numbers, retries a failed transfer once and
+  then drops it, never drops a transfer whose object is in the gripper, and
+  shortens a coarse subgraph to `navigate -> place` when the object is
+  already held. On the gold graphs' own transfers it reproduces them exactly.
+  The real model runs through the same command line.
+
+The runner is `python -m mshab.experiments.rollout`; `--dry-run` validates
+the proposal and maps every node to its plan subtask without a simulator.
+The first GPU runs (rule proposer, five episodes) executed the official
+checkpoints through the controller: on plan 6 the place policy broke the
+contact-force limit on every attempt, and the official evaluator fails the
+same episode at the same subtask; plans 10, 21, and 42 delivered two to
+four of five objects, with a dropped object picked up again after a Layer-1
+replan and the fine decomposition skipping the sub-goals a replan found
+already achieved. The package README records the numbers. Runs write the
+trace, the executions with their simulator steps, the one-plan document the
+environment loaded, and a video.
 
 ## Deliverables and order
 
@@ -396,7 +466,7 @@ adapter and executor change.
 | 3 | Four request/response documents, `GraphProposer`, `ScriptedProposer`, `assemble_patch`, `ProposalValidator` | 2 | `test_planning_boundary.py` |
 | 4 | `SymbolicEnvironmentAdapter`, `SymbolicPolicyExecutor`, `TaskController`, five scenarios, metrics | 3 | `test_task_controller.py` |
 | 5 | `DeepSeekProposer`, prompts, validator retries, evaluation script | 4 | `test_deepseek_proposer.py`, `test_granularity_evaluation.py` (offline, fake transport) |
-| 6 | MS-HAB adapter and executor | 1, 4 | GPU runner |
+| 6 | `TidyHouseEpisode`, `SkillRollout-v0`, `RolloutEnvironmentAdapter`, `CheckpointPolicyExecutor`, `TidyHouseRuleProposer`, the rollout runner | 1, 4, 5 | `test_rollout.py` (CPU: episode, facts, mapping, rule proposer, dry run); the GPU runner for the simulator |
 
 ## Decisions taken
 
@@ -423,3 +493,12 @@ adapter and executor change.
 - Gold-graph documents and `LibraryCatalog` stay separate. Later work
   builds on the experiment's documents; `LibraryCatalog` remains the
   SetTable test artifact.
+- On MS-HAB a skill node is executed by pointing the official environment at
+  the plan subtask it stands for; the environment's own checkers are the
+  facts, its subtask success ends the policy run, and the contract's effects
+  are verified on top. The official environment is subclassed
+  (`SkillRollout-v0`) rather than driven through its state machine, because
+  the pointer, the horizon, and task success are the runtime's decisions.
+- The stage-6 pseudo model is rule-based, not a table: a real episode's
+  entities and failures are not known in advance. It is a validation device
+  for the adapter and executor, not a baseline planner.

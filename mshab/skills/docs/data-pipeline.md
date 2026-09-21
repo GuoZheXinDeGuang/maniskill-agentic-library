@@ -135,12 +135,16 @@ is how the attempt summary can print the contract and target a rollout died on.
 | `EnvironmentAdapter`, `EnvironmentSnapshot` | Entity resolution and fact extraction | No SetTable entity/fact extractor is wired up |
 | `SkillPlanner` at runtime | Re-decide after each node | Runs only in stage A; the sequence is frozen into the catalog |
 
-Closing that gap is the online `execute -> observe -> re-decide` milestone: a
-loop that calls `SkillRuntime.ready_nodes()`, asks the planner for one node,
-executes it, and feeds the `SkillExecutionResult` back. `TaskController` in
-`mshab/experiments/planning/` is that loop on a symbolic environment; stage 6
-of the [higher-layers plan](../../experiments/docs/higher-layers-plan.md)
-brings it to MS-HAB by swapping in an adapter and an executor.
+That is the SetTable path. The online `execute -> observe -> re-decide` loop
+exists: `TaskController` in `mshab/experiments/planning/` runs it on a
+symbolic environment, and `mshab/experiments/rollout/` (stage 6 of the
+[higher-layers plan](../../experiments/docs/higher-layers-plan.md)) runs it
+on MS-HAB for TidyHouse, where every object in the table above is on the
+path: the adapter extracts facts from the environment's own checkers, the
+runtime admits and verifies each node, the library selects the checkpoint,
+the executor steps it, and the planner decides after every node. Bringing
+the packaged SetTable graph onto that path needs a SetTable episode (its
+articulations included) in place of the TidyHouse one.
 
 ## One fact, two sources
 
@@ -156,4 +160,5 @@ and the scripts win:
   `POLICY_TYPE_TASK_SUBTASK_TO_TARG_IDS` and the single `policy_type` flag.
 
 Both disappear once stage C goes through `SkillRuntime`, which reads the
-horizon off the contract and the policy off the library.
+horizon off the contract and the policy off the library; the TidyHouse
+rollout does exactly that.

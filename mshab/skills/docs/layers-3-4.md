@@ -143,8 +143,11 @@ class YourPolicyExecutor(PolicyExecutor):
         )
 ```
 
-The repository defines this communication contract, but it does not yet
-include a production PPO loader or complete vectorized SetTable fact extractor.
+`mshab/experiments/rollout/` implements this contract for TidyHouse: a fact
+extractor over the environment's own checkers, a `PolicyExecutor` that loads
+the SAC and PPO checkpoints, and an environment subclass whose subtask pointer
+the runtime controls. A SetTable extractor and vectorized (many-environment)
+extraction are not written.
 
 ## Layer 4: policies
 

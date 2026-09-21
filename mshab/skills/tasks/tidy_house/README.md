@@ -64,8 +64,10 @@ calls, recovery success, and replanning span. Run at least nominal, primary
 Pick failure, primary Place failure, object-drop, and partially satisfied
 initial-state conditions.
 
-The current sequential evaluator can compare nominal paths, but a valid
-granularity result also needs a fact-aware controller that marks sub-goals from
-live predicates and re-decides after each node. Otherwise coarse and fine are
-only two serializations of the same fixed 20-subtask plan.
+A valid granularity result needs a fact-aware controller that marks sub-goals
+from live predicates and re-decides after each node; otherwise coarse and
+fine are only two serializations of the same fixed 20-subtask plan. That
+controller is `TaskController` in `mshab/experiments/planning/`, and
+`mshab/experiments/rollout/` runs it on MS-HAB for one official TidyHouse
+episode with the RL checkpoints, recording the metrics above per run.
 

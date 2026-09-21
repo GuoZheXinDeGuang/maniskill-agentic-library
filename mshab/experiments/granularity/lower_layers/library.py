@@ -16,10 +16,11 @@ checkpoint and never returns one trained for a different object.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, Tuple, Union
+from typing import Any, Dict, Iterable, Optional, Tuple, Union
 
 from mshab.experiments.granularity.lower_layers.manifest import (
     POLICY_SPECS,
+    TASK_ABBREVIATIONS,
     spec_for,
 )
 from mshab.skills.library import ContractLibrary
@@ -49,19 +50,40 @@ def split_contract_id(contract_id: str) -> Tuple[str, str, str]:
     return parts[1], parts[2], parts[3]
 
 
-def build_granularity_library(checkpoint_root: Path) -> ContractLibrary:
+def build_granularity_library(
+    checkpoint_root: Path,
+    task_families: Optional[Iterable[str]] = None,
+) -> ContractLibrary:
     """Five generic contracts, 53 checkpoint policies, one binding per policy.
 
     Policy readiness is read from ``checkpoint_root`` at run time and never
     changes what is registered or bound, so the library is identical on a
     clean clone and on a workstation with the full download.
+
+    ``task_families`` restricts Layer 4 to the checkpoints of those official
+    tasks (``tidy_house``, ``prepare_groceries``, ``set_table``); the five
+    contracts are registered regardless.  A rollout of one task passes its
+    own family: binding order is sorted policy id, so with every family bound
+    a TidyHouse pick would otherwise be executed by the PrepareGroceries
+    checkpoint of the same object, which sorts first.
     """
 
+    if task_families is not None:
+        task_families = tuple(task_families)
+        unknown = sorted(set(task_families) - set(TASK_ABBREVIATIONS))
+        if unknown:
+            raise ValueError(
+                "unknown task families {}; known: {}".format(
+                    unknown, sorted(TASK_ABBREVIATIONS)
+                )
+            )
     library = ContractLibrary()
     for contract_type, contract_class in CONTRACT_CLASSES.items():
         library.register(contract_class(task=EXPERIMENT_TASK, target="all"))
     # POLICY_SPECS is sorted by id, so each contract's binding order is too.
     for spec in POLICY_SPECS:
+        if task_families is not None and spec.task_family not in task_families:
+            continue
         policy = spec.policy(checkpoint_root)
         library.register_policy(policy)
         library.bind(contract_id(spec.contract_type), policy.id)

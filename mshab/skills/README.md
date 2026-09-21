@@ -83,6 +83,7 @@ at the end of the table, which are relative to the repository root.
 | `tests/test_task_controller.py` | The symbolic environment and the `execute -> observe -> re-decide` controller on the experiment's scenarios at both granularities |
 | `tests/test_deepseek_proposer.py` | The real model behind the boundary with a fake transport: prompts, lenient-then-strict parsing, the validator's retry rounds and the further user turn |
 | `tests/test_granularity_evaluation.py` | The stage-5 evaluation: agreement metrics against the gold graphs, rejection tally, the scripted dry run of the sweep |
+| `tests/test_rollout.py` | Stage 6 on CPU: one official TidyHouse plan as the symbolic scene, facts from the environment's measurements, node -> plan subtask, the rule-based proposer, the runner's dry run |
 | `tests/test_task_packages.py` | Public and compatibility imports of the packaged SetTable graph |
 
 ### Where a task's code lives
@@ -96,7 +97,7 @@ do not share a format:
 | Contains | Hand-authored reference implementations | Controlled experiments |
 | Contract ids | One per object, `mshab.set_table.pick.013_apple` | Five generic, `mshab.granularity.pick.all` |
 | Serialized as | `LibraryCatalog` (`catalog.py`) | Gold-graph documents (`SkillGraphPatch` JSON) |
-| Today | SetTable, the packaged reference example | TidyHouse coarse/fine, SetTable regression |
+| Today | SetTable, the packaged reference example | TidyHouse coarse/fine, SetTable regression; the MS-HAB rollout under `experiments/rollout/` |
 
 The two serialization formats stay separate on purpose: `LibraryCatalog` is
 the SetTable test artifact, and later work builds on the experiment's
@@ -134,14 +135,21 @@ Implemented now:
   returns one `SkillSubgraph`, the validator sends rejections back for a
   bounded number of retries, and `mshab.experiments.granularity.evaluate`
   measures validity, agreement with the gold graphs, and controller outcome
-  per granularity.
+  per granularity;
+- the same controller loop on MS-HAB (`mshab/experiments/rollout/`): a
+  TidyHouse entity/fact extractor behind `MSHabEnvironmentAdapter`, a
+  `PolicyExecutor` that loads the SAC/PPO checkpoints, an environment whose
+  subtask pointer the runtime controls (`SkillRollout-v0`), and a GPU runner
+  that rolls a proposer's plan out on one official episode with video.
 
 Simulator-specific follow-up work:
 
-- production vectorized SetTable entity/fact extractors;
-- PPO/BC/DP checkpoint loading and action adapters;
+- production vectorized SetTable entity/fact extractors (the TidyHouse ones
+  in the rollout package drive one environment);
+- BC/DP checkpoint loading and action adapters (the executor loads the RL
+  checkpoints);
 - measured policy performance and automatic policy routing;
 - production insertion-VLM proposal parsing and validation;
-- running the controller loop on MS-HAB instead of the symbolic environment (a TidyHouse entity/fact extractor and a checkpoint-loading `PolicyExecutor`); a trained decision model replacing the rule-based `SkillPlanner` is optional later work;
+- a trained decision model replacing the rule-based `SkillPlanner` is optional later work;
 - a vision-capable proposer: the request documents reserve an `images` field that the text-only DeepSeek proposer refuses;
 - insertion and decision quality evaluation.

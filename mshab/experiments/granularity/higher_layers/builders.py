@@ -15,7 +15,8 @@ by a proposer by construction.
 
 from __future__ import annotations
 
-from typing import Any, List, Mapping, Sequence, Tuple
+import re
+from typing import Any, List, Mapping, Optional, Sequence, Tuple
 
 from mshab.experiments.granularity.lower_layers.library import (
     EXPERIMENT_TASK,
@@ -70,6 +71,25 @@ def fine_subgoal_ids(index: int) -> Tuple[str, str, str, str]:
     )
 
 
+_TIDY_HOUSE_SUBGOAL_ID = re.compile(
+    r"^(?:object_(\d+)_(?:delivered|reachable|holding|placed)|destination_(\d+)_reachable)$"
+)
+
+
+def transfer_index(subgoal_id: str) -> Optional[int]:
+    """The transfer number a TidyHouse sub-goal id names, or ``None``.
+
+    The inverse of :func:`coarse_subgoal_id` and :func:`fine_subgoal_ids`:
+    ``object_3_holding`` and ``destination_3_reachable`` both name transfer 3.
+    Any other id, such as one a real model invented, gives ``None``.
+    """
+
+    match = _TIDY_HOUSE_SUBGOAL_ID.match(subgoal_id)
+    if match is None:
+        return None
+    return int(match.group(1) or match.group(2))
+
+
 def navigate_node(node_id: str, target: str, achieves: Sequence[str] = ()) -> SkillNode:
     return SkillNode(node_id, contract_id("navigate"), {"target": target}, tuple(achieves))
 
@@ -110,7 +130,7 @@ def _require_task(builder: str, task: str) -> None:
         )
 
 
-def _chain_subgraph(
+def chain_subgraph(
     subgoal_id: str, task: str, nodes: Sequence[SkillNode]
 ) -> SkillSubgraph:
     """A subgraph whose nodes run in the given order, joined by ``ENABLES``."""
@@ -121,6 +141,21 @@ def _chain_subgraph(
     for source, target in zip(nodes, nodes[1:]):
         subgraph.relate(source.id, target.id, SkillRelation.ENABLES)
     return subgraph
+
+
+def _require_indices(value: Any, count: int) -> Tuple[int, ...]:
+    indices = tuple(value)
+    if len(indices) != count:
+        raise ValueError(
+            "transfer_indices must name one number per transfer: {} for {} transfers".format(
+                len(indices), count
+            )
+        )
+    if any(isinstance(item, bool) or not isinstance(item, int) or item < 1 for item in indices):
+        raise ValueError("transfer_indices must be positive integers, got {!r}".format(indices))
+    if len(set(indices)) != len(indices):
+        raise ValueError("transfer_indices must not repeat, got {!r}".format(indices))
+    return indices
 
 
 def _require_pairs(value: Any, name: str, width: int) -> Tuple[Tuple[str, ...], ...]:
@@ -147,6 +182,13 @@ class TidyHouseGraphBuilder(SkillGraphBuilder):
     ``reachable(object) -> holding(object) -> reachable(destination) ->
     at(object, destination)``.  Node ids, contracts, arguments, and the
     nominal execution order are the same in both variants.
+
+    The context names the ``transfers`` (``(object, receptacle)`` pairs) and
+    optionally ``transfer_indices``, the number each transfer keeps in its
+    sub-goal and node ids; by default they are numbered 1, 2, ... in order.
+    A proposer that replans the remaining transfers of an episode passes the
+    original numbers, so ``object_4_delivered`` still means the fourth
+    transfer after the second was given up.
     """
 
     def __init__(self, granularity: str) -> None:
@@ -165,9 +207,12 @@ class TidyHouseGraphBuilder(SkillGraphBuilder):
         transfers = _require_pairs(
             context.get("transfers", DEFAULT_TIDY_HOUSE_TRANSFERS), "transfers", 2
         )
+        indices = _require_indices(
+            context.get("transfer_indices", range(1, len(transfers) + 1)), len(transfers)
+        )
         subgoals: List[SubGoal] = []
         subgraphs: List[SkillSubgraph] = []
-        for index, (obj, destination) in enumerate(transfers, start=1):
+        for index, (obj, destination) in zip(indices, transfers):
             navigate_object = "navigate_to_object_{}".format(index)
             pick = "pick_object_{}".format(index)
             navigate_destination = "navigate_to_destination_{}".format(index)
@@ -178,7 +223,7 @@ class TidyHouseGraphBuilder(SkillGraphBuilder):
                 subgoal_id = coarse_subgoal_id(index)
                 subgoals.append(SubGoal(subgoal_id, delivered))
                 subgraphs.append(
-                    _chain_subgraph(
+                    chain_subgraph(
                         subgoal_id,
                         task,
                         (
@@ -203,7 +248,7 @@ class TidyHouseGraphBuilder(SkillGraphBuilder):
                 (placed, delivered, place_node(place, obj, destination, (placed,))),
             ):
                 subgoals.append(SubGoal(subgoal_id, predicate))
-                subgraphs.append(_chain_subgraph(subgoal_id, task, (node,)))
+                subgraphs.append(chain_subgraph(subgoal_id, task, (node,)))
         return assemble_patch(task, subgoals, subgraphs)
 
 
@@ -266,5 +311,5 @@ class SetTableGenericGraphBuilder(SkillGraphBuilder):
                 ),
             ):
                 subgoals.append(SubGoal(subgoal_id, predicate))
-                subgraphs.append(_chain_subgraph(subgoal_id, task, nodes))
+                subgraphs.append(chain_subgraph(subgoal_id, task, nodes))
         return assemble_patch(task, subgoals, subgraphs)
