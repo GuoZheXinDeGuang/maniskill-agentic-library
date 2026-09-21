@@ -18,7 +18,7 @@ from scripts.build_set_table_graph_plan import build_plan_data
 
 
 OFFICIAL_TASK_PLAN = (
-    Path(__file__).resolve().parents[2]
+    Path(__file__).resolve().parents[3]
     / "mshab-assets"
     / "data"
     / "scene_datasets"
@@ -31,7 +31,7 @@ OFFICIAL_TASK_PLAN = (
     / "all.json"
 )
 CATALOG = (
-    Path(__file__).resolve().parents[1]
+    Path(__file__).resolve().parents[2]
     / "mshab"
     / "skills"
     / "catalogs"

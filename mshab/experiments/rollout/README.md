@@ -228,7 +228,7 @@ What the runs showed:
 
 ## Tests
 
-`tests/test_rollout.py` runs on CPU with the standard library: the episode
+`tests/rollout/test_rollout.py` runs on CPU with the standard library: the episode
 from a plan document and an episode config (names, shared receptacles,
 duplicate categories, the node -> subtask map, facts from measurements, the
 file checks), the rule proposer against the gold graphs and through the

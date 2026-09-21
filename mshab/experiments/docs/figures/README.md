@@ -10,7 +10,7 @@ Every figure is deterministic SVG written by
 `python -m mshab.experiments.docs.figures.render`. The DeepSeek figures are
 drawn from the compact extracts in [`extracts/`](extracts/), not from the gitignored
 run directories, so they regenerate on a clean clone;
-`tests/test_experiment_figures.py` checks that they do.
+`tests/granularity/test_experiment_figures.py` checks that they do.
 
 ## The pipeline
 

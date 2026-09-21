@@ -59,7 +59,8 @@ export MSHAB_CKPT_DIR=/my/path/mshab_checkpoints
 
 ## Tests
 
-All tests live under `tests/`. Run the complete CPU-only suite:
+All tests live under `tests/`, one folder per package they test (see
+[`tests/README.md`](../../../tests/README.md)). Run the complete CPU-only suite:
 
 ```bash
 docker compose run --rm mshab python -m unittest discover -s tests -p 'test_*.py' -v
@@ -68,10 +69,10 @@ docker compose run --rm mshab python -m unittest discover -s tests -p 'test_*.py
 Run only the manual-graph -> repeated skill-node-decision test:
 
 ```bash
-docker compose run --rm mshab python -m unittest tests.test_set_table_graph_decisions -v
+docker compose run --rm mshab python -m unittest tests.skills.test_set_table_graph_decisions -v
 ```
 
-`test_skill_library_checkpoints.py` validates the 11 downloaded SetTable
+`tests/skills/test_skill_library_checkpoints.py` validates the 11 downloaded SetTable
 policies when the checkpoint directory exists and skips cleanly otherwise.
 Tests inspect checkpoint files but do not load policy tensors or create a GPU
 simulator. Use the [SetTable evaluation runner](set-table.md#execute-a-graph-selected-settable-sequence-and-record-video)

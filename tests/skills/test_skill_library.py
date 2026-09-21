@@ -38,7 +38,7 @@ from scripts.generate_set_table_skill_graph import graph_document, set_table_svg
 
 
 CATALOG_PATH = (
-    Path(__file__).resolve().parents[1]
+    Path(__file__).resolve().parents[2]
     / "mshab"
     / "skills"
     / "catalogs"
@@ -309,7 +309,7 @@ class SkillModelTests(TestCase):
         )
 
     def test_checked_in_set_table_json_and_svg_match_graph(self):
-        repository_root = Path(__file__).resolve().parents[1]
+        repository_root = Path(__file__).resolve().parents[2]
         document = json.loads(
             (
                 repository_root

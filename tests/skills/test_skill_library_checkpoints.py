@@ -16,7 +16,7 @@ from mshab.skills import (
 )
 
 
-REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_ASSET_ROOT = Path(
     os.environ.get("MS_ASSET_DIR", str(REPOSITORY_ROOT.parent / "mshab-assets"))
 ).expanduser()

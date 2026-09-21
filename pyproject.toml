@@ -66,7 +66,7 @@ lines_after_imports = -1
 multi_line_output = 3
 line_length = 150
 # FIRSTPARTY covers the repository's non-`mshab` top-level modules (`scripts`,
-# imported by tests/test_set_table_graph_decisions.py). Leaving it out of a
+# imported by tests/skills/test_set_table_graph_decisions.py). Leaving it out of a
 # custom `sections` list is not a warning: isort aborts with
 # "FIRSTPARTY was not included in the sections setting" on the first such import.
 sections = ["FUTURE", "STDLIB", "THIRDPARTY", "GYMNASIUM", "LEARNING", "SAPIEN", "MANI_SKILL", "DIFFUSERS", "MSHAB", "FIRSTPARTY", "LOCALFOLDER"]

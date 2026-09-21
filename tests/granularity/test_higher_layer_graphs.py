@@ -18,7 +18,7 @@ from mshab.skills import LibraryCatalog, SkillRelation
 from mshab.skills.schema import SchemaError
 
 
-REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 CATALOG_PATH = REPOSITORY_ROOT / "mshab" / "skills" / "catalogs" / "set_table.json"
 
 # name -> (sub-goals, nodes)

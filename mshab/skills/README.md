@@ -72,19 +72,19 @@ at the end of the table, which are relative to the repository root.
 | `scripts/generate_set_table_skill_graph.py` | Rebuild SetTable JSON and SVG artifacts |
 | `scripts/build_set_table_graph_plan.py` | Ground a catalog-selected sequence with official scene data |
 | `scripts/evaluate_set_table_graph_plan.sh` | Execute that sequence and record an MS-HAB video |
-| `tests/test_skill_library.py` | Unit tests for all four boundaries |
-| `tests/test_skill_graph_semantics.py` | Fallback, sealing, atomicity, schema |
-| `tests/test_contract_state_transitions.py` | Symbolic state transitions |
-| `tests/test_set_table_graph_decisions.py` | Manual graph -> repeated one-node decision test |
-| `tests/test_skill_library_checkpoints.py` | CPU-only downloaded-checkpoint integration tests |
-| `tests/test_granularity_library.py` | The granularity experiment's `ContractLibrary` under `mshab/experiments/`, including target-aware policy selection |
-| `tests/test_higher_layer_graphs.py` | The experiment's gold graphs: validity, grounding, coarse/fine equivalence, SetTable regression, committed artifacts |
-| `tests/test_planning_boundary.py` | The proposer boundary under `mshab/experiments/planning/`: documents, scripted proposer, assembler, validator rejections |
-| `tests/test_task_controller.py` | The symbolic environment and the `execute -> observe -> re-decide` controller on the experiment's scenarios at both granularities |
-| `tests/test_deepseek_proposer.py` | The real model behind the boundary with a fake transport: prompts, lenient-then-strict parsing, the validator's retry rounds and the further user turn |
-| `tests/test_granularity_evaluation.py` | The stage-5 evaluation: agreement metrics against the gold graphs, rejection tally, the scripted dry run of the sweep |
-| `tests/test_rollout.py` | Stage 6 on CPU: one official TidyHouse plan as the symbolic scene, facts from the environment's measurements, node -> plan subtask, the rule-based proposer, the runner's dry run |
-| `tests/test_task_packages.py` | Public and compatibility imports of the packaged SetTable graph |
+| `tests/skills/test_skill_library.py` | Unit tests for all four boundaries |
+| `tests/skills/test_skill_graph_semantics.py` | Fallback, sealing, atomicity, schema |
+| `tests/skills/test_contract_state_transitions.py` | Symbolic state transitions |
+| `tests/skills/test_set_table_graph_decisions.py` | Manual graph -> repeated one-node decision test |
+| `tests/skills/test_skill_library_checkpoints.py` | CPU-only downloaded-checkpoint integration tests |
+| `tests/granularity/test_granularity_library.py` | The granularity experiment's `ContractLibrary` under `mshab/experiments/`, including target-aware policy selection |
+| `tests/granularity/test_higher_layer_graphs.py` | The experiment's gold graphs: validity, grounding, coarse/fine equivalence, SetTable regression, committed artifacts |
+| `tests/planning/test_planning_boundary.py` | The proposer boundary under `mshab/experiments/planning/`: documents, scripted proposer, assembler, validator rejections |
+| `tests/planning/test_task_controller.py` | The symbolic environment and the `execute -> observe -> re-decide` controller on the experiment's scenarios at both granularities |
+| `tests/planning/test_deepseek_proposer.py` | The real model behind the boundary with a fake transport: prompts, lenient-then-strict parsing, the validator's retry rounds and the further user turn |
+| `tests/granularity/test_granularity_evaluation.py` | The stage-5 evaluation: agreement metrics against the gold graphs, rejection tally, the scripted dry run of the sweep |
+| `tests/rollout/test_rollout.py` | Stage 6 on CPU: one official TidyHouse plan as the symbolic scene, facts from the environment's measurements, node -> plan subtask, the rule-based proposer, the runner's dry run |
+| `tests/skills/test_task_packages.py` | Public and compatibility imports of the packaged SetTable graph |
 
 ### Where a task's code lives
 
