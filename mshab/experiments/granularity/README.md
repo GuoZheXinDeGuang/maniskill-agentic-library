@@ -31,6 +31,15 @@ higher_layers/
 artifacts/
 ├── coarse_four_layers.json
 └── coarse_four_layers.svg
+
+vlm/
+├── config.example.yaml  local DeepSeek configuration template
+├── prompt.py            constrained planner and judge prompts
+├── run.py               compile, render, compare, and ground one model plan
+├── simulator.py         lower graph routes to native MS-HAB PlanData
+├── execute.py           invoke the existing evaluator on one grounded route
+├── set_table_experiment.yaml  fixed 10-instruction/10-scene design
+└── set_table_experiment.py    resumable 170-job experiment and tables
 ```
 
 `coarse_four_layers.py` does not redeclare any SubGoal, SkillNode, Contract,
@@ -173,3 +182,16 @@ assert view.strategy.subgoal_id == "retrieve"
 See [`higher_layers/README.md`](higher_layers/README.md) for the Layer-1/2
 semantics, alternatives, fallbacks, n:1 Contract references, and VLM-ready
 JSON artifact.
+
+## DeepSeek graph planning
+
+The [`vlm/`](vlm/) experiment gives DeepSeek the existing four-layer JSON and
+an instruction, constrains it to select existing semantic strategies, and
+compiles that selection locally into SkillNode → Contract → Policy steps.
+It renders the resulting execution flow as JSON, DOT, and SVG.
+
+MS-HAB supplies ordered, scene-grounded nominal `TaskPlan` JSON rather than a
+fallback flowchart. The runner normalizes that plan into the same flow schema,
+computes deterministic sequence and grounding metrics, and optionally uses a
+separate DeepSeek call for a semantic comparison. See
+[`vlm/README.md`](vlm/README.md) for configuration and commands.

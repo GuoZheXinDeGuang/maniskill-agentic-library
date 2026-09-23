@@ -180,3 +180,7 @@ ManiSkill/
 nautilus/
 
 .DS_Store
+
+# Local VLM credentials and generated experiment runs.
+mshab/experiments/granularity/vlm/config.yaml
+mshab/experiments/granularity/vlm/outputs/

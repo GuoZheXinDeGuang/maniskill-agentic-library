@@ -1,295 +1,91 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="3000" height="1940" viewBox="0 0 3000 1940" role="img" aria-labelledby="title description">
-<title id="title">Atomic coarse semantic skill graph</title>
-<desc id="description">Three independent SubGoals, forty-four atomic SkillNodes, typed graph edges, and five shared Contracts.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="1900" height="1260" viewBox="0 0 1900 1260" role="img" aria-labelledby="title description">
+<title id="title">Coarse MS-HAB Layer-1 and Layer-2 catalog</title>
+<desc id="description">Three task-family SubGoal graphs and the Retrieve, Deliver, and Restore SkillSubgraph templates.</desc>
 <defs>
-<marker id="arrow-navy" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#40536a"/></marker>
-<marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#2b965d"/></marker>
-<marker id="arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#c43d3d"/></marker>
-<marker id="arrow-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#7354c7"/></marker>
-<marker id="arrow-orange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#ca5a24"/></marker>
-<marker id="arrow-gray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#66758d"/></marker>
+<marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+<path d="M 0 0 L 10 5 L 0 10 z" fill="#298f5b"/>
+</marker>
+<marker id="arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+<path d="M 0 0 L 10 5 L 0 10 z" fill="#cb3a3a"/>
+</marker>
 </defs>
-<rect width="3000" height="1940" fill="#ffffff"/>
-<text x="55" y="55" font-size="30" font-weight="700" fill="#243247" text-anchor="start">Coarse semantic graph · atomic SkillNodes</text>
-<text x="2945" y="55" font-size="16" font-weight="400" fill="#66758d" text-anchor="end">3 SubGoals · 3 SkillSubgraphs · 44 SkillNodes · 5 Contracts</text>
-<rect x="30" y="85" width="2940" height="230" rx="20" fill="#eef5fd" stroke="#eef5fd" stroke-width="2"/>
-<rect x="30" y="335" width="2940" height="1060" rx="20" fill="#eff8f2" stroke="#eff8f2" stroke-width="2"/>
-<rect x="30" y="1415" width="2940" height="400" rx="20" fill="#fbf5f1" stroke="#fbf5f1" stroke-width="2"/>
-<text x="55" y="120" font-size="22" font-weight="700" fill="#276db2" text-anchor="start">Layer 1 · SubGoals</text>
-<text x="55" y="370" font-size="22" font-weight="700" fill="#257c50" text-anchor="start">Layer 2 · SkillSubgraphs</text>
-<text x="55" y="1455" font-size="22" font-weight="700" fill="#b94a17" text-anchor="start">Layer 3 · Contracts</text>
-<rect x="150" y="145" width="700" height="120" rx="12" fill="#ffffff" stroke="#4b8bc6" stroke-width="2"/>
-<text x="500.0" y="185" font-size="21" font-weight="700" fill="#276db2" text-anchor="middle">Retrieve</text>
-<text x="500.0" y="225" font-size="14" font-weight="400" fill="#52657a" text-anchor="middle">holding({object})</text>
-<path d="M 500.0 265 V 390" fill="none" stroke="#40536a" stroke-width="2.4" stroke-opacity="1.0" marker-end="url(#arrow-navy)"/>
-<rect x="40" y="390" width="920" height="980" rx="16" fill="#f8fffa" stroke="#298f5b" stroke-width="2" stroke-dasharray="8 6"/>
-<text x="500.0" y="412" font-size="19" font-weight="700" fill="#257c50" text-anchor="middle">Retrieve SkillSubgraph</text>
-<rect x="1150" y="145" width="700" height="120" rx="12" fill="#ffffff" stroke="#4b8bc6" stroke-width="2"/>
-<text x="1500.0" y="185" font-size="21" font-weight="700" fill="#276db2" text-anchor="middle">Deliver</text>
-<text x="1500.0" y="225" font-size="14" font-weight="400" fill="#52657a" text-anchor="middle">at({object},{destination})</text>
-<path d="M 1500.0 265 V 390" fill="none" stroke="#40536a" stroke-width="2.4" stroke-opacity="1.0" marker-end="url(#arrow-navy)"/>
-<rect x="1040" y="390" width="920" height="980" rx="16" fill="#f8fffa" stroke="#298f5b" stroke-width="2" stroke-dasharray="8 6"/>
-<text x="1500.0" y="412" font-size="19" font-weight="700" fill="#257c50" text-anchor="middle">Deliver SkillSubgraph</text>
-<rect x="2150" y="145" width="700" height="120" rx="12" fill="#ffffff" stroke="#4b8bc6" stroke-width="2"/>
-<text x="2500.0" y="185" font-size="21" font-weight="700" fill="#276db2" text-anchor="middle">Restore</text>
-<text x="2500.0" y="225" font-size="14" font-weight="400" fill="#52657a" text-anchor="middle">closed({source})</text>
-<path d="M 2500.0 265 V 390" fill="none" stroke="#40536a" stroke-width="2.4" stroke-opacity="1.0" marker-end="url(#arrow-navy)"/>
-<rect x="2040" y="390" width="920" height="980" rx="16" fill="#f8fffa" stroke="#298f5b" stroke-width="2" stroke-dasharray="8 6"/>
-<text x="2500.0" y="412" font-size="19" font-weight="700" fill="#257c50" text-anchor="middle">Restore SkillSubgraph</text>
-<path d="M 2770.0 772 V 1613" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-close_drawer" data-relation="references" data-contract-id="mshab.granularity.close.all"/>
-<path d="M 2770.0 552 V 1613" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-close_fridge" data-relation="references" data-contract-id="mshab.granularity.close.all"/>
-<path d="M 1575.0 772 V 1505" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-navigate_counter" data-relation="references" data-contract-id="mshab.granularity.navigate.all"/>
-<path d="M 1185.0 1212 V 1505" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-navigate_drawer_for_delivery" data-relation="references" data-contract-id="mshab.granularity.navigate.all"/>
-<path d="M 2575.0 772 V 1505" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-navigate_drawer_for_restore" data-relation="references" data-contract-id="mshab.granularity.navigate.all"/>
-<path d="M 1575.0 1212 V 1505" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-navigate_drawer_interior" data-relation="references" data-contract-id="mshab.granularity.navigate.all"/>
-<path d="M 575.0 992 V 1505" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-navigate_drawer_object" data-relation="references" data-contract-id="mshab.granularity.navigate.all"/>
-<path d="M 185.0 992 V 1505" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-navigate_drawer_source" data-relation="references" data-contract-id="mshab.granularity.navigate.all"/>
-<path d="M 1185.0 992 V 1505" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-navigate_fridge_for_delivery" data-relation="references" data-contract-id="mshab.granularity.navigate.all"/>
-<path d="M 2575.0 552 V 1505" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-navigate_fridge_for_restore" data-relation="references" data-contract-id="mshab.granularity.navigate.all"/>
-<path d="M 1575.0 992 V 1505" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-navigate_fridge_interior" data-relation="references" data-contract-id="mshab.granularity.navigate.all"/>
-<path d="M 575.0 772 V 1505" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-navigate_fridge_object" data-relation="references" data-contract-id="mshab.granularity.navigate.all"/>
-<path d="M 185.0 772 V 1505" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-navigate_fridge_source" data-relation="references" data-contract-id="mshab.granularity.navigate.all"/>
-<path d="M 575.0 552 V 1505" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-navigate_surface_object" data-relation="references" data-contract-id="mshab.granularity.navigate.all"/>
-<path d="M 1575.0 552 V 1505" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-navigate_table" data-relation="references" data-contract-id="mshab.granularity.navigate.all"/>
-<path d="M 1380.0 1212 V 1586" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-open_drawer_for_delivery" data-relation="references" data-contract-id="mshab.granularity.open.all"/>
-<path d="M 380.0 992 V 1586" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-open_drawer_source" data-relation="references" data-contract-id="mshab.granularity.open.all"/>
-<path d="M 1380.0 992 V 1586" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-open_fridge_for_delivery" data-relation="references" data-contract-id="mshab.granularity.open.all"/>
-<path d="M 380.0 772 V 1586" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-open_fridge_source" data-relation="references" data-contract-id="mshab.granularity.open.all"/>
-<path d="M 770.0 992 V 1532" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-pick_drawer_object" data-relation="references" data-contract-id="mshab.granularity.pick.all"/>
-<path d="M 770.0 772 V 1532" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-pick_fridge_object" data-relation="references" data-contract-id="mshab.granularity.pick.all"/>
-<path d="M 770.0 552 V 1532" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-pick_surface_object" data-relation="references" data-contract-id="mshab.granularity.pick.all"/>
-<path d="M 1770.0 1212 V 1559" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-place_in_drawer" data-relation="references" data-contract-id="mshab.granularity.place.all"/>
-<path d="M 1770.0 992 V 1559" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-place_in_fridge" data-relation="references" data-contract-id="mshab.granularity.place.all"/>
-<path d="M 1770.0 772 V 1559" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-place_on_counter" data-relation="references" data-contract-id="mshab.granularity.place.all"/>
-<path d="M 1770.0 552 V 1559" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-place_on_table" data-relation="references" data-contract-id="mshab.granularity.place.all"/>
-<path d="M 1575.0 854 V 1505" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-reapproach_counter" data-relation="references" data-contract-id="mshab.granularity.navigate.all"/>
-<path d="M 1575.0 1294 V 1505" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-reapproach_drawer_interior" data-relation="references" data-contract-id="mshab.granularity.navigate.all"/>
-<path d="M 1575.0 1074 V 1505" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-reapproach_fridge_interior" data-relation="references" data-contract-id="mshab.granularity.navigate.all"/>
-<path d="M 1575.0 634 V 1505" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-reapproach_table" data-relation="references" data-contract-id="mshab.granularity.navigate.all"/>
-<path d="M 2770.0 854 V 1613" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-recover_close_drawer" data-relation="references" data-contract-id="mshab.granularity.close.all"/>
-<path d="M 2770.0 634 V 1613" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-recover_close_fridge" data-relation="references" data-contract-id="mshab.granularity.close.all"/>
-<path d="M 1770.0 1294 V 1559" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-recover_place_in_drawer" data-relation="references" data-contract-id="mshab.granularity.place.all"/>
-<path d="M 1770.0 1074 V 1559" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-recover_place_in_fridge" data-relation="references" data-contract-id="mshab.granularity.place.all"/>
-<path d="M 1770.0 854 V 1559" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-recover_place_on_counter" data-relation="references" data-contract-id="mshab.granularity.place.all"/>
-<path d="M 1770.0 634 V 1559" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-recover_place_on_table" data-relation="references" data-contract-id="mshab.granularity.place.all"/>
-<path d="M 770.0 1074 V 1532" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-regrasp_drawer_object" data-relation="references" data-contract-id="mshab.granularity.pick.all"/>
-<path d="M 770.0 854 V 1532" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-regrasp_fridge_object" data-relation="references" data-contract-id="mshab.granularity.pick.all"/>
-<path d="M 770.0 634 V 1532" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-regrasp_surface_object" data-relation="references" data-contract-id="mshab.granularity.pick.all"/>
-<path d="M 575.0 1074 V 1505" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-relocalize_drawer_object" data-relation="references" data-contract-id="mshab.granularity.navigate.all"/>
-<path d="M 575.0 854 V 1505" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-relocalize_fridge_object" data-relation="references" data-contract-id="mshab.granularity.navigate.all"/>
-<path d="M 575.0 634 V 1505" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-relocalize_surface_object" data-relation="references" data-contract-id="mshab.granularity.navigate.all"/>
-<path d="M 2575.0 854 V 1505" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-reposition_drawer" data-relation="references" data-contract-id="mshab.granularity.navigate.all"/>
-<path d="M 2575.0 634 V 1505" fill="none" stroke="#ca5a24" stroke-width="1.4" stroke-opacity="0.2" id="contract-reference-reposition_fridge" data-relation="references" data-contract-id="mshab.granularity.navigate.all"/>
-<path d="M 185.0 1505 H 2575.0" fill="none" stroke="#ca5a24" stroke-width="2.2" stroke-opacity="0.48" data-contract-reference-rail="mshab.granularity.navigate.all"/>
-<path d="M 300.0 1505 V 1660" fill="none" stroke="#ca5a24" stroke-width="2.4" stroke-opacity="0.72" marker-end="url(#arrow-orange)" data-contract-reference-bus="mshab.granularity.navigate.all"/>
-<path d="M 770.0 1532 H 870.0" fill="none" stroke="#ca5a24" stroke-width="2.2" stroke-opacity="0.48" data-contract-reference-rail="mshab.granularity.pick.all"/>
-<path d="M 870.0 1532 V 1660" fill="none" stroke="#ca5a24" stroke-width="2.4" stroke-opacity="0.72" marker-end="url(#arrow-orange)" data-contract-reference-bus="mshab.granularity.pick.all"/>
-<path d="M 1440.0 1559 H 1770.0" fill="none" stroke="#ca5a24" stroke-width="2.2" stroke-opacity="0.48" data-contract-reference-rail="mshab.granularity.place.all"/>
-<path d="M 1440.0 1559 V 1660" fill="none" stroke="#ca5a24" stroke-width="2.4" stroke-opacity="0.72" marker-end="url(#arrow-orange)" data-contract-reference-bus="mshab.granularity.place.all"/>
-<path d="M 380.0 1586 H 2010.0" fill="none" stroke="#ca5a24" stroke-width="2.2" stroke-opacity="0.48" data-contract-reference-rail="mshab.granularity.open.all"/>
-<path d="M 2010.0 1586 V 1660" fill="none" stroke="#ca5a24" stroke-width="2.4" stroke-opacity="0.72" marker-end="url(#arrow-orange)" data-contract-reference-bus="mshab.granularity.open.all"/>
-<path d="M 2580.0 1613 H 2770.0" fill="none" stroke="#ca5a24" stroke-width="2.2" stroke-opacity="0.48" data-contract-reference-rail="mshab.granularity.close.all"/>
-<path d="M 2580.0 1613 V 1660" fill="none" stroke="#ca5a24" stroke-width="2.4" stroke-opacity="0.72" marker-end="url(#arrow-orange)" data-contract-reference-bus="mshab.granularity.close.all"/>
-<path d="M 645 525.0 H 700" fill="none" stroke="#2b965d" stroke-width="2.6" stroke-opacity="1.0" marker-end="url(#arrow-green)" id="skill-edge-enables-navigate_surface_object-pick_surface_object" data-relation="enables"/>
-<path d="M 645 607.0 H 700" fill="none" stroke="#2b965d" stroke-width="2.6" stroke-opacity="1.0" marker-end="url(#arrow-green)" id="skill-edge-enables-relocalize_surface_object-regrasp_surface_object" data-relation="enables"/>
-<path d="M 770.0 552 C 770.0 566.0, 770.0 566.0, 770.0 580" fill="none" stroke="#c43d3d" stroke-width="2.6" stroke-opacity="1.0" stroke-dasharray="8 6" marker-end="url(#arrow-red)" id="skill-edge-fallback_to-pick_surface_object-regrasp_surface_object" data-relation="fallback_to"/>
-<path d="M 255 745.0 H 310" fill="none" stroke="#2b965d" stroke-width="2.6" stroke-opacity="1.0" marker-end="url(#arrow-green)" id="skill-edge-enables-navigate_fridge_source-open_fridge_source" data-relation="enables"/>
-<path d="M 450 745.0 H 505" fill="none" stroke="#2b965d" stroke-width="2.6" stroke-opacity="1.0" marker-end="url(#arrow-green)" id="skill-edge-enables-open_fridge_source-navigate_fridge_object" data-relation="enables"/>
-<path d="M 645 745.0 H 700" fill="none" stroke="#2b965d" stroke-width="2.6" stroke-opacity="1.0" marker-end="url(#arrow-green)" id="skill-edge-enables-navigate_fridge_object-pick_fridge_object" data-relation="enables"/>
-<path d="M 380.0 772 C 380.0 786.0, 575.0 786.0, 575.0 800" fill="none" stroke="#2b965d" stroke-width="2.6" stroke-opacity="1.0" marker-end="url(#arrow-green)" id="skill-edge-enables-open_fridge_source-relocalize_fridge_object" data-relation="enables"/>
-<path d="M 645 827.0 H 700" fill="none" stroke="#2b965d" stroke-width="2.6" stroke-opacity="1.0" marker-end="url(#arrow-green)" id="skill-edge-enables-relocalize_fridge_object-regrasp_fridge_object" data-relation="enables"/>
-<path d="M 770.0 772 C 770.0 786.0, 770.0 786.0, 770.0 800" fill="none" stroke="#c43d3d" stroke-width="2.6" stroke-opacity="1.0" stroke-dasharray="8 6" marker-end="url(#arrow-red)" id="skill-edge-fallback_to-pick_fridge_object-regrasp_fridge_object" data-relation="fallback_to"/>
-<path d="M 255 965.0 H 310" fill="none" stroke="#2b965d" stroke-width="2.6" stroke-opacity="1.0" marker-end="url(#arrow-green)" id="skill-edge-enables-navigate_drawer_source-open_drawer_source" data-relation="enables"/>
-<path d="M 450 965.0 H 505" fill="none" stroke="#2b965d" stroke-width="2.6" stroke-opacity="1.0" marker-end="url(#arrow-green)" id="skill-edge-enables-open_drawer_source-navigate_drawer_object" data-relation="enables"/>
-<path d="M 645 965.0 H 700" fill="none" stroke="#2b965d" stroke-width="2.6" stroke-opacity="1.0" marker-end="url(#arrow-green)" id="skill-edge-enables-navigate_drawer_object-pick_drawer_object" data-relation="enables"/>
-<path d="M 380.0 992 C 380.0 1006.0, 575.0 1006.0, 575.0 1020" fill="none" stroke="#2b965d" stroke-width="2.6" stroke-opacity="1.0" marker-end="url(#arrow-green)" id="skill-edge-enables-open_drawer_source-relocalize_drawer_object" data-relation="enables"/>
-<path d="M 645 1047.0 H 700" fill="none" stroke="#2b965d" stroke-width="2.6" stroke-opacity="1.0" marker-end="url(#arrow-green)" id="skill-edge-enables-relocalize_drawer_object-regrasp_drawer_object" data-relation="enables"/>
-<path d="M 770.0 992 C 770.0 1006.0, 770.0 1006.0, 770.0 1020" fill="none" stroke="#c43d3d" stroke-width="2.6" stroke-opacity="1.0" stroke-dasharray="8 6" marker-end="url(#arrow-red)" id="skill-edge-fallback_to-pick_drawer_object-regrasp_drawer_object" data-relation="fallback_to"/>
-<path d="M 840 525.0 H 942 V 745.0 H 840" fill="none" stroke="#7354c7" stroke-width="2.6" stroke-opacity="1.0" stroke-dasharray="8 6" marker-end="url(#arrow-purple)" id="skill-edge-alternative_to-pick_surface_object-pick_fridge_object" data-relation="alternative_to" marker-start="url(#arrow-purple)"/>
-<path d="M 840 745.0 H 942 V 965.0 H 840" fill="none" stroke="#7354c7" stroke-width="2.6" stroke-opacity="1.0" stroke-dasharray="8 6" marker-end="url(#arrow-purple)" id="skill-edge-alternative_to-pick_fridge_object-pick_drawer_object" data-relation="alternative_to" marker-start="url(#arrow-purple)"/>
-<path d="M 1645 525.0 H 1700" fill="none" stroke="#2b965d" stroke-width="2.6" stroke-opacity="1.0" marker-end="url(#arrow-green)" id="skill-edge-enables-navigate_table-place_on_table" data-relation="enables"/>
-<path d="M 1645 607.0 H 1700" fill="none" stroke="#2b965d" stroke-width="2.6" stroke-opacity="1.0" marker-end="url(#arrow-green)" id="skill-edge-enables-reapproach_table-recover_place_on_table" data-relation="enables"/>
-<path d="M 1770.0 552 C 1770.0 566.0, 1770.0 566.0, 1770.0 580" fill="none" stroke="#c43d3d" stroke-width="2.6" stroke-opacity="1.0" stroke-dasharray="8 6" marker-end="url(#arrow-red)" id="skill-edge-fallback_to-place_on_table-recover_place_on_table" data-relation="fallback_to"/>
-<path d="M 1645 745.0 H 1700" fill="none" stroke="#2b965d" stroke-width="2.6" stroke-opacity="1.0" marker-end="url(#arrow-green)" id="skill-edge-enables-navigate_counter-place_on_counter" data-relation="enables"/>
-<path d="M 1645 827.0 H 1700" fill="none" stroke="#2b965d" stroke-width="2.6" stroke-opacity="1.0" marker-end="url(#arrow-green)" id="skill-edge-enables-reapproach_counter-recover_place_on_counter" data-relation="enables"/>
-<path d="M 1770.0 772 C 1770.0 786.0, 1770.0 786.0, 1770.0 800" fill="none" stroke="#c43d3d" stroke-width="2.6" stroke-opacity="1.0" stroke-dasharray="8 6" marker-end="url(#arrow-red)" id="skill-edge-fallback_to-place_on_counter-recover_place_on_counter" data-relation="fallback_to"/>
-<path d="M 1255 965.0 H 1310" fill="none" stroke="#2b965d" stroke-width="2.6" stroke-opacity="1.0" marker-end="url(#arrow-green)" id="skill-edge-enables-navigate_fridge_for_delivery-open_fridge_for_delivery" data-relation="enables"/>
-<path d="M 1450 965.0 H 1505" fill="none" stroke="#2b965d" stroke-width="2.6" stroke-opacity="1.0" marker-end="url(#arrow-green)" id="skill-edge-enables-open_fridge_for_delivery-navigate_fridge_interior" data-relation="enables"/>
-<path d="M 1645 965.0 H 1700" fill="none" stroke="#2b965d" stroke-width="2.6" stroke-opacity="1.0" marker-end="url(#arrow-green)" id="skill-edge-enables-navigate_fridge_interior-place_in_fridge" data-relation="enables"/>
-<path d="M 1380.0 992 C 1380.0 1006.0, 1575.0 1006.0, 1575.0 1020" fill="none" stroke="#2b965d" stroke-width="2.6" stroke-opacity="1.0" marker-end="url(#arrow-green)" id="skill-edge-enables-open_fridge_for_delivery-reapproach_fridge_interior" data-relation="enables"/>
-<path d="M 1645 1047.0 H 1700" fill="none" stroke="#2b965d" stroke-width="2.6" stroke-opacity="1.0" marker-end="url(#arrow-green)" id="skill-edge-enables-reapproach_fridge_interior-recover_place_in_fridge" data-relation="enables"/>
-<path d="M 1770.0 992 C 1770.0 1006.0, 1770.0 1006.0, 1770.0 1020" fill="none" stroke="#c43d3d" stroke-width="2.6" stroke-opacity="1.0" stroke-dasharray="8 6" marker-end="url(#arrow-red)" id="skill-edge-fallback_to-place_in_fridge-recover_place_in_fridge" data-relation="fallback_to"/>
-<path d="M 1255 1185.0 H 1310" fill="none" stroke="#2b965d" stroke-width="2.6" stroke-opacity="1.0" marker-end="url(#arrow-green)" id="skill-edge-enables-navigate_drawer_for_delivery-open_drawer_for_delivery" data-relation="enables"/>
-<path d="M 1450 1185.0 H 1505" fill="none" stroke="#2b965d" stroke-width="2.6" stroke-opacity="1.0" marker-end="url(#arrow-green)" id="skill-edge-enables-open_drawer_for_delivery-navigate_drawer_interior" data-relation="enables"/>
-<path d="M 1645 1185.0 H 1700" fill="none" stroke="#2b965d" stroke-width="2.6" stroke-opacity="1.0" marker-end="url(#arrow-green)" id="skill-edge-enables-navigate_drawer_interior-place_in_drawer" data-relation="enables"/>
-<path d="M 1380.0 1212 C 1380.0 1226.0, 1575.0 1226.0, 1575.0 1240" fill="none" stroke="#2b965d" stroke-width="2.6" stroke-opacity="1.0" marker-end="url(#arrow-green)" id="skill-edge-enables-open_drawer_for_delivery-reapproach_drawer_interior" data-relation="enables"/>
-<path d="M 1645 1267.0 H 1700" fill="none" stroke="#2b965d" stroke-width="2.6" stroke-opacity="1.0" marker-end="url(#arrow-green)" id="skill-edge-enables-reapproach_drawer_interior-recover_place_in_drawer" data-relation="enables"/>
-<path d="M 1770.0 1212 C 1770.0 1226.0, 1770.0 1226.0, 1770.0 1240" fill="none" stroke="#c43d3d" stroke-width="2.6" stroke-opacity="1.0" stroke-dasharray="8 6" marker-end="url(#arrow-red)" id="skill-edge-fallback_to-place_in_drawer-recover_place_in_drawer" data-relation="fallback_to"/>
-<path d="M 1840 525.0 H 1942 V 745.0 H 1840" fill="none" stroke="#7354c7" stroke-width="2.6" stroke-opacity="1.0" stroke-dasharray="8 6" marker-end="url(#arrow-purple)" id="skill-edge-alternative_to-place_on_table-place_on_counter" data-relation="alternative_to" marker-start="url(#arrow-purple)"/>
-<path d="M 1840 745.0 H 1942 V 965.0 H 1840" fill="none" stroke="#7354c7" stroke-width="2.6" stroke-opacity="1.0" stroke-dasharray="8 6" marker-end="url(#arrow-purple)" id="skill-edge-alternative_to-place_on_counter-place_in_fridge" data-relation="alternative_to" marker-start="url(#arrow-purple)"/>
-<path d="M 1840 965.0 H 1942 V 1185.0 H 1840" fill="none" stroke="#7354c7" stroke-width="2.6" stroke-opacity="1.0" stroke-dasharray="8 6" marker-end="url(#arrow-purple)" id="skill-edge-alternative_to-place_in_fridge-place_in_drawer" data-relation="alternative_to" marker-start="url(#arrow-purple)"/>
-<path d="M 2645 525.0 H 2700" fill="none" stroke="#2b965d" stroke-width="2.6" stroke-opacity="1.0" marker-end="url(#arrow-green)" id="skill-edge-enables-navigate_fridge_for_restore-close_fridge" data-relation="enables"/>
-<path d="M 2645 607.0 H 2700" fill="none" stroke="#2b965d" stroke-width="2.6" stroke-opacity="1.0" marker-end="url(#arrow-green)" id="skill-edge-enables-reposition_fridge-recover_close_fridge" data-relation="enables"/>
-<path d="M 2770.0 552 C 2770.0 566.0, 2770.0 566.0, 2770.0 580" fill="none" stroke="#c43d3d" stroke-width="2.6" stroke-opacity="1.0" stroke-dasharray="8 6" marker-end="url(#arrow-red)" id="skill-edge-fallback_to-close_fridge-recover_close_fridge" data-relation="fallback_to"/>
-<path d="M 2645 745.0 H 2700" fill="none" stroke="#2b965d" stroke-width="2.6" stroke-opacity="1.0" marker-end="url(#arrow-green)" id="skill-edge-enables-navigate_drawer_for_restore-close_drawer" data-relation="enables"/>
-<path d="M 2645 827.0 H 2700" fill="none" stroke="#2b965d" stroke-width="2.6" stroke-opacity="1.0" marker-end="url(#arrow-green)" id="skill-edge-enables-reposition_drawer-recover_close_drawer" data-relation="enables"/>
-<path d="M 2770.0 772 C 2770.0 786.0, 2770.0 786.0, 2770.0 800" fill="none" stroke="#c43d3d" stroke-width="2.6" stroke-opacity="1.0" stroke-dasharray="8 6" marker-end="url(#arrow-red)" id="skill-edge-fallback_to-close_drawer-recover_close_drawer" data-relation="fallback_to"/>
-<path d="M 2840 525.0 H 2942 V 745.0 H 2840" fill="none" stroke="#7354c7" stroke-width="2.6" stroke-opacity="1.0" stroke-dasharray="8 6" marker-end="url(#arrow-purple)" id="skill-edge-alternative_to-close_fridge-close_drawer" data-relation="alternative_to" marker-start="url(#arrow-purple)"/>
-<rect x="2700" y="718" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-close_drawer" data-contract-id="mshab.granularity.close.all" data-semantic-name="CloseDrawer"/>
-<text x="2770.0" y="751" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">CloseDrawer</text>
-<circle cx="2770.0" cy="772" r="4" fill="#ca5a24" data-node-contract-port="close_drawer"/>
-<rect x="2700" y="498" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-close_fridge" data-contract-id="mshab.granularity.close.all" data-semantic-name="CloseFridge"/>
-<text x="2770.0" y="531" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">CloseFridge</text>
-<circle cx="2770.0" cy="552" r="4" fill="#ca5a24" data-node-contract-port="close_fridge"/>
-<rect x="1505" y="718" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-navigate_counter" data-contract-id="mshab.granularity.navigate.all" data-semantic-name="NavigateCounter"/>
-<text x="1575.0" y="751" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">NavigateCounter</text>
-<circle cx="1575.0" cy="772" r="4" fill="#ca5a24" data-node-contract-port="navigate_counter"/>
-<rect x="1115" y="1158" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-navigate_drawer_for_delivery" data-contract-id="mshab.granularity.navigate.all" data-semantic-name="NavigateDrawerForDelivery"/>
-<text x="1185.0" y="1191" font-size="10" font-weight="700" fill="#23744e" text-anchor="middle">NavigateDrawerForDelivery</text>
-<circle cx="1185.0" cy="1212" r="4" fill="#ca5a24" data-node-contract-port="navigate_drawer_for_delivery"/>
-<rect x="2505" y="718" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-navigate_drawer_for_restore" data-contract-id="mshab.granularity.navigate.all" data-semantic-name="NavigateDrawerForRestore"/>
-<text x="2575.0" y="751" font-size="10" font-weight="700" fill="#23744e" text-anchor="middle">NavigateDrawerForRestore</text>
-<circle cx="2575.0" cy="772" r="4" fill="#ca5a24" data-node-contract-port="navigate_drawer_for_restore"/>
-<rect x="1505" y="1158" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-navigate_drawer_interior" data-contract-id="mshab.granularity.navigate.all" data-semantic-name="NavigateDrawerInterior"/>
-<text x="1575.0" y="1191" font-size="10" font-weight="700" fill="#23744e" text-anchor="middle">NavigateDrawerInterior</text>
-<circle cx="1575.0" cy="1212" r="4" fill="#ca5a24" data-node-contract-port="navigate_drawer_interior"/>
-<rect x="505" y="938" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-navigate_drawer_object" data-contract-id="mshab.granularity.navigate.all" data-semantic-name="NavigateDrawerObject"/>
-<text x="575.0" y="971" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">NavigateDrawerObject</text>
-<circle cx="575.0" cy="992" r="4" fill="#ca5a24" data-node-contract-port="navigate_drawer_object"/>
-<rect x="115" y="938" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-navigate_drawer_source" data-contract-id="mshab.granularity.navigate.all" data-semantic-name="NavigateDrawerSource"/>
-<text x="185.0" y="971" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">NavigateDrawerSource</text>
-<circle cx="185.0" cy="992" r="4" fill="#ca5a24" data-node-contract-port="navigate_drawer_source"/>
-<rect x="1115" y="938" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-navigate_fridge_for_delivery" data-contract-id="mshab.granularity.navigate.all" data-semantic-name="NavigateFridgeForDelivery"/>
-<text x="1185.0" y="971" font-size="10" font-weight="700" fill="#23744e" text-anchor="middle">NavigateFridgeForDelivery</text>
-<circle cx="1185.0" cy="992" r="4" fill="#ca5a24" data-node-contract-port="navigate_fridge_for_delivery"/>
-<rect x="2505" y="498" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-navigate_fridge_for_restore" data-contract-id="mshab.granularity.navigate.all" data-semantic-name="NavigateFridgeForRestore"/>
-<text x="2575.0" y="531" font-size="10" font-weight="700" fill="#23744e" text-anchor="middle">NavigateFridgeForRestore</text>
-<circle cx="2575.0" cy="552" r="4" fill="#ca5a24" data-node-contract-port="navigate_fridge_for_restore"/>
-<rect x="1505" y="938" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-navigate_fridge_interior" data-contract-id="mshab.granularity.navigate.all" data-semantic-name="NavigateFridgeInterior"/>
-<text x="1575.0" y="971" font-size="10" font-weight="700" fill="#23744e" text-anchor="middle">NavigateFridgeInterior</text>
-<circle cx="1575.0" cy="992" r="4" fill="#ca5a24" data-node-contract-port="navigate_fridge_interior"/>
-<rect x="505" y="718" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-navigate_fridge_object" data-contract-id="mshab.granularity.navigate.all" data-semantic-name="NavigateFridgeObject"/>
-<text x="575.0" y="751" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">NavigateFridgeObject</text>
-<circle cx="575.0" cy="772" r="4" fill="#ca5a24" data-node-contract-port="navigate_fridge_object"/>
-<rect x="115" y="718" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-navigate_fridge_source" data-contract-id="mshab.granularity.navigate.all" data-semantic-name="NavigateFridgeSource"/>
-<text x="185.0" y="751" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">NavigateFridgeSource</text>
-<circle cx="185.0" cy="772" r="4" fill="#ca5a24" data-node-contract-port="navigate_fridge_source"/>
-<rect x="505" y="498" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-navigate_surface_object" data-contract-id="mshab.granularity.navigate.all" data-semantic-name="NavigateSurfaceObject"/>
-<text x="575.0" y="531" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">NavigateSurfaceObject</text>
-<circle cx="575.0" cy="552" r="4" fill="#ca5a24" data-node-contract-port="navigate_surface_object"/>
-<rect x="1505" y="498" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-navigate_table" data-contract-id="mshab.granularity.navigate.all" data-semantic-name="NavigateTable"/>
-<text x="1575.0" y="531" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">NavigateTable</text>
-<circle cx="1575.0" cy="552" r="4" fill="#ca5a24" data-node-contract-port="navigate_table"/>
-<rect x="1310" y="1158" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-open_drawer_for_delivery" data-contract-id="mshab.granularity.open.all" data-semantic-name="OpenDrawerForDelivery"/>
-<text x="1380.0" y="1191" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">OpenDrawerForDelivery</text>
-<circle cx="1380.0" cy="1212" r="4" fill="#ca5a24" data-node-contract-port="open_drawer_for_delivery"/>
-<rect x="310" y="938" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-open_drawer_source" data-contract-id="mshab.granularity.open.all" data-semantic-name="OpenDrawerSource"/>
-<text x="380.0" y="971" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">OpenDrawerSource</text>
-<circle cx="380.0" cy="992" r="4" fill="#ca5a24" data-node-contract-port="open_drawer_source"/>
-<rect x="1310" y="938" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-open_fridge_for_delivery" data-contract-id="mshab.granularity.open.all" data-semantic-name="OpenFridgeForDelivery"/>
-<text x="1380.0" y="971" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">OpenFridgeForDelivery</text>
-<circle cx="1380.0" cy="992" r="4" fill="#ca5a24" data-node-contract-port="open_fridge_for_delivery"/>
-<rect x="310" y="718" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-open_fridge_source" data-contract-id="mshab.granularity.open.all" data-semantic-name="OpenFridgeSource"/>
-<text x="380.0" y="751" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">OpenFridgeSource</text>
-<circle cx="380.0" cy="772" r="4" fill="#ca5a24" data-node-contract-port="open_fridge_source"/>
-<rect x="700" y="938" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-pick_drawer_object" data-contract-id="mshab.granularity.pick.all" data-semantic-name="PickDrawerObject"/>
-<text x="770.0" y="971" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">PickDrawerObject</text>
-<circle cx="770.0" cy="992" r="4" fill="#ca5a24" data-node-contract-port="pick_drawer_object"/>
-<rect x="700" y="718" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-pick_fridge_object" data-contract-id="mshab.granularity.pick.all" data-semantic-name="PickFridgeObject"/>
-<text x="770.0" y="751" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">PickFridgeObject</text>
-<circle cx="770.0" cy="772" r="4" fill="#ca5a24" data-node-contract-port="pick_fridge_object"/>
-<rect x="700" y="498" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-pick_surface_object" data-contract-id="mshab.granularity.pick.all" data-semantic-name="PickSurfaceObject"/>
-<text x="770.0" y="531" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">PickSurfaceObject</text>
-<circle cx="770.0" cy="552" r="4" fill="#ca5a24" data-node-contract-port="pick_surface_object"/>
-<rect x="1700" y="1158" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-place_in_drawer" data-contract-id="mshab.granularity.place.all" data-semantic-name="PlaceInDrawer"/>
-<text x="1770.0" y="1191" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">PlaceInDrawer</text>
-<circle cx="1770.0" cy="1212" r="4" fill="#ca5a24" data-node-contract-port="place_in_drawer"/>
-<rect x="1700" y="938" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-place_in_fridge" data-contract-id="mshab.granularity.place.all" data-semantic-name="PlaceInFridge"/>
-<text x="1770.0" y="971" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">PlaceInFridge</text>
-<circle cx="1770.0" cy="992" r="4" fill="#ca5a24" data-node-contract-port="place_in_fridge"/>
-<rect x="1700" y="718" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-place_on_counter" data-contract-id="mshab.granularity.place.all" data-semantic-name="PlaceOnCounter"/>
-<text x="1770.0" y="751" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">PlaceOnCounter</text>
-<circle cx="1770.0" cy="772" r="4" fill="#ca5a24" data-node-contract-port="place_on_counter"/>
-<rect x="1700" y="498" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-place_on_table" data-contract-id="mshab.granularity.place.all" data-semantic-name="PlaceOnTable"/>
-<text x="1770.0" y="531" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">PlaceOnTable</text>
-<circle cx="1770.0" cy="552" r="4" fill="#ca5a24" data-node-contract-port="place_on_table"/>
-<rect x="1505" y="800" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-reapproach_counter" data-contract-id="mshab.granularity.navigate.all" data-semantic-name="ReapproachCounter"/>
-<text x="1575.0" y="833" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">ReapproachCounter</text>
-<circle cx="1575.0" cy="854" r="4" fill="#ca5a24" data-node-contract-port="reapproach_counter"/>
-<rect x="1505" y="1240" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-reapproach_drawer_interior" data-contract-id="mshab.granularity.navigate.all" data-semantic-name="ReapproachDrawerInterior"/>
-<text x="1575.0" y="1273" font-size="10" font-weight="700" fill="#23744e" text-anchor="middle">ReapproachDrawerInterior</text>
-<circle cx="1575.0" cy="1294" r="4" fill="#ca5a24" data-node-contract-port="reapproach_drawer_interior"/>
-<rect x="1505" y="1020" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-reapproach_fridge_interior" data-contract-id="mshab.granularity.navigate.all" data-semantic-name="ReapproachFridgeInterior"/>
-<text x="1575.0" y="1053" font-size="10" font-weight="700" fill="#23744e" text-anchor="middle">ReapproachFridgeInterior</text>
-<circle cx="1575.0" cy="1074" r="4" fill="#ca5a24" data-node-contract-port="reapproach_fridge_interior"/>
-<rect x="1505" y="580" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-reapproach_table" data-contract-id="mshab.granularity.navigate.all" data-semantic-name="ReapproachTable"/>
-<text x="1575.0" y="613" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">ReapproachTable</text>
-<circle cx="1575.0" cy="634" r="4" fill="#ca5a24" data-node-contract-port="reapproach_table"/>
-<rect x="2700" y="800" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-recover_close_drawer" data-contract-id="mshab.granularity.close.all" data-semantic-name="RecoverCloseDrawer"/>
-<text x="2770.0" y="833" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">RecoverCloseDrawer</text>
-<circle cx="2770.0" cy="854" r="4" fill="#ca5a24" data-node-contract-port="recover_close_drawer"/>
-<rect x="2700" y="580" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-recover_close_fridge" data-contract-id="mshab.granularity.close.all" data-semantic-name="RecoverCloseFridge"/>
-<text x="2770.0" y="613" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">RecoverCloseFridge</text>
-<circle cx="2770.0" cy="634" r="4" fill="#ca5a24" data-node-contract-port="recover_close_fridge"/>
-<rect x="1700" y="1240" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-recover_place_in_drawer" data-contract-id="mshab.granularity.place.all" data-semantic-name="RecoverPlaceInDrawer"/>
-<text x="1770.0" y="1273" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">RecoverPlaceInDrawer</text>
-<circle cx="1770.0" cy="1294" r="4" fill="#ca5a24" data-node-contract-port="recover_place_in_drawer"/>
-<rect x="1700" y="1020" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-recover_place_in_fridge" data-contract-id="mshab.granularity.place.all" data-semantic-name="RecoverPlaceInFridge"/>
-<text x="1770.0" y="1053" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">RecoverPlaceInFridge</text>
-<circle cx="1770.0" cy="1074" r="4" fill="#ca5a24" data-node-contract-port="recover_place_in_fridge"/>
-<rect x="1700" y="800" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-recover_place_on_counter" data-contract-id="mshab.granularity.place.all" data-semantic-name="RecoverPlaceOnCounter"/>
-<text x="1770.0" y="833" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">RecoverPlaceOnCounter</text>
-<circle cx="1770.0" cy="854" r="4" fill="#ca5a24" data-node-contract-port="recover_place_on_counter"/>
-<rect x="1700" y="580" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-recover_place_on_table" data-contract-id="mshab.granularity.place.all" data-semantic-name="RecoverPlaceOnTable"/>
-<text x="1770.0" y="613" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">RecoverPlaceOnTable</text>
-<circle cx="1770.0" cy="634" r="4" fill="#ca5a24" data-node-contract-port="recover_place_on_table"/>
-<rect x="700" y="1020" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-regrasp_drawer_object" data-contract-id="mshab.granularity.pick.all" data-semantic-name="RegraspDrawerObject"/>
-<text x="770.0" y="1053" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">RegraspDrawerObject</text>
-<circle cx="770.0" cy="1074" r="4" fill="#ca5a24" data-node-contract-port="regrasp_drawer_object"/>
-<rect x="700" y="800" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-regrasp_fridge_object" data-contract-id="mshab.granularity.pick.all" data-semantic-name="RegraspFridgeObject"/>
-<text x="770.0" y="833" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">RegraspFridgeObject</text>
-<circle cx="770.0" cy="854" r="4" fill="#ca5a24" data-node-contract-port="regrasp_fridge_object"/>
-<rect x="700" y="580" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-regrasp_surface_object" data-contract-id="mshab.granularity.pick.all" data-semantic-name="RegraspSurfaceObject"/>
-<text x="770.0" y="613" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">RegraspSurfaceObject</text>
-<circle cx="770.0" cy="634" r="4" fill="#ca5a24" data-node-contract-port="regrasp_surface_object"/>
-<rect x="505" y="1020" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-relocalize_drawer_object" data-contract-id="mshab.granularity.navigate.all" data-semantic-name="RelocalizeDrawerObject"/>
-<text x="575.0" y="1053" font-size="10" font-weight="700" fill="#23744e" text-anchor="middle">RelocalizeDrawerObject</text>
-<circle cx="575.0" cy="1074" r="4" fill="#ca5a24" data-node-contract-port="relocalize_drawer_object"/>
-<rect x="505" y="800" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-relocalize_fridge_object" data-contract-id="mshab.granularity.navigate.all" data-semantic-name="RelocalizeFridgeObject"/>
-<text x="575.0" y="833" font-size="10" font-weight="700" fill="#23744e" text-anchor="middle">RelocalizeFridgeObject</text>
-<circle cx="575.0" cy="854" r="4" fill="#ca5a24" data-node-contract-port="relocalize_fridge_object"/>
-<rect x="505" y="580" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-relocalize_surface_object" data-contract-id="mshab.granularity.navigate.all" data-semantic-name="RelocalizeSurfaceObject"/>
-<text x="575.0" y="613" font-size="10" font-weight="700" fill="#23744e" text-anchor="middle">RelocalizeSurfaceObject</text>
-<circle cx="575.0" cy="634" r="4" fill="#ca5a24" data-node-contract-port="relocalize_surface_object"/>
-<rect x="2505" y="800" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-reposition_drawer" data-contract-id="mshab.granularity.navigate.all" data-semantic-name="RepositionDrawer"/>
-<text x="2575.0" y="833" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">RepositionDrawer</text>
-<circle cx="2575.0" cy="854" r="4" fill="#ca5a24" data-node-contract-port="reposition_drawer"/>
-<rect x="2505" y="580" width="140" height="54" rx="10" fill="#ffffff" stroke="#258457" stroke-width="2" id="skill-node-reposition_fridge" data-contract-id="mshab.granularity.navigate.all" data-semantic-name="RepositionFridge"/>
-<text x="2575.0" y="613" font-size="12" font-weight="700" fill="#23744e" text-anchor="middle">RepositionFridge</text>
-<circle cx="2575.0" cy="634" r="4" fill="#ca5a24" data-node-contract-port="reposition_fridge"/>
-<rect x="100" y="1660" width="400" height="96" rx="12" fill="#fffaf2" stroke="#c6531a" stroke-width="2" id="contract-node-navigate"/>
-<text x="300.0" y="1698" font-size="18" font-weight="700" fill="#b94a17" text-anchor="middle">NavigateContract</text>
-<text x="300.0" y="1730" font-size="13" font-weight="400" fill="#6e5b52" text-anchor="middle">22 incoming SkillNodes</text>
-<rect x="670" y="1660" width="400" height="96" rx="12" fill="#fffaf2" stroke="#c6531a" stroke-width="2" id="contract-node-pick"/>
-<text x="870.0" y="1698" font-size="18" font-weight="700" fill="#b94a17" text-anchor="middle">PickContract</text>
-<text x="870.0" y="1730" font-size="13" font-weight="400" fill="#6e5b52" text-anchor="middle">6 incoming SkillNodes</text>
-<rect x="1240" y="1660" width="400" height="96" rx="12" fill="#fffaf2" stroke="#c6531a" stroke-width="2" id="contract-node-place"/>
-<text x="1440.0" y="1698" font-size="18" font-weight="700" fill="#b94a17" text-anchor="middle">PlaceContract</text>
-<text x="1440.0" y="1730" font-size="13" font-weight="400" fill="#6e5b52" text-anchor="middle">8 incoming SkillNodes</text>
-<rect x="1810" y="1660" width="400" height="96" rx="12" fill="#fffaf2" stroke="#c6531a" stroke-width="2" id="contract-node-open"/>
-<text x="2010.0" y="1698" font-size="18" font-weight="700" fill="#b94a17" text-anchor="middle">OpenContract</text>
-<text x="2010.0" y="1730" font-size="13" font-weight="400" fill="#6e5b52" text-anchor="middle">4 incoming SkillNodes</text>
-<rect x="2380" y="1660" width="400" height="96" rx="12" fill="#fffaf2" stroke="#c6531a" stroke-width="2" id="contract-node-close"/>
-<text x="2580.0" y="1698" font-size="18" font-weight="700" fill="#b94a17" text-anchor="middle">CloseContract</text>
-<text x="2580.0" y="1730" font-size="13" font-weight="400" fill="#6e5b52" text-anchor="middle">4 incoming SkillNodes</text>
-<path d="M 90 1870 H 180" fill="none" stroke="#2b965d" stroke-width="2.2" stroke-opacity="1.0" marker-end="url(#arrow-green)"/>
-<text x="195" y="1875" font-size="14" font-weight="400" fill="#2f3a4d" text-anchor="start">Sequential</text>
-<path d="M 570 1870 H 660" fill="none" stroke="#7354c7" stroke-width="2.2" stroke-opacity="1.0" stroke-dasharray="8 6" marker-end="url(#arrow-purple)" marker-start="url(#arrow-purple)"/>
-<text x="675" y="1875" font-size="14" font-weight="400" fill="#2f3a4d" text-anchor="start">Alternative</text>
-<path d="M 1050 1870 H 1140" fill="none" stroke="#c43d3d" stroke-width="2.2" stroke-opacity="1.0" stroke-dasharray="8 6" marker-end="url(#arrow-red)"/>
-<text x="1155" y="1875" font-size="14" font-weight="400" fill="#2f3a4d" text-anchor="start">Fallback</text>
-<path d="M 1530 1870 H 1620" fill="none" stroke="#ca5a24" stroke-width="2.2" stroke-opacity="0.72" marker-end="url(#arrow-orange)"/>
-<text x="1635" y="1875" font-size="14" font-weight="400" fill="#2f3a4d" text-anchor="start">References Contract</text>
-<text x="2910" y="1875" font-size="14" font-weight="700" fill="#b94a17" text-anchor="end">one SkillNode → exactly one Contract</text>
+<rect width="1900" height="1260" fill="#ffffff"/>
+<text x="55" y="55" font-size="30" font-weight="700" fill="#243247" text-anchor="start">Coarse semantic higher layers</text>
+<text x="1845" y="55" font-size="17" font-weight="400" fill="#66758d" text-anchor="end">42 SubGoals · 42 SkillSubgraphs · 252 candidate SkillNodes</text>
+<rect x="35" y="85" width="1830" height="330" rx="20" fill="#eef5fd"/>
+<rect x="35" y="445" width="1830" height="745" rx="20" fill="#eff8f2"/>
+<text x="60" y="125" font-size="25" font-weight="700" fill="#276db2" text-anchor="start">Layer 1 · SubGoal graphs</text>
+<text x="60" y="474" font-size="25" font-weight="700" fill="#257c50" text-anchor="start">Layer 2 · one semantic SkillSubgraph per SubGoal</text>
+<rect x="65" y="150" width="550" height="225" rx="14" fill="#ffffff" stroke="#4b8bc6" stroke-width="2"/>
+<text x="340" y="185" font-size="21" font-weight="700" fill="#2f3a4d" text-anchor="middle">PrepareGroceries</text>
+<text x="340" y="212" font-size="14" font-weight="400" fill="#66758d" text-anchor="middle">9 object capabilities · 18 SubGoals</text>
+<rect x="195" y="244" width="130" height="52" rx="14" fill="#f7fbff" stroke="#4b8bc6" stroke-width="2"/>
+<text x="260" y="276" font-size="16" font-weight="700" fill="#276db2" text-anchor="middle">Retrieve</text>
+<rect x="365" y="244" width="130" height="52" rx="14" fill="#f7fbff" stroke="#4b8bc6" stroke-width="2"/>
+<text x="430" y="276" font-size="16" font-weight="700" fill="#276db2" text-anchor="middle">Deliver</text>
+<path d="M 325 270 L 365 270" fill="none" stroke="#298f5b" stroke-width="2.2" marker-end="url(#arrow-green)"/>
+<text x="340" y="345" font-size="13" font-weight="400" fill="#66758d" text-anchor="middle">repeated once per supported object category</text>
+<rect x="655" y="150" width="550" height="225" rx="14" fill="#ffffff" stroke="#4b8bc6" stroke-width="2"/>
+<text x="930" y="185" font-size="21" font-weight="700" fill="#2f3a4d" text-anchor="middle">SetTable</text>
+<text x="930" y="212" font-size="14" font-weight="400" fill="#66758d" text-anchor="middle">2 object capabilities · 6 SubGoals</text>
+<rect x="735" y="244" width="130" height="52" rx="14" fill="#f7fbff" stroke="#4b8bc6" stroke-width="2"/>
+<text x="800" y="276" font-size="16" font-weight="700" fill="#276db2" text-anchor="middle">Retrieve</text>
+<rect x="905" y="244" width="130" height="52" rx="14" fill="#f7fbff" stroke="#4b8bc6" stroke-width="2"/>
+<text x="970" y="276" font-size="16" font-weight="700" fill="#276db2" text-anchor="middle">Deliver</text>
+<rect x="1075" y="244" width="130" height="52" rx="14" fill="#f7fbff" stroke="#4b8bc6" stroke-width="2"/>
+<text x="1140" y="276" font-size="16" font-weight="700" fill="#276db2" text-anchor="middle">Restore</text>
+<path d="M 865 270 L 905 270" fill="none" stroke="#298f5b" stroke-width="2.2" marker-end="url(#arrow-green)"/>
+<path d="M 1035 270 L 1075 270" fill="none" stroke="#298f5b" stroke-width="2.2" marker-end="url(#arrow-green)"/>
+<text x="930" y="345" font-size="13" font-weight="400" fill="#66758d" text-anchor="middle">bowl + apple · articulated sources</text>
+<rect x="1245" y="150" width="550" height="225" rx="14" fill="#ffffff" stroke="#4b8bc6" stroke-width="2"/>
+<text x="1520" y="185" font-size="21" font-weight="700" fill="#2f3a4d" text-anchor="middle">TidyHouse</text>
+<text x="1520" y="212" font-size="14" font-weight="400" fill="#66758d" text-anchor="middle">9 object capabilities · 18 SubGoals</text>
+<rect x="1375" y="244" width="130" height="52" rx="14" fill="#f7fbff" stroke="#4b8bc6" stroke-width="2"/>
+<text x="1440" y="276" font-size="16" font-weight="700" fill="#276db2" text-anchor="middle">Retrieve</text>
+<rect x="1545" y="244" width="130" height="52" rx="14" fill="#f7fbff" stroke="#4b8bc6" stroke-width="2"/>
+<text x="1610" y="276" font-size="16" font-weight="700" fill="#276db2" text-anchor="middle">Deliver</text>
+<path d="M 1505 270 L 1545 270" fill="none" stroke="#298f5b" stroke-width="2.2" marker-end="url(#arrow-green)"/>
+<text x="1520" y="345" font-size="13" font-weight="400" fill="#66758d" text-anchor="middle">repeated once per supported object category</text>
+<rect x="65" y="515" width="550" height="600" rx="14" fill="#ffffff" stroke="#298f5b" stroke-width="2" stroke-dasharray="8 6"/>
+<text x="340.0" y="553" font-size="20" font-weight="700" fill="#257c50" text-anchor="middle">Retrieve(obj)</text>
+<rect x="675" y="515" width="550" height="600" rx="14" fill="#ffffff" stroke="#298f5b" stroke-width="2" stroke-dasharray="8 6"/>
+<text x="950.0" y="553" font-size="20" font-weight="700" fill="#257c50" text-anchor="middle">Deliver(obj,destination)</text>
+<rect x="1285" y="515" width="550" height="600" rx="14" fill="#ffffff" stroke="#298f5b" stroke-width="2" stroke-dasharray="8 6"/>
+<text x="1560.0" y="553" font-size="20" font-weight="700" fill="#257c50" text-anchor="middle">Restore(source)</text>
+<rect x="95" y="562" width="490" height="76" rx="14" fill="#f8fffa" stroke="#62a981" stroke-width="2"/>
+<text x="115" y="592" font-size="14" font-weight="700" fill="#257c50" text-anchor="start">Primary</text>
+<text x="115" y="618" font-size="13" font-weight="400" fill="#40536a" text-anchor="start">Navigate object → Pick</text>
+<rect x="95" y="697" width="490" height="76" rx="14" fill="#f8fffa" stroke="#62a981" stroke-width="2"/>
+<text x="115" y="727" font-size="14" font-weight="700" fill="#257c50" text-anchor="start">Container access</text>
+<text x="115" y="753" font-size="13" font-weight="400" fill="#40536a" text-anchor="start">Navigate source → Open → Navigate object → Pick</text>
+<rect x="95" y="832" width="490" height="76" rx="14" fill="#f8fffa" stroke="#62a981" stroke-width="2"/>
+<text x="115" y="862" font-size="14" font-weight="700" fill="#257c50" text-anchor="start">Recovery</text>
+<text x="115" y="888" font-size="13" font-weight="400" fill="#40536a" text-anchor="start">Relocalize object → Regrasp</text>
+<path d="M 340 638 L 340 697" fill="none" stroke="#cb3a3a" stroke-width="2.2" marker-end="url(#arrow-red)" stroke-dasharray="7 5"/>
+<path d="M 340 773 L 340 832" fill="none" stroke="#cb3a3a" stroke-width="2.2" marker-end="url(#arrow-red)" stroke-dasharray="7 5"/>
+<text x="340" y="982" font-size="13" font-weight="400" fill="#7d5360" text-anchor="middle">Achievers: ALTERNATIVE_TO · ordered by FALLBACK_TO</text>
+<rect x="705" y="562" width="490" height="76" rx="14" fill="#f8fffa" stroke="#62a981" stroke-width="2"/>
+<text x="725" y="592" font-size="14" font-weight="700" fill="#257c50" text-anchor="start">Primary</text>
+<text x="725" y="618" font-size="13" font-weight="400" fill="#40536a" text-anchor="start">Navigate destination → Place</text>
+<rect x="705" y="697" width="490" height="76" rx="14" fill="#f8fffa" stroke="#62a981" stroke-width="2"/>
+<text x="725" y="727" font-size="14" font-weight="700" fill="#257c50" text-anchor="start">Re-approach</text>
+<text x="725" y="753" font-size="13" font-weight="400" fill="#40536a" text-anchor="start">Navigate destination again → Place</text>
+<rect x="705" y="832" width="490" height="76" rx="14" fill="#f8fffa" stroke="#62a981" stroke-width="2"/>
+<text x="725" y="862" font-size="14" font-weight="700" fill="#257c50" text-anchor="start">Dropped-object recovery</text>
+<text x="725" y="888" font-size="13" font-weight="400" fill="#40536a" text-anchor="start">Navigate → Pick → Navigate → Place</text>
+<path d="M 950 638 L 950 697" fill="none" stroke="#cb3a3a" stroke-width="2.2" marker-end="url(#arrow-red)" stroke-dasharray="7 5"/>
+<path d="M 950 773 L 950 832" fill="none" stroke="#cb3a3a" stroke-width="2.2" marker-end="url(#arrow-red)" stroke-dasharray="7 5"/>
+<text x="950" y="982" font-size="13" font-weight="400" fill="#7d5360" text-anchor="middle">Achievers: ALTERNATIVE_TO · ordered by FALLBACK_TO</text>
+<rect x="1315" y="612" width="490" height="76" rx="14" fill="#f8fffa" stroke="#62a981" stroke-width="2"/>
+<text x="1335" y="642" font-size="14" font-weight="700" fill="#257c50" text-anchor="start">Primary</text>
+<text x="1335" y="668" font-size="13" font-weight="400" fill="#40536a" text-anchor="start">Navigate source → Close</text>
+<rect x="1315" y="767" width="490" height="76" rx="14" fill="#f8fffa" stroke="#62a981" stroke-width="2"/>
+<text x="1335" y="797" font-size="14" font-weight="700" fill="#257c50" text-anchor="start">Recovery</text>
+<text x="1335" y="823" font-size="13" font-weight="400" fill="#40536a" text-anchor="start">Navigate source again → Close</text>
+<path d="M 1560 688 L 1560 767" fill="none" stroke="#cb3a3a" stroke-width="2.2" marker-end="url(#arrow-red)" stroke-dasharray="7 5"/>
+<text x="1560" y="920" font-size="13" font-weight="400" fill="#66758d" text-anchor="middle">SetTable only; skipped when closed(source) already holds</text>
+<text x="1560" y="982" font-size="13" font-weight="400" fill="#7d5360" text-anchor="middle">Achievers: ALTERNATIVE_TO · ordered by FALLBACK_TO</text>
+<text x="65" y="1155" font-size="14" font-weight="400" fill="#52657a" text-anchor="start">Solid green: ENABLES · dashed red: FALLBACK_TO · ALTERNATIVE_TO is symmetric between achievers</text>
+<text x="1835" y="1155" font-size="14" font-weight="400" fill="#52657a" text-anchor="end">SkillNode → Contract only; no Policy IDs in Layers 1/2</text>
 </svg>
